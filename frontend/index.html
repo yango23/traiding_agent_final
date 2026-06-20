@@ -75,6 +75,40 @@
                             <span class="stat-value" id="val-cap">$1.28T</span>
                         </div>
                     </div>
+                    <hr class="card-divider">
+                    <h4 class="section-title" id="lbl-indicators-title" style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">Технические индикаторы</h4>
+                    <div class="stats-grid indicators-grid" style="gap: 10px;">
+                        <div class="stat-item">
+                            <span class="stat-label indicator-label clickable" onclick="askAgentAboutIndicator('RSI')" style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+                                RSI (14) <span class="tooltip-icon" id="tip-rsi" data-tooltip="Индекс относительной силы (RSI). Перекуплен >70, перепродан <30.">?</span>
+                            </span>
+                            <span class="stat-value" id="val-indicator-rsi">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label indicator-label clickable" onclick="askAgentAboutIndicator('MACD')" style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+                                MACD <span class="tooltip-icon" id="tip-macd" data-tooltip="Схождение/расхождение средних (MACD). Показывает импульс тренда.">?</span>
+                            </span>
+                            <span class="stat-value" id="val-indicator-macd">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label indicator-label clickable" onclick="askAgentAboutIndicator('SMA Crossover')" style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+                                Скользящие средние <span class="tooltip-icon" id="tip-sma" data-tooltip="SMA-50 и SMA-200. Золотой крест — бычий сигнал, Крест смерти — медвежий.">?</span>
+                            </span>
+                            <span class="stat-value" id="val-indicator-sma">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label indicator-label clickable" onclick="askAgentAboutIndicator('Bollinger Bands')" style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+                                Bollinger Bands <span class="tooltip-icon" id="tip-bb" data-tooltip="Полосы Боллинджера. Отражают волатильность рынка.">?</span>
+                            </span>
+                            <span class="stat-value" id="val-indicator-bb">-</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label indicator-label clickable" onclick="askAgentAboutIndicator('Fear & Greed Index')" style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 500;">
+                                Страх и Жадность <span class="tooltip-icon" id="tip-fg" data-tooltip="Индекс страха и жадности. Настроение инвесторов: 0 (страх) - 100 (жадность).">?</span>
+                            </span>
+                            <span class="stat-value" id="val-indicator-fg">-</span>
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -110,6 +144,9 @@
                     </div>
                 </div>
             </section>
+
+            <!-- RESIZE HANDLE -->
+            <div class="resize-handle" id="resize-handle"></div>
 
             <!-- RIGHT PANEL: Educational Chat Assistant -->
             <section class="right-panel">

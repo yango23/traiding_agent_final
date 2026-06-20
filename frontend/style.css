@@ -159,8 +159,8 @@ body {
 .app-main-layout {
     flex: 1;
     display: grid;
-    grid-template-columns: 280px 1fr 340px;
-    gap: 16px;
+    grid-template-columns: 280px 1fr 4px var(--chat-panel-width, 340px);
+    gap: 12px;
     padding: 16px;
     overflow: hidden;
 }
@@ -632,3 +632,77 @@ body.light-theme .card-divider {
     transform: scale(1.05);
     background: #2563EB;
 }
+
+/* =========================================================================
+   Resize Handle & Tooltips Extensions
+   ========================================================================= */
+
+.resize-handle {
+    cursor: col-resize;
+    background: transparent;
+    transition: background 0.2s, box-shadow 0.2s;
+    border-radius: 4px;
+    height: 100%;
+}
+
+.resize-handle:hover, .resize-handle.active {
+    background: var(--neon-blue);
+    box-shadow: var(--neon-glow-blue);
+}
+
+/* Tooltips */
+.tooltip-icon {
+    position: relative;
+    cursor: help;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-secondary);
+    font-size: 0.65rem;
+    font-weight: 700;
+    transition: all 0.2s ease;
+}
+
+body.light-theme .tooltip-icon {
+    background: rgba(15, 23, 42, 0.08);
+}
+
+.tooltip-icon:hover {
+    background: var(--neon-blue);
+    color: white;
+}
+
+.tooltip-icon:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 140%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.95);
+    color: #FFFFFF;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    white-space: normal;
+    width: 220px;
+    z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    font-family: inherit;
+    font-weight: 400;
+    text-align: left;
+    pointer-events: none;
+    line-height: 1.35;
+}
+
+body.light-theme .tooltip-icon:hover::after {
+    background: rgba(255, 255, 255, 0.95);
+    color: #0F172A;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+

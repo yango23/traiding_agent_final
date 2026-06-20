@@ -179,6 +179,7 @@ async function loadAIContent() {
         const data = await response.json();
         if (data.success) {
             updateStatsUI(data.market_data);
+            updateIndicatorsUI(data.indicators);
             renderNewsUI(data.news);
         }
     } catch (e) {
@@ -444,6 +445,89 @@ function formatLargeNumber(num) {
 }
 
 // -------------------------------------------------------------------------
+// Technical Indicators Rendering & Interaction
+// -------------------------------------------------------------------------
+
+function updateIndicatorsUI(indicators) {
+    document.getElementById("val-indicator-rsi").textContent = `${indicators.rsi.value} (${indicators.rsi.status})`;
+    document.getElementById("val-indicator-macd").textContent = indicators.macd.status;
+    document.getElementById("val-indicator-sma").textContent = indicators.moving_averages.status;
+    document.getElementById("val-indicator-bb").textContent = indicators.bollinger_bands.status;
+    document.getElementById("val-indicator-fg").textContent = `${indicators.fear_greed.value} (${indicators.fear_greed.status})`;
+    
+    // Set visual indicators styling
+    setIndicatorStatusColor("val-indicator-rsi", indicators.rsi.status);
+    setIndicatorStatusColor("val-indicator-macd", indicators.macd.status);
+    setIndicatorStatusColor("val-indicator-sma", indicators.moving_averages.status);
+    setIndicatorStatusColor("val-indicator-bb", indicators.bollinger_bands.status);
+    setIndicatorStatusColor("val-indicator-fg", indicators.fear_greed.status);
+}
+
+function setIndicatorStatusColor(elementId, status) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const lowerStatus = status.toLowerCase();
+    
+    if (lowerStatus.includes("перекуплен") || lowerStatus.includes("медвеж") || lowerStatus.includes("смерти") || lowerStatus.includes("страх")) {
+        el.style.color = "var(--neon-rose)";
+    } else if (lowerStatus.includes("перепродан") || lowerStatus.includes("быч") || lowerStatus.includes("золотой") || lowerStatus.includes("жадность")) {
+        el.style.color = "var(--neon-green)";
+    } else {
+        el.style.color = "var(--text-primary)";
+    }
+}
+
+function askAgentAboutIndicator(indicatorName) {
+    const coinLabel = coinSelector.options[coinSelector.selectedIndex].text;
+    const prompt = currentLanguage === "ru"
+        ? `Объясни подробнее технический индикатор ${indicatorName} для ${coinLabel} простыми словами как для новичка.`
+        : `Explain the ${indicatorName} technical indicator for ${coinLabel} in detail, in simple terms for a beginner.`;
+    
+    chatInput.value = prompt;
+    sendMessage();
+}
+
+// -------------------------------------------------------------------------
+// Resize Handle (Flexible Chat Panel Width)
+// -------------------------------------------------------------------------
+
+function initResizeHandle() {
+    const resizeHandle = document.getElementById("resize-handle");
+    const layout = document.querySelector(".app-main-layout");
+    let isResizing = false;
+
+    if (!resizeHandle || !layout) return;
+
+    resizeHandle.addEventListener("mousedown", (e) => {
+        isResizing = true;
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+        resizeHandle.classList.add("active");
+    });
+
+    document.addEventListener("mousemove", (e) => {
+        if (!isResizing) return;
+        
+        // Width is calculated from right screen boundary
+        const newWidth = window.innerWidth - e.clientX - 16;
+        
+        if (newWidth > 220 && newWidth < 800) {
+            layout.style.setProperty("--chat-panel-width", `${newWidth}px`);
+        }
+    });
+
+    document.addEventListener("mouseup", () => {
+        if (isResizing) {
+            isResizing = false;
+            document.body.style.cursor = "";
+            document.body.style.userSelect = "";
+            resizeHandle.classList.remove("active");
+        }
+    });
+}
+
+
+// -------------------------------------------------------------------------
 // Event Listeners & Bootstrapping
 // -------------------------------------------------------------------------
 
@@ -467,3 +551,4 @@ localizeUI();
 renderTradingViewWidget();
 initChatSession();
 loadAIContent();
+initResizeHandle();

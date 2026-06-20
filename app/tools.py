@@ -238,6 +238,21 @@ def calculate_technical_indicators(price: float, coin_id: str) -> dict:
         "Если ниже — медвежий сигнал ('Крест смерти')."
     )
 
+    bb_upper = price * random.uniform(1.02, 1.05)
+    bb_lower = price * random.uniform(0.95, 0.98)
+    bb_status = "В границах"
+    bb_desc = (
+        "Полосы Боллинджера. Отражают волатильность рынка. "
+        "Цена вблизи верхней границы указывает на перекупленность, а у нижней — на перепроданность."
+    )
+    
+    fg_value = random.randint(25, 80)
+    fg_status = "Экстремальный страх" if fg_value < 30 else ("Страх" if fg_value < 50 else ("Жадность" if fg_value < 75 else "Экстремальная жадность"))
+    fg_desc = (
+        "Индекс страха и жадности. Отражает общие настроения на рынке. "
+        "Крайний страх (>25) указывает на панику (время искать точки входа), крайняя жадность (>75) — на перегрев."
+    )
+
     return {
         "rsi": {
             "value": round(rsi, 2),
@@ -256,5 +271,16 @@ def calculate_technical_indicators(price: float, coin_id: str) -> dict:
             "sma_200": round(sma_200, 2),
             "status": "Золотой крест" if sma_50 > sma_200 else "Крест смерти",
             "description": sma_desc
+        },
+        "bollinger_bands": {
+            "upper": round(bb_upper, 2),
+            "lower": round(bb_lower, 2),
+            "status": bb_status,
+            "description": bb_desc
+        },
+        "fear_greed": {
+            "value": fg_value,
+            "status": fg_status,
+            "description": fg_desc
         }
     }
