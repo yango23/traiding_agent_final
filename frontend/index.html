@@ -219,11 +219,27 @@
                         <button class="close-disclaimer-btn" onclick="closeDisclaimer()" id="btn-close-disclaimer" title="Close warning">×</button>
                     </div>
                     <!-- Quota usage indicator -->
-                    <div id="quota-status-bar" style="padding:6px 14px; border-bottom:1px solid rgba(255,255,255,0.05); font-size:0.7rem; color:var(--text-muted); display:flex; gap:14px; align-items:center;">
-                        <span>🤖 API:</span>
-                        <span id="quota-summary-stat" title="Summary requests used today">📝 Summary: <strong id="quota-s">0</strong>/20</span>
-                        <span id="quota-chat-stat" title="Chat requests used today">💬 Chat: <strong id="quota-c">0</strong>/20</span>
-                        <span id="quota-exhausted-badge" style="display:none; color:var(--neon-rose); font-weight:600;">⛔ Quota exhausted</span>
+                    <div id="quota-status-bar" class="quota-bar">
+                        <div class="quota-row">
+                            <div class="quota-item">
+                                <span class="quota-label">📝 <span id="quota-label-summary">Summary</span></span>
+                                <div class="quota-track">
+                                    <div class="quota-fill" id="quota-fill-summary"></div>
+                                </div>
+                                <span class="quota-count"><strong id="quota-s">0</strong>/20</span>
+                            </div>
+                            <div class="quota-item">
+                                <span class="quota-label">💬 <span id="quota-label-chat">Chat</span></span>
+                                <div class="quota-track">
+                                    <div class="quota-fill" id="quota-fill-chat"></div>
+                                </div>
+                                <span class="quota-count"><strong id="quota-c">0</strong>/20</span>
+                            </div>
+                        </div>
+                        <div class="quota-footer">
+                            <span id="quota-exhausted-badge" style="display:none; color:var(--neon-rose); font-weight:600; font-size:0.68rem;">⛔ <span id="quota-exhausted-text">Quota exhausted</span></span>
+                            <span id="quota-reset-label" style="font-size:0.68rem; color:var(--text-muted);">🔄 Resets in <strong id="quota-reset-time">--h --m</strong></span>
+                        </div>
                     </div>
                     <div class="chat-messages" id="chat-messages-container">
                         <!-- Dynamic chat messages -->

@@ -81,13 +81,24 @@ async def get_ai_summary(request: SummaryRequest):
 @app.get("/api/quota-status")
 async def get_quota_status():
     """
-    Returns current API quota usage counters for the UI indicator.
+    Returns current API quota usage counters + time until daily reset (midnight UTC).
     """
+    from datetime import datetime, timezone, timedelta
+    now_utc = datetime.now(timezone.utc)
+    midnight_utc = (now_utc + timedelta(days=1)).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    reset_in_seconds = int((midnight_utc - now_utc).total_seconds())
+    reset_hh = reset_in_seconds // 3600
+    reset_mm = (reset_in_seconds % 3600) // 60
+
     return {
-        "summary_calls": quota_tracker["summary_calls"],
-        "chat_calls":    quota_tracker["chat_calls"],
-        "quota_exhausted": quota_tracker["quota_exhausted"],
-        "free_tier_limit": 20,
+        "summary_calls":    quota_tracker["summary_calls"],
+        "chat_calls":       quota_tracker["chat_calls"],
+        "quota_exhausted":  quota_tracker["quota_exhausted"],
+        "free_tier_limit":  20,
+        "reset_in_seconds": reset_in_seconds,
+        "reset_label":      f"{reset_hh}h {reset_mm:02d}m",
     }
 
 @app.post("/api/chat")

@@ -324,25 +324,64 @@ async function updateQuotaUI() {
     try {
         const res = await fetch("/api/quota-status");
         const q = await res.json();
+
+        const limit = q.free_tier_limit || 20;
+        const sUsed = q.summary_calls || 0;
+        const cUsed = q.chat_calls    || 0;
+        const exhausted = q.quota_exhausted || false;
+
+        // --- counts ---
         const sEl = document.getElementById("quota-s");
         const cEl = document.getElementById("quota-c");
+        if (sEl) sEl.textContent = sUsed;
+        if (cEl) cEl.textContent = cUsed;
+
+        // --- progress fills ---
+        function setFill(fillId, used) {
+            const el = document.getElementById(fillId);
+            if (!el) return;
+            const pct = Math.min((used / limit) * 100, 100);
+            el.style.width = pct + "%";
+            el.classList.remove("warn", "danger");
+            if (pct >= 100 || exhausted) el.classList.add("danger");
+            else if (pct >= 70)          el.classList.add("warn");
+        }
+        setFill("quota-fill-summary", sUsed);
+        setFill("quota-fill-chat",    cUsed);
+
+        // --- exhausted badge ---
         const badge = document.getElementById("quota-exhausted-badge");
-        const bar   = document.getElementById("quota-status-bar");
-        if (sEl) sEl.textContent = q.summary_calls;
-        if (cEl) cEl.textContent = q.chat_calls;
-        const total = (q.summary_calls + q.chat_calls);
-        const exhausted = q.quota_exhausted || total >= q.free_tier_limit;
-        if (badge) badge.style.display = exhausted ? "inline" : "none";
-        // Color the bar red when close to limit
-        if (bar) {
-            if (exhausted) {
-                bar.style.color = "var(--neon-rose)";
-            } else if (total >= q.free_tier_limit * 0.7) {
-                bar.style.color = "#EAB308";
-            } else {
-                bar.style.color = "var(--text-muted)";
+        const badgeText = document.getElementById("quota-exhausted-text");
+        if (badge) {
+            badge.style.display = exhausted ? "inline" : "none";
+            if (badgeText) {
+                badgeText.textContent = currentLanguage === "ru" ? "Квота исчерпана" : "Quota exhausted";
             }
         }
+
+        // --- reset countdown ---
+        const resetEl = document.getElementById("quota-reset-time");
+        const resetLabel = document.getElementById("quota-reset-label");
+        if (resetEl && q.reset_label) {
+            resetEl.textContent = q.reset_label;
+        }
+
+        // --- localize static labels ---
+        const slbl = document.getElementById("quota-label-summary");
+        const clbl = document.getElementById("quota-label-chat");
+        if (slbl) slbl.textContent = currentLanguage === "ru" ? "Сводка" : "Summary";
+        if (clbl) clbl.textContent = currentLanguage === "ru" ? "Чат"    : "Chat";
+        if (resetLabel) {
+            const prefix = currentLanguage === "ru" ? "🔄 Сброс через" : "🔄 Resets in";
+            resetLabel.innerHTML = `${prefix} <strong id="quota-reset-time">${q.reset_label || "--"}</strong>`;
+        }
+
+        // --- bar color when exhausted ---
+        const bar = document.getElementById("quota-status-bar");
+        if (bar) {
+            bar.style.opacity = exhausted ? "0.85" : "1";
+        }
+
     } catch (e) {
         // silently ignore – not critical
     }

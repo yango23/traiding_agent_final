@@ -924,4 +924,62 @@ body.light-theme .summary-section-header {
     color: var(--text-primary);
 }
 
-
+/* =========================================================================
+   Quota Status Bar
+   ========================================================================= */
+.quota-bar {
+    padding: 8px 14px 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    background: rgba(0,0,0,0.12);
+}
+.quota-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 10px;
+    margin-bottom: 5px;
+}
+.quota-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+}
+.quota-label {
+    font-size: 0.67rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.quota-track {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 99px;
+    overflow: hidden;
+    min-width: 28px;
+}
+.quota-fill {
+    height: 100%;
+    border-radius: 99px;
+    width: 0%;
+    background: var(--neon-green);
+    transition: width 0.4s ease, background 0.4s ease;
+}
+.quota-fill.warn   { background: #EAB308; }
+.quota-fill.danger { background: var(--neon-rose); }
+.quota-count {
+    font-size: 0.67rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.quota-count strong {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+.quota-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 2px;
+}
