@@ -32,10 +32,10 @@ const LOCALIZATION = {
         errorChat: "Произошла ошибка при получении ответа от ИИ.",
         welcomeMessage: "Привет! Я твой ИИ-преподаватель по техническому и фундаментальному анализу {coin}. Чем могу помочь тебе сегодня? Я могу рассказать про индикаторы (RSI, MACD), объяснить текущие новости или показать основы построения стратегий.",
         chips: [
-            "Объясни текущий RSI для {coin}?",
-            "Что показывает гистограмма MACD?",
-            "Как мне построить безопасную стратегию?",
-            "Какие новости влияют на курс {coin}?"
+            "Создать торговую стратегию для {coin}",
+            "Какая монета сейчас наиболее интересна для покупки?",
+            "Как минимизировать риски потерь новичку?",
+            "Как мне настроить индикаторы RSI и MACD?"
         ]
     },
     en: {
@@ -55,10 +55,10 @@ const LOCALIZATION = {
         errorChat: "An error occurred while receiving a response from the AI.",
         welcomeMessage: "Hello! I am your AI educator for technical and fundamental analysis on {coin}. How can I help you today? I can explain indicators (RSI, MACD), explain recent news, or show the basics of strategy building.",
         chips: [
-            "Explain the current RSI for {coin}?",
-            "What does the MACD histogram show?",
-            "How do I build a safe strategy?",
-            "Which news affect {coin} right now?"
+            "Create a trading strategy for {coin}",
+            "Which coin looks most interesting to buy right now?",
+            "How can a beginner minimize trading losses?",
+            "How do I set up RSI and MACD indicators?"
         ]
     }
 };
@@ -432,6 +432,8 @@ function formatMarkdown(text) {
         .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
         .replace(/\*([^*]+)\*/g, "<em>$1</em>")
         .replace(/`([^`]+)`/g, "<code>$1</code>")
+        .replace(/\[green\]\(([^)]+)\)/g, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
+        .replace(/\[red\]\(([^)]+)\)/g, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>')
         .replace(/(?:^|<br>)-\s+([^<]+)/g, "<br>• $1"); // bullets
         
     return formatted;

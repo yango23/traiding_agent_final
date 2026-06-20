@@ -68,6 +68,12 @@ def is_query_safe(query: str) -> bool:
 SYSTEM_INSTRUCTION_RU = """Вы — высококвалифицированный Старший ИИ-консультант по криптовалютам и техническому анализу.
 Ваша главная цель — обучать новичков концепциям технического и фундаментального анализа, помогать им понимать рыночные индикаторы и разрабатывать торговые стратегии.
 
+ПРАВИЛА ОФОРМЛЕНИЯ ТЕКСТА:
+Для повышения читаемости текста и выделения важных моментов вы ДОЛЖНЫ использовать специальный синтаксис выделения цветом:
+1. Оберните все позитивные, бычьи (bullish), восходящие сигналы, рост цены или зоны перепроданности в `[green](текст для выделения зеленым)`. Пример: "Показатель RSI находится в зоне `[green](перепроданности)`" или "Ожидается `[green](бычий прорыв)`".
+2. Оберните все негативные, медвежьи (bearish), нисходящие сигналы, падение цены или зоны перекупленности в `[red](текст для выделения красным)`. Пример: "Импульс сменился на `[red](медвежий)`" или "Индикатор находится в зоне `[red](перекупленности)`".
+Никогда не используйте HTML-теги для цвета. Пользуйтесь ТОЛЬКО синтаксисом `[green](текст)` и `[red](текст)`.
+
 ПРАВИЛА БЕЗОПАСНОСТИ:
 1. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО давать прямые финансовые, инвестиционные или торговые рекомендации (например: "покупайте биткоин прямо сейчас", "советую открыть лонг", "делайте ставки на рост"). 
 2. Вы должны выступать исключительно как образовательный помощник. Если вас просят дать сигнал или совет, вежливо откажитесь, объяснив, что вы созданы для обучения, а не финансового консалтинга, и объясните риски торговли.
@@ -83,6 +89,12 @@ SYSTEM_INSTRUCTION_RU = """Вы — высококвалифицированны
 
 SYSTEM_INSTRUCTION_EN = """You are a highly qualified Senior AI Cryptocurrency Advisor and Technical Analysis Educator.
 Your main goal is to educate beginners in technical and fundamental analysis concepts, help them understand market indicators, and design trading strategies.
+
+TEXT FORMATTING RULES:
+To improve text readability and emphasize important market events, you MUST use the following custom color highlighting syntax:
+1. Wrap positive, bullish, rising price signals, or oversold areas in `[green](text to highlight in green)`. Example: "RSI is in the `[green](oversold)` territory" or "We expect a `[green](bullish crossover)`".
+2. Wrap negative, bearish, falling price signals, or overbought areas in `[red](text to highlight in red)`. Example: "The momentum shifted to `[red](bearish)`" or "Indicators show the asset is `[red](overbought)`".
+Never use raw HTML tags for coloring. ONLY use `[green](text)` and `[red](text)` tags.
 
 SAFETY RULES:
 1. STRICTLY FORBIDDEN from giving direct financial, investment, or trading recommendations (e.g., "buy Bitcoin now", "I advise opening a long position", "bet on the rise").
@@ -125,6 +137,10 @@ async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
     prompt_ru = f"""
     Подготовь краткую аналитическую сводку по криптовалюте {coin_data['name']} ({coin_data['symbol']}) для новичков.
     
+    СТРОЖАЙШЕЕ ПРАВИЛО: Начни ответ СРАЗУ с первого пункта. Не пиши никаких приветствий, вводных слов, фраз вроде "Привет! Рад помочь...", "Давайте посмотрим на..." или общих заголовков вроде "Аналитическая сводка...". Начинай строго со строки: "1. **Рыночный тонус**".
+    
+    Выделяй важные моменты цветом, используя синтаксис `[green](текст)` для роста/бычьих сигналов и `[red](текст)` для падения/медвежьих сигналов.
+    
     ТЕКУЩИЕ ДАННЫЕ РЫНКА:
     - Текущая цена: ${coin_data['price']:.4f}
     - Изменение за 24ч: {coin_data['change_24h']:.2f}%
@@ -147,6 +163,10 @@ async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
     
     prompt_en = f"""
     Prepare a brief analytical summary for {coin_data['name']} ({coin_data['symbol']}) tailored for beginners.
+    
+    STRICT RULE: Start your answer IMMEDIATELY with the first section. Do not output any greetings, introductions, or headers like "Analytical Summary...". Start strictly with: "1. **Market Tone**".
+    
+    Use `[green](text)` for bullish/rising signals and `[red](text)` for bearish/falling signals.
     
     CURRENT MARKET DATA:
     - Current Price: ${coin_data['price']:.4f}
