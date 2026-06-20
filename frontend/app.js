@@ -87,7 +87,8 @@ const LOCALIZATION = {
 };
 
 // State Variables
-let currentLanguage = localStorage.getItem("lang") || "en";
+let currentLanguage = "en";
+localStorage.setItem("lang", "en");
 let currentTheme = localStorage.getItem("theme") || "dark";
 let currentCoin = "bitcoin";
 let activeTab = "summary";
@@ -171,7 +172,7 @@ function localizeUI() {
     document.getElementById("tab-summary-btn").textContent = t.tabSummary;
     document.getElementById("tab-news-btn").textContent = t.tabNews;
     document.getElementById("lbl-advisor-status").textContent = t.lblAdvisorStatus;
-    document.getElementById("chat-disclaimer").innerHTML = t.chatDisclaimer;
+    document.getElementById("chat-disclaimer-text").innerHTML = t.chatDisclaimer;
     chatInput.placeholder = t.chatPlaceholder;
     document.getElementById("lbl-loading-summary").textContent = t.lblLoadingSummary;
     
@@ -191,6 +192,11 @@ function localizeUI() {
     secBadge.setAttribute("title", t.lblSecurityBadgeTitle);
     
     langToggleBtn.setAttribute("title", t.langToggleTitle);
+    
+    const closeBtn = document.getElementById("btn-close-disclaimer");
+    if (closeBtn) {
+        closeBtn.setAttribute("title", currentLanguage === "ru" ? "Закрыть предупреждение" : "Close warning");
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -502,11 +508,11 @@ function formatLargeNumber(num) {
 // -------------------------------------------------------------------------
 
 function updateIndicatorsUI(indicators) {
-    document.getElementById("val-indicator-rsi").textContent = `${indicators.rsi.value} (${indicators.rsi.status})`;
-    document.getElementById("val-indicator-macd").textContent = indicators.macd.status;
-    document.getElementById("val-indicator-sma").textContent = indicators.moving_averages.status;
-    document.getElementById("val-indicator-bb").textContent = indicators.bollinger_bands.status;
-    document.getElementById("val-indicator-fg").textContent = `${indicators.fear_greed.value} (${indicators.fear_greed.status})`;
+    document.getElementById("val-indicator-rsi").innerHTML = `${indicators.rsi.value} (<span class="term-link" onclick="askAgentAboutTerm('${indicators.rsi.status}', 'RSI')">${indicators.rsi.status}</span>)`;
+    document.getElementById("val-indicator-macd").innerHTML = `<span class="term-link" onclick="askAgentAboutTerm('${indicators.macd.status}', 'MACD')">${indicators.macd.status}</span>`;
+    document.getElementById("val-indicator-sma").innerHTML = `<span class="term-link" onclick="askAgentAboutTerm('${indicators.moving_averages.status}', 'Moving Averages')">${indicators.moving_averages.status}</span>`;
+    document.getElementById("val-indicator-bb").innerHTML = `<span class="term-link" onclick="askAgentAboutTerm('${indicators.bollinger_bands.status}', 'Bollinger Bands')">${indicators.bollinger_bands.status}</span>`;
+    document.getElementById("val-indicator-fg").innerHTML = `${indicators.fear_greed.value} (<span class="term-link" onclick="askAgentAboutTerm('${indicators.fear_greed.status}', 'Fear & Greed')">${indicators.fear_greed.status}</span>)`;
     
     // Set visual indicators styling
     setIndicatorStatusColor("val-indicator-rsi", indicators.rsi.status);
@@ -548,6 +554,20 @@ function askAgentAboutIndicator(indicatorName) {
     
     chatInput.value = prompt;
     sendMessage();
+}
+
+function askAgentAboutTerm(termName, indicatorName) {
+    const coinLabel = coinSelector.options[coinSelector.selectedIndex].text;
+    const prompt = currentLanguage === "ru"
+        ? `Что означает показатель "${termName}" индикатора ${indicatorName} для ${coinLabel} в данном контексте?`
+        : `What does the "${termName}" status for ${indicatorName} mean for ${coinLabel} in this context?`;
+    
+    chatInput.value = prompt;
+    sendMessage();
+}
+
+function closeDisclaimer() {
+    document.getElementById("chat-disclaimer").style.display = "none";
 }
 
 // -------------------------------------------------------------------------

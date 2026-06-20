@@ -159,7 +159,8 @@
                         <span class="security-badge" id="lbl-security-badge" title="Full safety from financial advice and command injection">🛡️ Protected</span>
                     </div>
                     <div class="chat-warning" id="chat-disclaimer">
-                        ⚠️ <strong>Warning:</strong> I only provide technical/fundamental analysis and teach trading concepts. I DO NOT provide trading signals or direct buy/sell recommendations.
+                        <span id="chat-disclaimer-text">⚠️ <strong>Warning:</strong> I only provide technical/fundamental analysis and teach trading concepts. I DO NOT provide trading signals or direct buy/sell recommendations.</span>
+                        <button class="close-disclaimer-btn" onclick="closeDisclaimer()" id="btn-close-disclaimer" title="Close warning">×</button>
                     </div>
                     <div class="chat-messages" id="chat-messages-container">
                         <!-- Dynamic chat messages -->
