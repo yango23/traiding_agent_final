@@ -159,7 +159,7 @@ body {
 .app-main-layout {
     flex: 1;
     display: grid;
-    grid-template-columns: 290px 1fr 8px var(--chat-panel-width, 340px);
+    grid-template-columns: 310px 1fr 8px var(--chat-panel-width, 340px);
     gap: 12px;
     padding: 16px;
     overflow: hidden;
@@ -292,6 +292,11 @@ body.light-theme .card-divider {
 .stat-value {
     font-size: 0.9rem;
     font-weight: 600;
+}
+
+.indicators-grid .stat-value {
+    font-size: 0.82rem;
+    white-space: nowrap;
 }
 
 /* Center Panel */

@@ -2,6 +2,26 @@ import httpx
 import random
 import time
 
+# Simple thread-safe in-memory cache layer
+class APICache:
+    def __init__(self, ttl_seconds: int = 60):
+        self.ttl = ttl_seconds
+        self.store = {}
+
+    def get(self, key: str):
+        if key in self.store:
+            val, timestamp = self.store[key]
+            if time.time() - timestamp < self.ttl:
+                return val
+        return None
+
+    def set(self, key: str, value: any):
+        self.store[key] = (value, time.time())
+
+# Global cache instances
+coin_data_cache = APICache(ttl_seconds=60)
+news_cache = APICache(ttl_seconds=300)
+
 # Base prices for fallback/simulation
 COIN_BASE_PRICES = {
     "bitcoin": 65000.0,
@@ -41,6 +61,11 @@ async def fetch_coin_data(coin_id: str) -> dict:
     }
     cg_id = id_map.get(coin_id, coin_id)
 
+    # Check cache first
+    cached_data = coin_data_cache.get(cg_id)
+    if cached_data:
+        return cached_data
+
     url = f"https://api.coingecko.com/api/v3/coins/{cg_id}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false"
     headers = {"accept": "application/json"}
     
@@ -57,7 +82,7 @@ async def fetch_coin_data(coin_id: str) -> dict:
                 market_cap = market_data.get("market_cap", {}).get("usd", 0)
                 total_volume = market_data.get("total_volume", {}).get("usd", 0)
                 
-                return {
+                result = {
                     "success": True,
                     "id": cg_id,
                     "name": data.get("name", cg_id.capitalize()),
@@ -70,6 +95,8 @@ async def fetch_coin_data(coin_id: str) -> dict:
                     "volume_24h": total_volume,
                     "source": "coingecko"
                 }
+                coin_data_cache.set(cg_id, result)
+                return result
     except Exception:
         # Ignore errors and fall through to simulation
         pass
@@ -86,7 +113,7 @@ async def fetch_coin_data(coin_id: str) -> dict:
     vol = price * random.uniform(5000000, 200000000)
     market_cap = price * random.uniform(100000000, 1000000000)
     
-    return {
+    result = {
         "success": True,
         "id": cg_id,
         "name": COIN_NAMES.get(cg_id, cg_id.capitalize()),
@@ -99,12 +126,16 @@ async def fetch_coin_data(coin_id: str) -> dict:
         "volume_24h": vol,
         "source": "simulation"
     }
+    # Cache the simulated fallback as well to prevent flapping
+    coin_data_cache.set(cg_id, result)
+    return result
 
 async def fetch_crypto_news(coin_id: str, lang: str = "ru") -> list:
     """
     Fetches latest crypto news for the specific coin.
     Returns aggregated news feed in the requested language.
     """
+    lang = lang.lower().strip()
     coin_id = coin_id.lower().strip()
     id_map = {
         "btc": "bitcoin",
@@ -117,6 +148,12 @@ async def fetch_crypto_news(coin_id: str, lang: str = "ru") -> list:
     }
     cg_id = id_map.get(coin_id, coin_id)
     coin_name = COIN_NAMES.get(cg_id, cg_id.capitalize())
+    cache_key = f"{cg_id}_{lang}"
+
+    # Check cache first
+    cached_news = news_cache.get(cache_key)
+    if cached_news:
+        return cached_news
 
     # Fetch from CryptoCompare news API
     url = f"https://min-api.cryptocompare.com/data/v2/news/?categories={coin_id}&excludeCategories=sponsored"
@@ -132,12 +169,6 @@ async def fetch_crypto_news(coin_id: str, lang: str = "ru") -> list:
                     title = a.get("title", "")
                     body = a.get("body", "")
                     
-                    # If Russian is requested, translate/adapt titles dynamically (or use pre-generated templates)
-                    if lang == "ru":
-                        # We will translate titles using mock templates or let the main agent handle it,
-                        # but let's provide clean titles.
-                        pass
-                    
                     result.append({
                         "title": title,
                         "url": a.get("url", ""),
@@ -146,6 +177,7 @@ async def fetch_crypto_news(coin_id: str, lang: str = "ru") -> list:
                         "body": body[:200] + "..."
                     })
                 if result:
+                    news_cache.set(cache_key, result)
                     return result
     except Exception:
         pass
@@ -206,6 +238,7 @@ def calculate_technical_indicators(price: float, coin_id: str, lang: str = "ru")
     Generates realistic technical indicators based on current price and coin ID.
     Always returns educational explanations for beginners.
     """
+    lang = lang.lower().strip()
     seed_offset = sum(ord(c) for c in coin_id)
     random.seed(int(time.time() / 120) + seed_offset)
     

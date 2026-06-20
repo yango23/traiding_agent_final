@@ -103,8 +103,7 @@ const LOCALIZATION = {
 };
 
 // State Variables
-let currentLanguage = "en";
-localStorage.setItem("lang", "en");
+let currentLanguage = localStorage.getItem("lang") || "en";
 let currentTheme = localStorage.getItem("theme") || "dark";
 let currentCoin = "bitcoin";
 let activeTab = "summary";
@@ -442,17 +441,20 @@ async function sendMessage() {
                     if (dataStr === "[DONE]") {
                         break;
                     }
+                    let parsed;
                     try {
-                        const parsed = JSON.parse(dataStr);
-                        if (parsed.text) {
-                            modelResponseText += parsed.text;
-                            modelMsgEl.innerHTML = formatMarkdown(modelResponseText);
-                            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
-                        } else if (parsed.error) {
-                            throw new Error(parsed.error);
-                        }
+                        parsed = JSON.parse(dataStr);
                     } catch (e) {
                         // Skip parse errors if chunk is partial
+                        continue;
+                    }
+
+                    if (parsed && parsed.text) {
+                        modelResponseText += parsed.text;
+                        modelMsgEl.innerHTML = formatMarkdown(modelResponseText);
+                        chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+                    } else if (parsed && parsed.error) {
+                        throw new Error(parsed.error);
                     }
                 }
             }

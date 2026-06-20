@@ -1,71 +1,74 @@
 # Crypto AI Advisor & Educational Dashboard
 
-A premium web application designed for cryptocurrency beginners. It features an interactive dashboard with TradingView charts, real-time prices, market news, and a secure AI advisor for technical and fundamental analysis (powered by Google ADK / Gemini 2.5).
+A premium web application designed for cryptocurrency beginners. It features a modern TradingView-integrated educational dashboard, real-time prices, indicators, fundamental news, and a highly secured AI agent built to teach trading concepts without financial risk.
 
 ---
 
-## 🛠️ Architecture Features & Course Concepts
+## 🚀 What has been Implemented (Key Project Features)
 
-This project implements key architectural patterns and security concepts for AI agents:
+This application has been developed with advanced UI design (Glassmorphic Dark/Light aesthetics) and a secured conversational AI interface. Key implemented features include:
 
-### 1. Safety and AI Agent Protection (Security & Guardrails)
-*   **Prompt Shield (Injection Protection)**: A built-in input validator checks all user messages for jailbreaks, prompt override attempts, and dangerous system commands (such as `sudo`, `rm`, `format c:`, `ignore instructions`, etc.). Detected threats are filtered out on the backend before ever reaching the LLM.
-*   **Confinement (Domain Bound)**: The AI advisor is strictly bound to the currently selected cryptocurrency (e.g., BTC or ETH). If the user tries to discuss other coins or unrelated topics, the system instructions prompt the agent to refuse and guide the user to select the appropriate coin from the left menu.
-*   **Session Isolation (Separate Memory)**: Chat histories are saved independently for each cryptocurrency. This prevents context mixing when switching between assets and ensures a clean educational dialogue.
-*   **Financial Guardrails**: System instructions strictly forbid the AI from providing direct buy/sell/trade recommendations. The advisor acts solely as an educational mentor, explaining market indicators and the principles of technical analysis.
+### 1. Market Sentiment Dial Gauge (Trend Indicator)
+*   **Gauge Visuals**: A beautiful, realistic semi-circular dial gauge displaying market sentiment (from *Strong Sell* to *Strong Buy*) with custom SVG gradation scale ticks.
+*   **Tapered Needle**: Features a tapered, neon-rose glowing indicator needle that dynamically animates to the calculated sentiment score.
+*   **Timeframe Selectors**: Quick controls (`12h`, `1W`, `1M`, `3M`, `6M`) that dynamically recalculate the asset's sentiment.
+*   **Click-to-Explain Details**: The sentiment status value is clickable. Clicking it triggers an educational question directly to the AI chat, prompting the agent to explain what that specific sentiment level and timeframe mean in simple terms.
 
-### 2. Custom Skills & Tools (RAG Integration)
-The application integrates real-time external data (RAG/Tool Use) to provide the AI with accurate market context:
-*   **Market Data (`fetch_coin_data`)**: Dynamic gathering of current prices, 24h changes, and 24h highs/lows.
-*   **News Aggregator (`fetch_crypto_news`)**: Fetches recent news feeds for the selected cryptocurrency for fundamental analysis.
-*   **Technical Indicator Calculator (`calculate_technical_indicators`)**: Computes **RSI (14)**, **MACD** histograms, and **SMA-50 / SMA-200** moving average statuses. This structured context is fed directly to Gemini for highly accurate analysis.
+### 2. Interactive Technical Indicators & Clickable Terms
+*   Displays real-time computed technical values for **RSI (14)**, **MACD**, **SMA Crossovers**, **Bollinger Bands**, and the **Fear & Greed Index**.
+*   All status values (e.g. *Golden Cross*, *Overbought*, *Fear*) are fully interactive. Clicking on them sends a query to the AI agent to explain the underlying indicators.
+*   Tooltips with educational explanations appear when hovering over the `?` icons, styled dynamically to prevent screen-edge clipping.
 
-### 3. Credential Leak Prevention
-*   **Local Git Secret Scanner**: A custom commit checker (`scripts/git_secret_scanner.py`) is registered as a Git `pre-commit` hook.
-*   The script automatically scans staged files (`git diff --cached`) for Google AI Studio keys (`AIzaSy...`), GCP project IDs (`project-...`), and blocks the commit if any credentials or private identifiers are detected.
-*   Environment configuration files (`.env`) are safely ignored by Git via `.gitignore`.
+### 3. Interactive AI Summary & Glowing Badges
+*   The **AI Summary** is dynamically preprocessed on the client side: key financial and technical terms (like *sideways trend*, *whales*, *RSI*) are converted into clickable links.
+*   Standard markdown headers in the AI summary are transformed into custom, glowing numbered badges (`.section-number-badge`), making the summary highly scannable and beautiful.
 
----
+### 4. Bilingual Support (EN/RU Localization Toggle)
+*   A language toggle in the header dynamically translates all static labels, tooltips, security badges, and active chat states on the fly.
+*   The backend dynamically computes indicator statuses in the selected language (Russian or English).
+*   Switching languages automatically resets the active chat session history to prevent mixed-language dialogues and prompt instruction dilution.
 
-## 🚀 Local Setup & Running
-
-1. Navigate to the project directory:
-   ```bash
-   cd crypto-advisor
-   ```
-
-2. Configure your local `.env` environment file in the root folder (this file is ignored by Git):
-   ```env
-   GEMINI_API_KEY=Your_Google_AI_Studio_Key
-   GOOGLE_GENAI_USE_VERTEXAI=False
-   ```
-
-3. Run the local FastAPI web server using the `uv` package manager:
-   ```bash
-   uv run uvicorn app.fast_api_app:app --reload --port 8000
-   ```
-
-4. Open your browser and go to: [http://localhost:8000](http://localhost:8000)
+### 5. Resizable Educational Chat Panel
+*   An interactive drag handle (`.resize-handle`) allows users to freely adjust the chat width. It highlights with a glowing blue effect when dragged or hovered, providing a premium desktop-like interface.
 
 ---
 
-## ☁️ Deploying to Google Cloud Run
+## 🛡️ Architecture & Course Security Concepts (STRIDE)
 
-To deploy the containerized application to Google Cloud:
+This project strictly adheres to AI security and safety concepts covered in the Kaggle Agent course:
 
-1. Authenticate with gcloud CLI and set your active project:
-   ```bash
-   gcloud auth login
-   gcloud config set project YOUR_GCP_PROJECT_ID
-   ```
+### 1. Safety and Guardrails (Prompt Shield & Domain Confinement)
+*   **Prompt Shield (Injection Protection)**: A robust validator node intercepts all messages, checking for prompt overrides, jailbreaks, and dangerous system commands (e.g., `ignore previous rules`, `sudo`, `rm -rf`). Malicious requests are blocked at the FastAPI gateway.
+*   **Domain Confinement**: The system instructions restrict the model to discussing the actively selected coin (e.g., Bitcoin in a BTC chat). If the user asks about other coins, the agent refuses and requests them to use the left dropdown selector.
+*   **Session Isolation**: Chat histories are stored and cached independently for each coin in `LocalStorage`. This prevents history pollution and keeps the LLM aligned with the active coin's context.
+*   **Financial Guardrails**: The system instructions explicitly forbid the AI from providing direct financial, buying, or selling signals. The agent acts exclusively as an educational mentor.
 
-2. Build the Docker image and deploy to Cloud Run with a single command:
-   ```bash
-   gcloud run deploy crypto-advisor \
-       --source . \
-       --region us-central1 \
-       --allow-unauthenticated \
-       --set-env-vars="GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE,GOOGLE_GENAI_USE_VERTEXAI=False"
-   ```
+### 2. Tool Integration (RAG)
+The backend leverages custom Python tools to query APIs and feed structured context directly to the LLM:
+*   `fetch_coin_data`: Retrieves prices, volumes, and 24h highs/lows.
+*   `fetch_crypto_news`: Aggregates the latest news feed for the selected asset.
+*   `calculate_technical_indicators`: Computes indicators locally to avoid hallucinations.
 
-Upon successful deployment, Cloud Run will output the public URL of your live dashboard.
+### 3. Caching Layer Optimization
+*   **Rate-Limit Protection**: Added an asynchronous cache with a 60-second TTL (Time-To-Live) for market data and a 5-minute TTL for news. This ensures fast load times and prevents the application from being rate-limited by public APIs.
+
+### 4. Credential Leak Prevention
+*   **Git Secret Hook**: Integrates a local Git `pre-commit` hook that runs `git_secret_scanner.py`. The scanner blocks any commit containing Google API Studio keys, GCP Project IDs, or other private identifiers.
+
+---
+
+## 🛠️ How to Run the Application
+
+### 1. Configuration
+Configure a `.env` file in the root folder of the project (this file is ignored by Git):
+```env
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+GOOGLE_GENAI_USE_VERTEXAI=False
+```
+
+### 2. Startup
+Run the application using the `uv` package manager:
+```bash
+uv run uvicorn app.fast_api_app:app --port 8000
+```
+Open **[http://localhost:8000](http://localhost:8000)** in your browser.
