@@ -103,15 +103,19 @@ const LOCALIZATION = {
 };
 
 // State Variables
-let currentLanguage = localStorage.getItem("lang") || "en";
+// Force clean state on startup to prevent language mixing from previous sessions
+localStorage.removeItem("chat_histories");
+localStorage.removeItem("lang");
+
+let currentLanguage = "en";
 let currentTheme = localStorage.getItem("theme") || "dark";
 let currentCoin = "bitcoin";
 let activeTab = "summary";
 let tvWidgetInstance = null;
 let currentSentimentTimeframe = "12h";
 
-// Chat histories cached by coin ID: { bitcoin: [messages], ethereum: [messages], ... }
-let chatHistories = JSON.parse(localStorage.getItem("chat_histories")) || {};
+// Chat histories cached by coin ID
+let chatHistories = {};
 
 // DOM Elements
 const coinSelector = document.getElementById("coin-selector");
