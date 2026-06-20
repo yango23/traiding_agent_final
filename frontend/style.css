@@ -765,6 +765,106 @@ body.light-theme .tooltip-icon:hover::after {
     text-shadow: 0 0 8px currentColor;
 }
 
+/* Market Sentiment Gauge Dial Styling */
+.gauge-container {
+    position: relative;
+    width: 100%;
+    max-width: 160px;
+    margin: 14px auto 0 auto;
+}
+
+.gauge-svg {
+    width: 100%;
+    display: block;
+}
+
+.gauge-needle {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    width: 3px;
+    height: 48px;
+    background: var(--text-primary);
+    border-radius: 2px;
+    transform-origin: 50% 100%;
+    transform: translate(-50%, 0) rotate(0deg);
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+    z-index: 2;
+}
+
+.gauge-center-pin {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--text-primary);
+    border: 2px solid var(--card-bg);
+    box-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
+    z-index: 3;
+}
+
+.gauge-value-text {
+    text-align: center;
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-top: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+/* Timeframe buttons styled */
+.timeframe-selector-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.timeframe-selector-container h4 {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    font-weight: 700;
+}
+
+.timeframe-buttons {
+    display: flex;
+    gap: 3px;
+}
+
+.tf-btn {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    padding: 3px 6px;
+    border-radius: 5px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+body.light-theme .tf-btn {
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+.tf-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.tf-btn.active {
+    background: var(--neon-blue);
+    color: white;
+    border-color: var(--neon-blue);
+    box-shadow: var(--neon-glow-blue);
+}
+
 /* Styled AI Summary Section Headers */
 .summary-section-header {
     display: flex;
@@ -807,4 +907,5 @@ body.light-theme .summary-section-header {
 .markdown-body strong {
     color: var(--text-primary);
 }
+
 

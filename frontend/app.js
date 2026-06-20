@@ -48,7 +48,15 @@ const LOCALIZATION = {
         tipFg: "Индекс страха и жадности. Настроение инвесторов: 0 (страх) - 100 (жадность).",
         lblSecurityBadge: "🛡️ Защищен",
         lblSecurityBadgeTitle: "Полная безопасность от финансовых советов и вредоносных команд",
-        langToggleTitle: "Переключить язык"
+        langToggleTitle: "Переключить язык",
+        sentimentLabels: {
+            strongSell: "Активная продажа",
+            sell: "Продажа",
+            neutral: "Нейтрально",
+            buy: "Покупка",
+            strongBuy: "Активная покупка",
+            sentimentTitle: "Настроение рынка"
+        }
     },
     en: {
         subtitle: "Educational AI Assistant & Dashboard",
@@ -82,7 +90,15 @@ const LOCALIZATION = {
         tipFg: "Fear and Greed Index. Sentiment from 0 (fear) to 100 (greed).",
         lblSecurityBadge: "🛡️ Protected",
         lblSecurityBadgeTitle: "Full safety from financial advice and command injection",
-        langToggleTitle: "Switch Language"
+        langToggleTitle: "Switch Language",
+        sentimentLabels: {
+            strongSell: "Strong Sell",
+            sell: "Sell",
+            neutral: "Neutral",
+            buy: "Buy",
+            strongBuy: "Strong Buy",
+            sentimentTitle: "Market Sentiment"
+        }
     }
 };
 
@@ -93,6 +109,7 @@ let currentTheme = localStorage.getItem("theme") || "dark";
 let currentCoin = "bitcoin";
 let activeTab = "summary";
 let tvWidgetInstance = null;
+let currentSentimentTimeframe = "12h";
 
 // Chat histories cached by coin ID: { bitcoin: [messages], ethereum: [messages], ... }
 let chatHistories = JSON.parse(localStorage.getItem("chat_histories")) || {};
@@ -197,6 +214,10 @@ function localizeUI() {
     if (closeBtn) {
         closeBtn.setAttribute("title", currentLanguage === "ru" ? "Закрыть предупреждение" : "Close warning");
     }
+    
+    // Translate Market Sentiment Title and Update Gauge
+    document.getElementById("lbl-sentiment-title").textContent = t.sentimentLabels.sentimentTitle;
+    updateSentimentUI();
 }
 
 // -------------------------------------------------------------------------
@@ -669,6 +690,130 @@ function initResizeHandle() {
     });
 }
 
+// -------------------------------------------------------------------------
+// Market Sentiment Gauge Logic
+// -------------------------------------------------------------------------
+
+const SENTIMENT_MAPPINGS = {
+    "bitcoin": {
+        "12h": 52,
+        "1W": 72,
+        "1M": 85,
+        "3M": 38,
+        "6M": 90
+    },
+    "ethereum": {
+        "12h": 64,
+        "1W": 48,
+        "1M": 68,
+        "3M": 50,
+        "6M": 42
+    },
+    "solana": {
+        "12h": 88,
+        "1W": 92,
+        "1M": 54,
+        "3M": 70,
+        "6M": 15
+    },
+    "ripple": {
+        "12h": 45,
+        "1W": 55,
+        "1M": 35,
+        "3M": 62,
+        "6M": 48
+    },
+    "dogecoin": {
+        "12h": 78,
+        "1W": 40,
+        "1M": 82,
+        "3M": 30,
+        "6M": 60
+    },
+    "shiba-inu": {
+        "12h": 36,
+        "1W": 64,
+        "1M": 58,
+        "3M": 42,
+        "6M": 76
+    },
+    "pepe": {
+        "12h": 82,
+        "1W": 89,
+        "1M": 44,
+        "3M": 74,
+        "6M": 28
+    }
+};
+
+function getSentimentScore(coin, timeframe) {
+    if (SENTIMENT_MAPPINGS[coin] && SENTIMENT_MAPPINGS[coin][timeframe] !== undefined) {
+        return SENTIMENT_MAPPINGS[coin][timeframe];
+    }
+    // Fallback hash-based score between 10 and 90
+    const str = `${coin}-${timeframe}`;
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return 10 + (Math.abs(hash) % 81); // 10 to 90
+}
+
+function updateSentimentUI() {
+    const score = getSentimentScore(currentCoin, currentSentimentTimeframe);
+    
+    // Needle rotation: 0-100 maps to -90deg to +90deg
+    // Formula: rotation = (score - 50) * 1.8;
+    const rotation = (score - 50) * 1.8;
+    const needleEl = document.getElementById("gauge-needle");
+    if (needleEl) {
+        needleEl.style.transform = `translate(-50%, 0) rotate(${rotation}deg)`;
+    }
+    
+    // Sentiment Label
+    let statusKey = "neutral";
+    let colorClass = "var(--text-primary)";
+    
+    if (score <= 20) {
+        statusKey = "strongSell";
+        colorClass = "var(--neon-rose)";
+    } else if (score <= 40) {
+        statusKey = "sell";
+        colorClass = "var(--neon-rose)";
+    } else if (score <= 60) {
+        statusKey = "neutral";
+        colorClass = "var(--text-primary)";
+    } else if (score <= 80) {
+        statusKey = "buy";
+        colorClass = "var(--neon-green)";
+    } else {
+        statusKey = "strongBuy";
+        colorClass = "var(--neon-green)";
+    }
+    
+    const valueEl = document.getElementById("gauge-value-text");
+    if (valueEl) {
+        const text = LOCALIZATION[currentLanguage].sentimentLabels[statusKey];
+        valueEl.textContent = `${text} (${score})`;
+        valueEl.style.color = colorClass;
+    }
+}
+
+function changeSentimentTimeframe(timeframe) {
+    currentSentimentTimeframe = timeframe;
+    
+    // Update active button class
+    const buttons = document.querySelectorAll(".timeframe-buttons .tf-btn");
+    buttons.forEach(btn => {
+        if (btn.id === `tf-${timeframe}`) {
+            btn.classList.add("active");
+        } else {
+            btn.classList.remove("active");
+        }
+    });
+    
+    updateSentimentUI();
+}
 
 // -------------------------------------------------------------------------
 // Event Listeners & Bootstrapping
@@ -679,6 +824,7 @@ coinSelector.onchange = (e) => {
     renderTradingViewWidget();
     initChatSession();
     loadAIContent();
+    updateSentimentUI();
 };
 
 langToggleBtn.onclick = toggleLanguage;

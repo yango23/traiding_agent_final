@@ -110,6 +110,35 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- MARKET SENTIMENT GAUGE CARD -->
+                <div class="glass-card sentiment-card" style="padding: 14px 18px;">
+                    <div class="timeframe-selector-container">
+                        <h4 id="lbl-sentiment-title">Market Sentiment</h4>
+                        <div class="timeframe-buttons">
+                            <button class="tf-btn active" id="tf-12h" onclick="changeSentimentTimeframe('12h')">12h</button>
+                            <button class="tf-btn" id="tf-1W" onclick="changeSentimentTimeframe('1W')">1W</button>
+                            <button class="tf-btn" id="tf-1M" onclick="changeSentimentTimeframe('1M')">1M</button>
+                            <button class="tf-btn" id="tf-3M" onclick="changeSentimentTimeframe('3M')">3M</button>
+                            <button class="tf-btn" id="tf-6M" onclick="changeSentimentTimeframe('6M')">6M</button>
+                        </div>
+                    </div>
+                    <div class="gauge-container">
+                        <svg viewBox="0 0 100 50" class="gauge-svg">
+                            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#gauge-grad)" stroke-width="8" stroke-linecap="round" />
+                            <defs>
+                                <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="var(--neon-rose)" />
+                                    <stop offset="50%" stop-color="#EAB308" />
+                                    <stop offset="100%" stop-color="var(--neon-green)" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                        <div class="gauge-needle" id="gauge-needle"></div>
+                        <div class="gauge-center-pin"></div>
+                        <div class="gauge-value-text" id="gauge-value-text">Neutral</div>
+                    </div>
+                </div>
             </section>
 
             <!-- CENTER PANEL: TradingView Chart & Tabs (Summary/News) -->
