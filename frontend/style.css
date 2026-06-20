@@ -782,15 +782,15 @@ body.light-theme .tooltip-icon:hover::after {
     position: absolute;
     bottom: 0;
     left: 50%;
-    width: 3px;
+    width: 6px;
     height: 48px;
-    background: var(--text-primary);
-    border-radius: 2px;
+    background: linear-gradient(to top, var(--text-primary) 30%, var(--neon-rose) 100%);
     transform-origin: 50% 100%;
     transform: translate(-50%, 0) rotate(0deg);
     transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+    filter: drop-shadow(0 0 4px rgba(244, 63, 94, 0.5));
     z-index: 2;
+    clip-path: polygon(40% 0%, 60% 0%, 100% 100%, 0% 100%);
 }
 
 .gauge-center-pin {
@@ -798,23 +798,34 @@ body.light-theme .tooltip-icon:hover::after {
     bottom: -6px;
     left: 50%;
     transform: translateX(-50%);
-    width: 12px;
-    height: 12px;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
     background: var(--text-primary);
-    border: 2px solid var(--card-bg);
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
+    border: 3px solid var(--bg-gradient);
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
     z-index: 3;
 }
 
 .gauge-value-text {
     text-align: center;
-    font-size: 0.82rem;
+    font-size: 0.85rem;
     font-weight: 700;
-    margin-top: 14px;
+    margin: 14px auto 0 auto;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: underline dashed currentColor;
+    text-underline-offset: 4px;
+    width: fit-content;
+    display: block;
+}
+
+.gauge-value-text:hover {
+    opacity: 0.8;
+    text-decoration: underline solid currentColor;
+    text-shadow: 0 0 8px currentColor;
 }
 
 /* Timeframe buttons styled */

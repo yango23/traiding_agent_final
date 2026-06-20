@@ -815,6 +815,33 @@ function changeSentimentTimeframe(timeframe) {
     updateSentimentUI();
 }
 
+function askAgentAboutSentiment() {
+    const coinLabel = coinSelector.options[coinSelector.selectedIndex].text;
+    const score = getSentimentScore(currentCoin, currentSentimentTimeframe);
+    
+    let statusKey = "neutral";
+    if (score <= 20) statusKey = "strongSell";
+    else if (score <= 40) statusKey = "sell";
+    else if (score <= 60) statusKey = "neutral";
+    else if (score <= 80) statusKey = "buy";
+    else statusKey = "strongBuy";
+    
+    const text = LOCALIZATION[currentLanguage].sentimentLabels[statusKey];
+    
+    const timeframeNames = {
+        ru: { "12h": "12 часов", "1W": "1 неделю", "1M": "1 месяц", "3M": "3 месяца", "6M": "6 месяцев" },
+        en: { "12h": "12 hours", "1W": "1 week", "1M": "1 month", "3M": "3 months", "6M": "6 months" }
+    };
+    const tfReadable = timeframeNames[currentLanguage][currentSentimentTimeframe];
+    
+    const prompt = currentLanguage === "ru"
+        ? `Что означает рыночное настроение "${text} (${score})" для ${coinLabel} на интервале ${tfReadable}? Объясни подробно простыми словами для новичка, как интерпретировать этот показатель.`
+        : `What does the market sentiment "${text} (${score})" for ${coinLabel} over the ${tfReadable} timeframe mean? Explain in detail in simple terms for a beginner how to interpret this indicator.`;
+        
+    chatInput.value = prompt;
+    sendMessage();
+}
+
 // -------------------------------------------------------------------------
 // Event Listeners & Bootstrapping
 // -------------------------------------------------------------------------

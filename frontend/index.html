@@ -125,7 +125,29 @@
                     </div>
                     <div class="gauge-container">
                         <svg viewBox="0 0 100 50" class="gauge-svg">
-                            <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="url(#gauge-grad)" stroke-width="8" stroke-linecap="round" />
+                            <!-- Outer tick border -->
+                            <path d="M 6 50 A 44 44 0 0 1 94 50" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="1 3" opacity="0.6" />
+                            <!-- Main gradient track -->
+                            <path d="M 12 50 A 38 38 0 0 1 88 50" fill="none" stroke="url(#gauge-grad)" stroke-width="6" stroke-linecap="round" />
+                            <!-- Inner subtle border -->
+                            <path d="M 16 50 A 34 34 0 0 1 84 50" fill="none" stroke="var(--text-muted)" stroke-width="0.5" opacity="0.3" />
+                            
+                            <!-- Tick Marks (Gradations) -->
+                            <!-- Left / Strong Sell (0 deg) -->
+                            <line x1="12" y1="50" x2="8" y2="50" stroke="var(--neon-rose)" stroke-width="1.5" />
+                            <!-- 30 deg -->
+                            <line x1="17.1" y1="31" x2="13.6" y2="29" stroke="var(--neon-rose)" stroke-width="1" opacity="0.75" />
+                            <!-- 60 deg -->
+                            <line x1="31" y1="17.1" x2="29" y2="13.6" stroke="#EAB308" stroke-width="1" opacity="0.75" />
+                            <!-- Neutral / 90 deg -->
+                            <line x1="50" y1="12" x2="50" y2="8" stroke="#EAB308" stroke-width="1.5" />
+                            <!-- 120 deg -->
+                            <line x1="69" y1="17.1" x2="71" y2="13.6" stroke="#EAB308" stroke-width="1" opacity="0.75" />
+                            <!-- 150 deg -->
+                            <line x1="82.9" y1="31" x2="86.4" y2="29" stroke="var(--neon-green)" stroke-width="1" opacity="0.75" />
+                            <!-- Right / Strong Buy (180 deg) -->
+                            <line x1="88" y1="50" x2="92" y2="50" stroke="var(--neon-green)" stroke-width="1.5" />
+
                             <defs>
                                 <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
                                     <stop offset="0%" stop-color="var(--neon-rose)" />
@@ -136,8 +158,8 @@
                         </svg>
                         <div class="gauge-needle" id="gauge-needle"></div>
                         <div class="gauge-center-pin"></div>
-                        <div class="gauge-value-text" id="gauge-value-text">Neutral</div>
                     </div>
+                    <div class="gauge-value-text" id="gauge-value-text" onclick="askAgentAboutSentiment()" title="Click to ask AI about this sentiment status">Neutral</div>
                 </div>
             </section>
 
