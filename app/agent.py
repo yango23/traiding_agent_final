@@ -70,9 +70,9 @@ SYSTEM_INSTRUCTION_RU = """Вы — высококвалифицированны
 
 ПРАВИЛА ОФОРМЛЕНИЯ ТЕКСТА:
 Для повышения читаемости текста и выделения важных моментов вы ДОЛЖНЫ использовать специальный синтаксис выделения цветом:
-1. Оберните все позитивные, бычьи (bullish), восходящие сигналы, рост цены или зоны перепроданности в `[green](текст для выделения зеленым)`. Пример: "Показатель RSI находится в зоне `[green](перепроданности)`" или "Ожидается `[green](бычий прорыв)`".
-2. Оберните все негативные, медвежьи (bearish), нисходящие сигналы, падение цены или зоны перекупленности в `[red](текст для выделения красным)`. Пример: "Импульс сменился на `[red](медвежий)`" или "Индикатор находится в зоне `[red](перекупленности)`".
-Никогда не используйте HTML-теги для цвета. Пользуйтесь ТОЛЬКО синтаксисом `[green](текст)` и `[red](текст)`.
+1. Оберните все позитивные, бычьи (bullish), восходящие сигналы, рост цены или зоны перепроданности в `[green]{текст для выделения зеленым}`. Пример: "Показатель RSI находится в зоне `[green]{перепроданности}`" или "Ожидается `[green]{бычий прорыв}`".
+2. Оберните все негативные, медвежьи (bearish), нисходящие сигналы, падение цены или зоны перекупленности в `[red]{текст для выделения красным}`. Пример: "Импульс сменился на `[red]{медвежий}`" или "Индикатор находится в зоне `[red]{перекупленности}`".
+Никогда не используйте HTML-теги для цвета. Пользуйтесь ТОЛЬКО синтаксисом `[green]{текст}` и `[red]{текст}`.
 
 ПРАВИЛА БЕЗОПАСНОСТИ:
 1. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО давать прямые финансовые, инвестиционные или торговые рекомендации (например: "покупайте биткоин прямо сейчас", "советую открыть лонг", "делайте ставки на рост"). 
@@ -92,9 +92,9 @@ Your main goal is to educate beginners in technical and fundamental analysis con
 
 TEXT FORMATTING RULES:
 To improve text readability and emphasize important market events, you MUST use the following custom color highlighting syntax:
-1. Wrap positive, bullish, rising price signals, or oversold areas in `[green](text to highlight in green)`. Example: "RSI is in the `[green](oversold)` territory" or "We expect a `[green](bullish crossover)`".
-2. Wrap negative, bearish, falling price signals, or overbought areas in `[red](text to highlight in red)`. Example: "The momentum shifted to `[red](bearish)`" or "Indicators show the asset is `[red](overbought)`".
-Never use raw HTML tags for coloring. ONLY use `[green](text)` and `[red](text)` tags.
+1. Wrap positive, bullish, rising price signals, or oversold areas in `[green]{text to highlight in green}`. Example: "RSI is in the `[green]{oversold}` territory" or "We expect a `[green]{bullish crossover}`".
+2. Wrap negative, bearish, falling price signals, or overbought areas in `[red]{text to highlight in red}`. Example: "The momentum shifted to `[red]{bearish}`" or "Indicators show the asset is `[red]{overbought}`".
+Never use raw HTML tags for coloring. ONLY use `[green]{text}` and `[red]{text}` tags.
 
 SAFETY RULES:
 1. STRICTLY FORBIDDEN from giving direct financial, investment, or trading recommendations (e.g., "buy Bitcoin now", "I advise opening a long position", "bet on the rise").
@@ -127,19 +127,19 @@ def get_simulated_summary(coin_id: str, lang: str = "ru") -> str:
     
     if lang == "ru":
         return f"""1. **Рыночный тонус**:
-Криптовалюта {coin_name} демонстрирует умеренную активность. Наблюдается краткосрочный [green](бычий импульс) с попыткой пробоя уровней локального сопротивления. Объемы торгов находятся на среднем уровне, указывая на стадию консолидации перед возможным сильным движением.
+Криптовалюта {coin_name} демонстрирует умеренную активность. Наблюдается краткосрочный [green]{{бычий импульс}} с попыткой пробоя уровней локального сопротивления. Объемы торгов находятся на среднем уровне, указывая на стадию консолидации перед возможным сильным движением.
 
 2. **Что говорят индикаторы**:
-Индикатор **RSI (14)** находится в нейтральной зоне (около 53), что сигнализирует об отсутствии перекупленности или перепроданности. Гистограмма **MACD** пересекла сигнальную линию снизу вверх, подтверждая [green](положительный импульс). Скользящие средние (SMA-50 и SMA-200) удерживают долгосрочный [green](бычий тренд), формируя поддержку.
+Индикатор **RSI (14)** находится в нейтральной зоне (около 53), что сигнализирует об отсутствии перекупленности или перепроданности. Гистограмма **MACD** пересекла сигнальную линию снизу вверх, подтверждая [green]{{положительный импульс}}. Скользящие средние (SMA-50 и SMA-200) удерживают долгосрочный [green]{{бычий тренд}}, формируя поддержку.
 
 3. **Ключевой вывод**:
 Техническая картина по {coin_name} умеренно позитивная, однако рынок остается волатильным. Рекомендуется соблюдать правила управления рисками и избегать торговли без защитных стоп-ордеров. Обратите внимание: данные смоделированы в учебных целях из-за временного ограничения квот API."""
     else:
         return f"""1. **Market Tone**:
-The cryptocurrency {coin_name} shows moderate trading activity. We observe a short-term [green](bullish momentum) attempting to break through local resistance levels. Volumes remain at average levels, suggesting a consolidation phase before a potential volatility breakout.
+The cryptocurrency {coin_name} shows moderate trading activity. We observe a short-term [green]{{bullish momentum}} attempting to break through local resistance levels. Volumes remain at average levels, suggesting a consolidation phase before a potential volatility breakout.
 
 2. **Indicator Breakdown**:
-The **RSI (14)** oscillator rests in the neutral zone (around 53), showing neither overbought nor oversold signals. The **MACD** histogram crossed above the signal line, confirming a [green](positive momentum). Moving Averages (SMA-50 and SMA-200) maintain a long-term [green](bullish trend), establishing strong support.
+The **RSI (14)** oscillator rests in the neutral zone (around 53), showing neither overbought nor oversold signals. The **MACD** histogram crossed above the signal line, confirming a [green]{{positive momentum}}. Moving Averages (SMA-50 and SMA-200) maintain a long-term [green]{{bullish trend}}, establishing strong support.
 
 3. **Key Takeaway**:
 The technical layout for {coin_name} is moderately positive, but volatility risks remain high. It is highly advised to practice strict risk management and avoid trading without protective stop-loss orders. Note: This analysis is simulated for educational purposes due to temporary API quota limits."""
@@ -152,7 +152,7 @@ async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
     client = get_gemini_client()
     coin_data = await fetch_coin_data(coin_id)
     news = await fetch_crypto_news(coin_id, lang)
-    indicators = calculate_technical_indicators(coin_data["price"], coin_id)
+    indicators = calculate_technical_indicators(coin_data["price"], coin_id, lang)
     
     news_titles = "\n".join([f"- {item['title']} ({item['source']})" for item in news])
     
@@ -161,7 +161,7 @@ async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
     
     СТРОЖАЙШЕЕ ПРАВИЛО: Начни ответ СРАЗУ с первого пункта. Не пиши никаких приветствий, вводных слов, фраз вроде "Привет! Рад помочь...", "Давайте посмотрим на..." или общих заголовков вроде "Аналитическая сводка...". Начинай строго со строки: "1. **Рыночный тонус**".
     
-    Выделяй важные моменты цветом, используя синтаксис `[green](текст)` для роста/бычьих сигналов и `[red](текст)` для падения/медвежьих сигналов.
+    Выделяй важные моменты цветом, используя синтаксис `[green]{{текст}}` для роста/бычьих сигналов и `[red]{{текст}}` для падения/медвежьих сигналов.
     
     ТЕКУЩИЕ ДАННЫЕ РЫНКА:
     - Текущая цена: ${coin_data['price']:.4f}
@@ -188,7 +188,7 @@ async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
     
     STRICT RULE: Start your answer IMMEDIATELY with the first section. Do not output any greetings, introductions, or headers like "Analytical Summary...". Start strictly with: "1. **Market Tone**".
     
-    Use `[green](text)` for bullish/rising signals and `[red](text)` for bearish/falling signals.
+    Use `[green]{{text}}` for bullish/rising signals and `[red]{{text}}` for bearish/falling signals.
     
     CURRENT MARKET DATA:
     - Current Price: ${coin_data['price']:.4f}

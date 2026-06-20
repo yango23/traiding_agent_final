@@ -561,10 +561,10 @@ function preprocessMarkdownTerms(text) {
         const escapedTerm = term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
         
         // Match either already wrapped links or raw words to prevent double nesting
-        const regex = new RegExp(`\\[[^\\]]+\\]\\(term:[^)]+\\)|(${escapedTerm})`, "gi");
+        const regex = new RegExp(`\\[[^\\]]+\\]\\{term:[^}]+\\}|(${escapedTerm})`, "gi");
         formatted = formatted.replace(regex, (match, g1) => {
             if (g1) {
-                return `[${g1}](term:${topic})`;
+                return `[${g1}]{term:${topic}}`;
             }
             return match;
         });
@@ -573,20 +573,27 @@ function preprocessMarkdownTerms(text) {
 }
 
 function formatMarkdown(text) {
-    let preprocessed = preprocessMarkdownTerms(text);
-    
-    let formatted = preprocessed
+    // 1. Clean HTML characters first (standard practice)
+    let formatted = text
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
+        .replace(/>/g, "&gt;");
+        
+    // 2. Parse green/red highlights using curly braces BEFORE preprocessing terms
+    formatted = formatted
+        .replace(/\[green\]\{([^}]+)\}/g, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
+        .replace(/\[red\]\{([^}]+)\}/g, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>');
+        
+    // 3. Preprocess terms to wrap them in [term]{term:Topic}
+    formatted = preprocessMarkdownTerms(formatted);
+    
+    // 4. Parse other markdown elements and convert custom term links
+    formatted = formatted
         .replace(/\n/g, "<br>")
         .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
         .replace(/\*([^*]+)\*/g, "<em>$1</em>")
         .replace(/`([^`]+)`/g, "<code>$1</code>")
-        .replace(/\[green\]\(([^)]+)\)/g, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
-        .replace(/\[red\]\(([^)]+)\)/g, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>')
-        // Convert custom term links
-        .replace(/\[([^\]]+)\]\(term:([^)]+)\)/g, '<span class="term-link" onclick="askAgentAboutTerm(\'$1\', \'$2\')">$1</span>')
+        .replace(/\[([^\]]+)\]\{term:([^}]+)\}/g, '<span class="term-link" onclick="askAgentAboutTerm(\'$1\', \'$2\')">$1</span>')
         // Convert numbered section titles (e.g. 1. **Market Tone**:) into styled blocks
         .replace(/(?:^|<br>)\s*(\d+)\.\s+\*\*([^*]+)\*\*(:)?/g, (match, num, title, colon) => {
             return `<div class="summary-section-header"><span class="section-number-badge">${num}</span> ${title}${colon || ''}</div>`;
