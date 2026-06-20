@@ -144,9 +144,20 @@ function toggleLanguage() {
     currentLanguage = currentLanguage === "ru" ? "en" : "ru";
     localStorage.setItem("lang", currentLanguage);
     langToggleBtn.textContent = currentLanguage.toUpperCase();
+    
+    // Reset all chat histories so welcome messages and responses are in the new language
+    const coinLabel = coinSelector.options[coinSelector.selectedIndex].text;
+    chatHistories = {};
+    chatHistories[currentCoin] = [{
+        role: "model",
+        content: LOCALIZATION[currentLanguage].welcomeMessage.replace("{coin}", coinLabel)
+    }];
+    saveHistories();
+    
     localizeUI();
     loadAIContent(); // Reload AI Summary & news in new language
     renderChatMessages(); // Re-render chat (update placeholders)
+    renderQuickChips(); // Re-render suggest chips
 }
 
 function localizeUI() {

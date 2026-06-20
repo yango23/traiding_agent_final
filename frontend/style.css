@@ -159,7 +159,7 @@ body {
 .app-main-layout {
     flex: 1;
     display: grid;
-    grid-template-columns: 280px 1fr 4px var(--chat-panel-width, 340px);
+    grid-template-columns: 290px 1fr 8px var(--chat-panel-width, 340px);
     gap: 12px;
     padding: 16px;
     overflow: hidden;
@@ -639,15 +639,38 @@ body.light-theme .card-divider {
 
 .resize-handle {
     cursor: col-resize;
-    background: transparent;
-    transition: background 0.2s, box-shadow 0.2s;
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.04);
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
     height: 100%;
+    position: relative;
+    border-radius: 4px;
+    z-index: 5;
+}
+
+.resize-handle::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 24px;
+    background: var(--text-muted);
+    border-radius: 1px;
+    transition: all 0.2s ease;
 }
 
 .resize-handle:hover, .resize-handle.active {
     background: var(--neon-blue);
     box-shadow: var(--neon-glow-blue);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.resize-handle:hover::after, .resize-handle.active::after {
+    background: white;
+    height: 36px;
 }
 
 /* Tooltips */
