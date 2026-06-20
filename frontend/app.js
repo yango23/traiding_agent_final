@@ -295,6 +295,17 @@ async function loadAIContent() {
         if (data.success) {
             aiSummaryText.innerHTML = formatMarkdown(data.summary);
             aiSummaryText.style.display = "block";
+            // Show/hide simulated-mode warning banner
+            const simBanner = document.getElementById("simulated-warning");
+            const simText   = document.getElementById("simulated-warning-text");
+            if (data.simulated) {
+                simText.textContent = currentLanguage === "ru"
+                    ? "⚠️ Квота AI исчерпана — показывается смоделированный анализ (демо-режим)"
+                    : "⚠️ AI quota exhausted — showing simulated analysis (demo mode)";
+                simBanner.style.display = "flex";
+            } else {
+                simBanner.style.display = "none";
+            }
         } else {
             renderSummaryError();
         }
@@ -302,8 +313,41 @@ async function loadAIContent() {
         renderSummaryError();
     } finally {
         summaryLoading.style.display = "none";
+        updateQuotaUI(); // refresh quota counters after each summary fetch
     }
 }
+
+// -------------------------------------------------------------------------
+// Quota Status Indicator
+// -------------------------------------------------------------------------
+async function updateQuotaUI() {
+    try {
+        const res = await fetch("/api/quota-status");
+        const q = await res.json();
+        const sEl = document.getElementById("quota-s");
+        const cEl = document.getElementById("quota-c");
+        const badge = document.getElementById("quota-exhausted-badge");
+        const bar   = document.getElementById("quota-status-bar");
+        if (sEl) sEl.textContent = q.summary_calls;
+        if (cEl) cEl.textContent = q.chat_calls;
+        const total = (q.summary_calls + q.chat_calls);
+        const exhausted = q.quota_exhausted || total >= q.free_tier_limit;
+        if (badge) badge.style.display = exhausted ? "inline" : "none";
+        // Color the bar red when close to limit
+        if (bar) {
+            if (exhausted) {
+                bar.style.color = "var(--neon-rose)";
+            } else if (total >= q.free_tier_limit * 0.7) {
+                bar.style.color = "#EAB308";
+            } else {
+                bar.style.color = "var(--text-muted)";
+            }
+        }
+    } catch (e) {
+        // silently ignore – not critical
+    }
+}
+
 
 function updateStatsUI(data) {
     coinDisplayName.textContent = data.name;
@@ -894,3 +938,7 @@ renderTradingViewWidget();
 initChatSession();
 loadAIContent();
 initResizeHandle();
+updateQuotaUI();
+// Refresh quota indicator every 60 seconds
+setInterval(updateQuotaUI, 60000);
+

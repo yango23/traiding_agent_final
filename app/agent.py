@@ -1,10 +1,23 @@
 import os
 import re
+import time
 from typing import AsyncGenerator
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 from app.tools import fetch_coin_data, fetch_crypto_news, calculate_technical_indicators, COIN_NAMES
+
+# -------------------------------------------------------------------------
+# In-Memory Quota Tracker (Free tier: 20 requests/day per model)
+# -------------------------------------------------------------------------
+FREE_TIER_LIMIT = 20  # Gemini free tier daily limit
+
+quota_tracker = {
+    "summary_calls": 0,
+    "chat_calls": 0,
+    "quota_exhausted": False,
+    "reset_time": None,   # UTC timestamp when quota resets (midnight)
+}
 
 # Load environment variables
 load_dotenv()
@@ -70,9 +83,9 @@ SYSTEM_INSTRUCTION_RU = """Вы — высококвалифицированны
 
 ПРАВИЛА ОФОРМЛЕНИЯ ТЕКСТА:
 Для повышения читаемости текста и выделения важных моментов вы ДОЛЖНЫ использовать специальный синтаксис выделения цветом:
-1. Оберните все позитивные, бычьи (bullish), восходящие сигналы, рост цены или зоны перепроданности в `[green]{текст для выделения зеленым}`. Пример: "Показатель RSI находится в зоне `[green]{перепроданности}`" или "Ожидается `[green]{бычий прорыв}`".
-2. Оберните все негативные, медвежьи (bearish), нисходящие сигналы, падение цены или зоны перекупленности в `[red]{текст для выделения красным}`. Пример: "Импульс сменился на `[red]{медвежий}`" или "Индикатор находится в зоне `[red]{перекупленности}`".
-Никогда не используйте HTML-теги для цвета. Пользуйтесь ТОЛЬКО синтаксисом `[green]{текст}` и `[red]{текст}`.
+1. Оберните все позитивные, бычьи (bullish), восходящие сигналы, рост цены или зоны перепроданности в `[green]{{текст для выделения зеленым}}`. Пример: "Показатель RSI находится в зоне `[green]{{перепроданности}}`" или "Ожидается `[green]{{бычий прорыв}}`".
+2. Оберните все негативные, медвежьи (bearish), нисходящие сигналы, падение цены или зоны перекупленности в `[red]{{текст для выделения красным}}`. Пример: "Импульс сменился на `[red]{{медвежий}}`" или "Индикатор находится в зоне `[red]{{перекупленности}}`".
+Никогда не используйте HTML-теги для цвета. Пользуйтесь ТОЛЬКО синтаксисом `[green]{{текст}}` и `[red]{{текст}}`.
 
 ПРАВИЛА БЕЗОПАСНОСТИ:
 1. КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО давать прямые финансовые, инвестиционные или торговые рекомендации (например: "покупайте биткоин прямо сейчас", "советую открыть лонг", "делайте ставки на рост"). 
@@ -92,9 +105,9 @@ Your main goal is to educate beginners in technical and fundamental analysis con
 
 TEXT FORMATTING RULES:
 To improve text readability and emphasize important market events, you MUST use the following custom color highlighting syntax:
-1. Wrap positive, bullish, rising price signals, or oversold areas in `[green]{text to highlight in green}`. Example: "RSI is in the `[green]{oversold}` territory" or "We expect a `[green]{bullish crossover}`".
-2. Wrap negative, bearish, falling price signals, or overbought areas in `[red]{text to highlight in red}`. Example: "The momentum shifted to `[red]{bearish}`" or "Indicators show the asset is `[red]{overbought}`".
-Never use raw HTML tags for coloring. ONLY use `[green]{text}` and `[red]{text}` tags.
+1. Wrap positive, bullish, rising price signals, or oversold areas in `[green]{{text to highlight in green}}`. Example: "RSI is in the `[green]{{oversold}}` territory" or "We expect a `[green]{{bullish crossover}}`".
+2. Wrap negative, bearish, falling price signals, or overbought areas in `[red]{{text to highlight in red}}`. Example: "The momentum shifted to `[red]{{bearish}}`" or "Indicators show the asset is `[red]{{overbought}}`".
+Never use raw HTML tags for coloring. ONLY use `[green]{{text}}` and `[red]{{text}}` tags.
 
 SAFETY RULES:
 1. STRICTLY FORBIDDEN from giving direct financial, investment, or trading recommendations (e.g., "buy Bitcoin now", "I advise opening a long position", "bet on the rise").
@@ -127,22 +140,22 @@ def get_simulated_summary(coin_id: str, lang: str = "ru") -> str:
     
     if lang == "ru":
         return f"""1. **Рыночный тонус**:
-Криптовалюта {coin_name} демонстрирует умеренную активность. Наблюдается краткосрочный [green]{{бычий импульс}} с попыткой пробоя уровней локального сопротивления. Объемы торгов находятся на среднем уровне, указывая на стадию консолидации перед возможным сильным движением.
+Криптовалюта {coin_name} демонстрирует смешанную динамику с умеренной торговой активностью. Наблюдается краткосрочный [green]{{бычий импульс}} с попыткой пробоя уровней локального сопротивления, однако объемы торгов [red]{{ниже среднего}}, что указывает на недостаточное подтверждение со стороны рынка.
 
 2. **Что говорят индикаторы**:
-Индикатор **RSI (14)** находится в нейтральной зоне (около 53), что сигнализирует об отсутствии перекупленности или перепроданности. Гистограмма **MACD** пересекла сигнальную линию снизу вверх, подтверждая [green]{{положительный импульс}}. Скользящие средние (SMA-50 и SMA-200) удерживают долгосрочный [green]{{бычий тренд}}, формируя поддержку.
+Индикатор **RSI (14)** близок к отметке [red]{{70 (зона перекупленности)}}, что сигнализирует о возможном откате или паузе в росте. Гистограмма **MACD** пересекла сигнальную линию снизу вверх, подтверждая [green]{{положительный краткосрочный импульс}}. Скользящие средние (SMA-50 и SMA-200) удерживают долгосрочный [green]{{бычий тренд}}, однако [red]{{разрыв между ними сокращается}}, что может означать ослабление тренда.
 
 3. **Ключевой вывод**:
-Техническая картина по {coin_name} умеренно позитивная, однако рынок остается волатильным. Рекомендуется соблюдать правила управления рисками и избегать торговли без защитных стоп-ордеров. Обратите внимание: данные смоделированы в учебных целях из-за временного ограничения квот API."""
+Техническая картина по {coin_name} неоднозначна: есть [green]{{позитивные сигналы}} со стороны MACD и долгосрочного тренда, но RSI предупреждает о [red]{{риске коррекции}} в краткосрочной перспективе. Обратите внимание: данные смоделированы в учебных целях из-за временного исчерпания дневной квоты API (20 запросов/день)."""
     else:
         return f"""1. **Market Tone**:
-The cryptocurrency {coin_name} shows moderate trading activity. We observe a short-term [green]{{bullish momentum}} attempting to break through local resistance levels. Volumes remain at average levels, suggesting a consolidation phase before a potential volatility breakout.
+The cryptocurrency {coin_name} is showing mixed dynamics with moderate trading activity. We observe a short-term [green]{{bullish push}} attempting to break through local resistance levels, however trading volumes are [red]{{below average}}, indicating insufficient market confirmation.
 
 2. **Indicator Breakdown**:
-The **RSI (14)** oscillator rests in the neutral zone (around 53), showing neither overbought nor oversold signals. The **MACD** histogram crossed above the signal line, confirming a [green]{{positive momentum}}. Moving Averages (SMA-50 and SMA-200) maintain a long-term [green]{{bullish trend}}, establishing strong support.
+The **RSI (14)** is approaching [red]{{overbought territory (near 70)}}, signaling a possible pullback or pause in the uptrend. The **MACD** histogram crossed above the signal line, confirming a [green]{{short-term positive momentum}}. Moving Averages (SMA-50 and SMA-200) maintain a long-term [green]{{bullish trend}}, however [red]{{the gap between them is narrowing}}, which may indicate a weakening trend.
 
 3. **Key Takeaway**:
-The technical layout for {coin_name} is moderately positive, but volatility risks remain high. It is highly advised to practice strict risk management and avoid trading without protective stop-loss orders. Note: This analysis is simulated for educational purposes due to temporary API quota limits."""
+The technical picture for {coin_name} is mixed: there are [green]{{positive signals}} from the MACD and long-term trend, but the RSI warns of a [red]{{correction risk}} in the short term. Note: This analysis is simulated for educational purposes due to the temporary exhaustion of the daily API quota (20 requests/day)."""
 
 async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
     """
@@ -214,6 +227,7 @@ async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
     sys_instruction = get_system_instruction(coin_id, lang)
     
     try:
+        quota_tracker["summary_calls"] += 1
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
@@ -222,9 +236,15 @@ async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
                 temperature=0.3,
             )
         )
+        quota_tracker["quota_exhausted"] = False
         return response.text
     except Exception as e:
-        print(f"API Error in generate_coin_summary: {e}. Falling back to simulated summary.")
+        err_str = str(e)
+        if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+            quota_tracker["quota_exhausted"] = True
+            print(f"API Error in generate_coin_summary: {e}. Falling back to simulated summary.")
+        else:
+            print(f"API Error in generate_coin_summary: {e}. Falling back to simulated summary.")
         return get_simulated_summary(coin_id, lang)
 
 async def chat_with_agent(

@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from app.tools import fetch_coin_data, fetch_crypto_news, calculate_technical_indicators
-from app.agent import chat_with_agent, generate_coin_summary, is_query_safe
+from app.agent import chat_with_agent, generate_coin_summary, is_query_safe, quota_tracker
 
 app = FastAPI(
     title="Crypto AI Advisor Dashboard",
@@ -73,9 +73,22 @@ async def get_ai_summary(request: SummaryRequest):
     """
     try:
         summary_text = await generate_coin_summary(request.coin_id, request.lang)
-        return {"success": True, "summary": summary_text}
+        is_simulated = not quota_tracker.get("quota_exhausted") is False
+        return {"success": True, "summary": summary_text, "simulated": quota_tracker["quota_exhausted"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate summary: {str(e)}")
+
+@app.get("/api/quota-status")
+async def get_quota_status():
+    """
+    Returns current API quota usage counters for the UI indicator.
+    """
+    return {
+        "summary_calls": quota_tracker["summary_calls"],
+        "chat_calls":    quota_tracker["chat_calls"],
+        "quota_exhausted": quota_tracker["quota_exhausted"],
+        "free_tier_limit": 20,
+    }
 
 @app.post("/api/chat")
 async def chat_endpoint(request: ChatRequest):
@@ -135,6 +148,7 @@ async def chat_endpoint(request: ChatRequest):
         return StreamingResponse(redirect_message(), media_type="text/event-stream")
 
     # 3. Stream response from Gemini
+    quota_tracker["chat_calls"] += 1
     async def event_generator():
         try:
             async for chunk in chat_with_agent(

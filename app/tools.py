@@ -132,9 +132,12 @@ async def fetch_coin_data(coin_id: str) -> dict:
 
 async def fetch_crypto_news(coin_id: str, lang: str = "ru") -> list:
     """
-    Fetches latest crypto news for the specific coin.
-    Returns aggregated news feed in the requested language.
+    Fetches latest real crypto news via public RSS feeds (CoinTelegraph, CoinDesk).
+    Falls back to a minimal stub if all feeds fail.
     """
+    import xml.etree.ElementTree as ET
+    import html as html_module
+
     lang = lang.lower().strip()
     coin_id = coin_id.lower().strip()
     id_map = {
@@ -148,90 +151,112 @@ async def fetch_crypto_news(coin_id: str, lang: str = "ru") -> list:
     }
     cg_id = id_map.get(coin_id, coin_id)
     coin_name = COIN_NAMES.get(cg_id, cg_id.capitalize())
-    cache_key = f"{cg_id}_{lang}"
+    cache_key = f"{cg_id}_{lang}_rss"
 
-    # Check cache first
+    # Check cache first (15-minute TTL)
     cached_news = news_cache.get(cache_key)
     if cached_news:
         return cached_news
 
-    # Fetch from CryptoCompare news API
-    url = f"https://min-api.cryptocompare.com/data/v2/news/?categories={coin_id}&excludeCategories=sponsored"
-    
+    # ------------------------------------------------------------------ #
+    # RSS feeds mapping: coin_id -> list of feed URLs (ordered by priority)
+    # ------------------------------------------------------------------ #
+    RSS_FEEDS = {
+        "bitcoin":   [
+            "https://cointelegraph.com/rss/tag/bitcoin",
+            "https://feeds.feedburner.com/CoinDesk",
+        ],
+        "ethereum":  [
+            "https://cointelegraph.com/rss/tag/ethereum",
+            "https://feeds.feedburner.com/CoinDesk",
+        ],
+        "solana":    [
+            "https://cointelegraph.com/rss/tag/solana",
+            "https://feeds.feedburner.com/CoinDesk",
+        ],
+        "ripple":    [
+            "https://cointelegraph.com/rss/tag/xrp",
+            "https://feeds.feedburner.com/CoinDesk",
+        ],
+        "dogecoin":  [
+            "https://cointelegraph.com/rss/tag/dogecoin",
+            "https://feeds.feedburner.com/CoinDesk",
+        ],
+        "default":   [
+            "https://cointelegraph.com/rss/category/latest-news",
+            "https://feeds.feedburner.com/CoinDesk",
+        ],
+    }
+
+    feeds = RSS_FEEDS.get(cg_id, RSS_FEEDS["default"])
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; CryptoAdvisor/1.0)"}
+    result = []
+
     try:
-        async with httpx.AsyncClient(timeout=3.0) as client:
-            response = await client.get(url)
-            if response.status_code == 200:
-                data = response.json()
-                articles = data.get("Data", [])
-                result = []
-                for a in articles[:6]:
-                    title = a.get("title", "")
-                    body = a.get("body", "")
-                    
-                    result.append({
-                        "title": title,
-                        "url": a.get("url", ""),
-                        "source": a.get("source_info", {}).get("name", "CryptoNews"),
-                        "time": a.get("published_on", int(time.time())),
-                        "body": body[:200] + "..."
-                    })
-                if result:
-                    news_cache.set(cache_key, result)
-                    return result
+        async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
+            for feed_url in feeds:
+                try:
+                    resp = await client.get(feed_url, headers=headers)
+                    if resp.status_code != 200:
+                        continue
+                    root = ET.fromstring(resp.text)
+                    items = root.findall(".//item")
+                    for item in items[:5]:
+                        title = html_module.unescape(item.findtext("title", "")).strip()
+                        link  = item.findtext("link", "").strip()
+                        desc  = html_module.unescape(item.findtext("description", "") or "")
+                        # Strip HTML tags from description
+                        import re as _re
+                        desc = _re.sub(r"<[^>]+>", "", desc).strip()[:200]
+                        pub_raw = item.findtext("pubDate", "")
+                        try:
+                            from email.utils import parsedate_to_datetime
+                            ts = int(parsedate_to_datetime(pub_raw).timestamp())
+                        except Exception:
+                            ts = int(time.time())
+                        # Determine source domain
+                        try:
+                            source_domain = feed_url.split("/")[2].replace("feeds.feedburner.com", "CoinDesk")
+                            source_domain = source_domain.replace("cointelegraph.com", "CoinTelegraph")
+                        except Exception:
+                            source_domain = "CryptoNews"
+                        if title and link:
+                            result.append({
+                                "title": title,
+                                "body": desc if desc else title,
+                                "url": link,
+                                "source": source_domain,
+                                "time": ts,
+                            })
+                    if result:
+                        break  # Got enough from first working feed
+                except Exception:
+                    continue
     except Exception:
         pass
 
-    # High quality localized mock news templates to ensure 100% availability
-    mock_news_ru = [
-        {
-            "title": f"Аналитики прогнозируют фазу консолидации для {coin_name}",
-            "body": "После недавней волатильности на рынке эксперты отмечают признаки снижения торговых объемов, что указывает на скорое начало бокового тренда.",
-            "source": "РБК Крипто",
-            "time": int(time.time() - 3600),
-            "url": "https://rbc.ru/crypto"
-        },
-        {
-            "title": f"Крупные инвесторы наращивают позиции в {coin_name}",
-            "body": "Данные ончейн-аналитики фиксируют массовый вывод монет со счетов бирж на некастодиальные холодные кошельки крупных держателей (китов).",
-            "source": "ForkLog",
-            "time": int(time.time() - 7200),
-            "url": "https://forklog.com"
-        },
-        {
-            "title": f"Влияние макроэкономических факторов США на курс {coin_name}",
-            "body": "Ожидаемое решение Федеральной резервной системы по процентным ставкам продолжает сдерживать агрессивных покупателей на крипторынке.",
-            "source": "Bits.media",
-            "time": int(time.time() - 14400),
-            "url": "https://bits.media"
-        }
-    ]
+    if result:
+        news_cache.set(cache_key, result)
+        return result
 
-    mock_news_en = [
+    # Fallback: RSS unavailable — return links to real news pages so user can open them manually
+    fallback = [
         {
-            "title": f"Analysts predict consolidation phase for {coin_name}",
-            "body": "Following the recent market volatility, analysts note decreasing trading volumes, hinting at a potential sideways movement soon.",
+            "title": f"Актуальные новости {coin_name} — CoinTelegraph" if lang == "ru" else f"Latest {coin_name} News — CoinTelegraph",
+            "body":  "Новостная лента временно недоступна. Нажмите, чтобы открыть последние новости на CoinTelegraph." if lang == "ru" else "News feed temporarily unavailable. Click to open latest news on CoinTelegraph.",
+            "source": "CoinTelegraph",
+            "time": int(time.time()),
+            "url": f"https://cointelegraph.com/tags/{cg_id}",
+        },
+        {
+            "title": f"Актуальные новости {coin_name} — CoinDesk" if lang == "ru" else f"Latest {coin_name} News — CoinDesk",
+            "body":  "Нажмите, чтобы открыть последние новости на CoinDesk." if lang == "ru" else "Click to open latest news on CoinDesk.",
             "source": "CoinDesk",
-            "time": int(time.time() - 3600),
-            "url": "https://coindesk.com"
+            "time": int(time.time()),
+            "url": f"https://www.coindesk.com/tag/{cg_id}/",
         },
-        {
-            "title": f"Whales are accumulating more {coin_name}, on-chain data shows",
-            "body": "On-chain analytics reveal a massive outflow of coins from exchanges to non-custodial cold wallets owned by institutional holders.",
-            "source": "Cointelegraph",
-            "time": int(time.time() - 7200),
-            "url": "https://cointelegraph.com"
-        },
-        {
-            "title": f"Macroeconomic factors in the US impact {coin_name} price action",
-            "body": "The upcoming Federal Reserve decision on interest rates continues to keep aggressive buyers sidelined in the crypto space.",
-            "source": "Decrypt",
-            "time": int(time.time() - 14400),
-            "url": "https://decrypt.co"
-        }
     ]
-
-    return mock_news_ru if lang == "ru" else mock_news_en
+    return fallback
 
 def calculate_technical_indicators(price: float, coin_id: str, lang: str = "ru") -> dict:
     """
