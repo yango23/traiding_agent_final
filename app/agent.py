@@ -242,10 +242,8 @@ async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
         err_str = str(e)
         if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
             quota_tracker["quota_exhausted"] = True
-            print(f"API Error in generate_coin_summary: {e}. Falling back to simulated summary.")
-        else:
-            print(f"API Error in generate_coin_summary: {e}. Falling back to simulated summary.")
-        return get_simulated_summary(coin_id, lang)
+        print(f"API Error in generate_coin_summary: {e}")
+        raise e
 
 async def chat_with_agent(
     query: str, 
