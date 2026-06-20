@@ -479,9 +479,63 @@ function switchTab(tabId) {
 // Formatting Helpers
 // -------------------------------------------------------------------------
 
+function preprocessMarkdownTerms(text) {
+    let formatted = text;
+    
+    const termMapping = {
+        "Death Cross": "SMA Crossover",
+        "Golden Cross": "SMA Crossover",
+        "RSI": "RSI",
+        "MACD": "MACD",
+        "Bollinger Bands": "Bollinger Bands",
+        "Fear & Greed Index": "Fear & Greed Index",
+        "Fear and Greed": "Fear & Greed Index",
+        "consolidation phase": "Market Consolidation",
+        "whales": "Market Whales",
+        "whale": "Market Whales",
+        "overbought": "RSI Overbought",
+        "oversold": "RSI Oversold",
+        "bearish": "Bearish Trend",
+        "bullish": "Bullish Trend",
+        "sideways": "Sideways Trend",
+        
+        "Крест смерти": "SMA Crossover",
+        "Золотой крест": "SMA Crossover",
+        "Полосы Боллинджера": "Bollinger Bands",
+        "Индекс страха и жадности": "Fear & Greed Index",
+        "консолидации": "Market Consolidation",
+        "консолидация": "Market Consolidation",
+        "боковик": "Sideways Trend",
+        "киты": "Market Whales",
+        "китов": "Market Whales",
+        "перекуплен": "RSI Overbought",
+        "перепродан": "RSI Oversold",
+        "медвежий": "Bearish Trend",
+        "бычий": "Bullish Trend"
+    };
+    
+    const sortedTerms = Object.keys(termMapping).sort((a, b) => b.length - a.length);
+    
+    for (let term of sortedTerms) {
+        const topic = termMapping[term];
+        const escapedTerm = term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        
+        // Match either already wrapped links or raw words to prevent double nesting
+        const regex = new RegExp(`\\[[^\\]]+\\]\\(term:[^)]+\\)|(${escapedTerm})`, "gi");
+        formatted = formatted.replace(regex, (match, g1) => {
+            if (g1) {
+                return `[${g1}](term:${topic})`;
+            }
+            return match;
+        });
+    }
+    return formatted;
+}
+
 function formatMarkdown(text) {
-    // Basic Markdown Parser for bold and bullets to render Gemini responses properly
-    let formatted = text
+    let preprocessed = preprocessMarkdownTerms(text);
+    
+    let formatted = preprocessed
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
@@ -491,6 +545,12 @@ function formatMarkdown(text) {
         .replace(/`([^`]+)`/g, "<code>$1</code>")
         .replace(/\[green\]\(([^)]+)\)/g, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
         .replace(/\[red\]\(([^)]+)\)/g, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>')
+        // Convert custom term links
+        .replace(/\[([^\]]+)\]\(term:([^)]+)\)/g, '<span class="term-link" onclick="askAgentAboutTerm(\'$1\', \'$2\')">$1</span>')
+        // Convert numbered section titles (e.g. 1. **Market Tone**:) into styled blocks
+        .replace(/(?:^|<br>)\s*(\d+)\.\s+\*\*([^*]+)\*\*(:)?/g, (match, num, title, colon) => {
+            return `<div class="summary-section-header"><span class="section-number-badge">${num}</span> ${title}${colon || ''}</div>`;
+        })
         .replace(/(?:^|<br>)-\s+([^<]+)/g, "<br>• $1"); // bullets
         
     return formatted;

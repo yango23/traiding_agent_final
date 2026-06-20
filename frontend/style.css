@@ -723,30 +723,31 @@ body.light-theme .tooltip-icon {
     content: attr(data-tooltip);
     position: absolute;
     bottom: 140%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(15, 23, 42, 0.95);
+    left: -20px; /* Shift to the right relative to icon to stay within screen edges */
+    transform: none;
+    background: rgba(15, 23, 42, 0.96);
     color: #FFFFFF;
-    padding: 6px 10px;
-    border-radius: 6px;
+    padding: 8px 12px;
+    border-radius: 8px;
     font-size: 0.75rem;
     white-space: normal;
-    width: 220px;
+    width: 250px;
     z-index: 1000;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.08);
     font-family: inherit;
     font-weight: 400;
     text-align: left;
     pointer-events: none;
-    line-height: 1.35;
+    line-height: 1.45;
+    box-sizing: border-box;
 }
 
 body.light-theme .tooltip-icon:hover::after {
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.98);
     color: #0F172A;
     border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
 /* Clickable technical terms in stats panel */
@@ -762,5 +763,48 @@ body.light-theme .tooltip-icon:hover::after {
     opacity: 0.8;
     text-decoration: underline solid currentColor;
     text-shadow: 0 0 8px currentColor;
+}
+
+/* Styled AI Summary Section Headers */
+.summary-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.02rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 22px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 6px;
+}
+
+body.light-theme .summary-section-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.section-number-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: var(--neon-blue);
+    color: #FFFFFF;
+    font-size: 0.8rem;
+    font-weight: 700;
+    box-shadow: var(--neon-glow-blue);
+}
+
+/* Adjust paragraph and spacing in summary */
+.markdown-body p {
+    margin-bottom: 12px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.markdown-body strong {
+    color: var(--text-primary);
 }
 

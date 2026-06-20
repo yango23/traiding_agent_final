@@ -31,7 +31,7 @@ The application integrates real-time external data (RAG/Tool Use) to provide the
 
 1. Navigate to the project directory:
    ```bash
-   cd f:\AGA\crypto-advisor
+   cd crypto-advisor
    ```
 
 2. Configure your local `.env` environment file in the root folder (this file is ignored by Git):
