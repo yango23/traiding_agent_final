@@ -29,7 +29,7 @@ def get_gemini_client() -> genai.Client:
 SUSPICIOUS_PATTERNS = [
     r"ignore\s+(your\s+)?(previous\s+)?(rules|instructions|directives|guidelines)",
     r"forget\s+(your\s+)?(previous\s+)?(rules|instructions|directives|guidelines)",
-    r"bypass\s+restrictions",
+    r"bypass\s+(restrictions|constraints|rules)",
     r"jailbreak",
     r"system\s+prompt",
     r"override\s+instruction",
