@@ -249,6 +249,21 @@ function renderTradingViewWidget() {
 // Market & AI Data Loading
 // -------------------------------------------------------------------------
 
+function renderSummaryError() {
+    const retryText = currentLanguage === "ru" ? "🔄 Повторить попытку" : "🔄 Retry Generation";
+    const errorText = LOCALIZATION[currentLanguage].errorSummary;
+    
+    aiSummaryText.innerHTML = `
+        <div style="text-align: center; padding: 24px; color: var(--text-secondary); background: rgba(244, 63, 94, 0.04); border: 1px dashed rgba(244, 63, 94, 0.2); border-radius: 12px; margin-top: 14px;">
+            <p style="margin-bottom: 14px; color: var(--neon-rose); font-weight: 600; font-size: 0.95rem;">⚠️ ${errorText}</p>
+            <button class="control-btn" style="margin: 0 auto; display: flex; align-items: center; gap: 8px; font-weight: 700; padding: 8px 16px; font-size: 0.85rem;" onclick="loadAIContent()">
+                ${retryText}
+            </button>
+        </div>
+    `;
+    aiSummaryText.style.display = "block";
+}
+
 async function loadAIContent() {
     // 1. Fetch Stats, Indicators and News from API
     try {
@@ -277,12 +292,10 @@ async function loadAIContent() {
             aiSummaryText.innerHTML = formatMarkdown(data.summary);
             aiSummaryText.style.display = "block";
         } else {
-            aiSummaryText.innerHTML = `<p>${LOCALIZATION[currentLanguage].errorSummary}</p>`;
-            aiSummaryText.style.display = "block";
+            renderSummaryError();
         }
     } catch (e) {
-        aiSummaryText.innerHTML = `<p>${LOCALIZATION[currentLanguage].errorSummary}</p>`;
-        aiSummaryText.style.display = "block";
+        renderSummaryError();
     } finally {
         summaryLoading.style.display = "none";
     }
