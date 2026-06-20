@@ -201,7 +201,7 @@ async def fetch_crypto_news(coin_id: str, lang: str = "ru") -> list:
 
     return mock_news_ru if lang == "ru" else mock_news_en
 
-def calculate_technical_indicators(price: float, coin_id: str) -> dict:
+def calculate_technical_indicators(price: float, coin_id: str, lang: str = "ru") -> dict:
     """
     Generates realistic technical indicators based on current price and coin ID.
     Always returns educational explanations for beginners.
@@ -217,59 +217,105 @@ def calculate_technical_indicators(price: float, coin_id: str) -> dict:
     sma_50 = price * random.uniform(0.95, 1.05)
     sma_200 = price * random.uniform(0.90, 1.10)
     
-    # Format and add educational text
-    rsi_desc = (
-        "Индикатор перекупленности/перепроданности. "
-        "Значения выше 70 говорят о возможной перекупленности (цена слишком выросла, возможен откат). "
-        "Значения ниже 30 говорят о перепроданности (цена сильно упала, возможен отскок)."
-    ) if rsi > 70 or rsi < 30 else (
-        "Индикатор находится в нейтральной зоне (между 30 и 70), явных сигналов о перекупленности или перепроданности нет."
-    )
-    
-    macd_desc = (
-        "Схождение/расхождение скользящих средних. "
-        "Гистограмма выше нуля указывает на преобладание бычьего (восходящего) импульса. "
-        "Гистограмма ниже нуля указывает на преобладание медвежьего (нисходящего) импульса."
-    )
-    
-    sma_desc = (
-        "Простые скользящие средние (50-дневная и 200-дневная). "
-        "Если 50-дневная SMA находится выше 200-дневной, это бычий сигнал ('Золотой крест'). "
-        "Если ниже — медвежий сигнал ('Крест смерти')."
-    )
+    # Format and add educational text depending on language
+    if lang != "ru":
+        # English
+        rsi_desc = (
+            "Overbought/oversold indicator. "
+            "Values above 70 indicate potential overbought conditions (price rose too much, pullback possible). "
+            "Values below 30 indicate oversold conditions (price fell significantly, rebound possible)."
+        ) if rsi > 70 or rsi < 30 else (
+            "The indicator is in the neutral zone (between 30 and 70), there are no clear overbought or oversold signals."
+        )
+        
+        macd_desc = (
+            "Moving Average Convergence Divergence. "
+            "A histogram above zero indicates a prevailing bullish (upward) momentum. "
+            "A histogram below zero indicates a prevailing bearish (downward) momentum."
+        )
+        
+        sma_desc = (
+            "Simple Moving Averages (50-day and 200-day). "
+            "If the 50-day SMA is above the 200-day SMA, it is a bullish signal ('Golden Cross'). "
+            "If it is below — a bearish signal ('Death Cross')."
+        )
 
-    bb_upper = price * random.uniform(1.02, 1.05)
-    bb_lower = price * random.uniform(0.95, 0.98)
-    bb_status = "В границах"
-    bb_desc = (
-        "Полосы Боллинджера. Отражают волатильность рынка. "
-        "Цена вблизи верхней границы указывает на перекупленность, а у нижней — на перепроданность."
-    )
-    
-    fg_value = random.randint(25, 80)
-    fg_status = "Экстремальный страх" if fg_value < 30 else ("Страх" if fg_value < 50 else ("Жадность" if fg_value < 75 else "Экстремальная жадность"))
-    fg_desc = (
-        "Индекс страха и жадности. Отражает общие настроения на рынке. "
-        "Крайний страх (>25) указывает на панику (время искать точки входа), крайняя жадность (>75) — на перегрев."
-    )
+        bb_upper = price * random.uniform(1.02, 1.05)
+        bb_lower = price * random.uniform(0.95, 0.98)
+        bb_status = "In bounds"
+        bb_desc = (
+            "Bollinger Bands. Reflect market volatility. "
+            "Price near the upper band indicates overbought conditions, while near the lower band indicates oversold."
+        )
+        
+        fg_value = random.randint(25, 80)
+        fg_status = "Extreme Fear" if fg_value < 30 else ("Fear" if fg_value < 50 else ("Greed" if fg_value < 75 else "Extreme Greed"))
+        fg_desc = (
+            "Fear and Greed Index. Reflects general market sentiment. "
+            "Extreme fear (<30) indicates panic (good entry opportunities), extreme greed (>75) indicates market overheating."
+        )
+        
+        rsi_status = "Overbought" if rsi > 70 else ("Oversold" if rsi < 30 else "Neutral")
+        macd_status = "Bullish momentum" if macd_hist > 0 else "Bearish momentum"
+        sma_status = "Golden Cross" if sma_50 > sma_200 else "Death Cross"
+    else:
+        # Russian
+        rsi_desc = (
+            "Индикатор перекупленности/перепроданности. "
+            "Значения выше 70 говорят о возможной перекупленности (цена слишком выросла, возможен откат). "
+            "Значения ниже 30 говорят о перепроданности (цена сильно упала, возможен отскок)."
+        ) if rsi > 70 or rsi < 30 else (
+            "Индикатор находится в нейтральной зоне (между 30 и 70), явных сигналов о перекупленности или перепроданности нет."
+        )
+        
+        macd_desc = (
+            "Схождение/расхождение скользящих средних. "
+            "Гистограмма выше нуля указывает на преобладание бычьего (восходящего) импульса. "
+            "Гистограмма ниже нуля указывает на преобладание медвежьего (нисходящего) импульса."
+        )
+        
+        sma_desc = (
+            "Простые скользящие средние (50-дневная и 200-дневная). "
+            "Если 50-дневная SMA находится выше 200-дневной, это бычий сигнал ('Золотой крест'). "
+            "Если ниже — медвежий сигнал ('Крест смерти')."
+        )
+
+        bb_upper = price * random.uniform(1.02, 1.05)
+        bb_lower = price * random.uniform(0.95, 0.98)
+        bb_status = "В границах"
+        bb_desc = (
+            "Полосы Боллинджера. Отражают волатильность рынка. "
+            "Цена вблизи верхней границы указывает на перекупленность, а у нижней — на перепроданность."
+        )
+        
+        fg_value = random.randint(25, 80)
+        fg_status = "Экстремальный страх" if fg_value < 30 else ("Страх" if fg_value < 50 else ("Жадность" if fg_value < 75 else "Экстремальная жадность"))
+        fg_desc = (
+            "Индекс страха и жадности. Отражает общие настроения на рынке. "
+            "Крайний страх (>25) указывает на панику (время искать точки входа), крайняя жадность (>75) — на перегрев."
+        )
+        
+        rsi_status = "Перекуплен" if rsi > 70 else ("Перепродан" if rsi < 30 else "Нейтральный")
+        macd_status = "Бычий импульс" if macd_hist > 0 else "Медвежий импульс"
+        sma_status = "Золотой крест" if sma_50 > sma_200 else "Крест смерти"
 
     return {
         "rsi": {
             "value": round(rsi, 2),
-            "status": "Перекуплен" if rsi > 70 else ("Перепродан" if rsi < 30 else "Нейтральный"),
+            "status": rsi_status,
             "description": rsi_desc
         },
         "macd": {
             "hist": round(macd_hist, 4),
             "line": round(macd_line, 4),
             "signal": round(signal_line, 4),
-            "status": "Бычий импульс" if macd_hist > 0 else "Медвежий импульс",
+            "status": macd_status,
             "description": macd_desc
         },
         "moving_averages": {
             "sma_50": round(sma_50, 2),
             "sma_200": round(sma_200, 2),
-            "status": "Золотой крест" if sma_50 > sma_200 else "Крест смерти",
+            "status": sma_status,
             "description": sma_desc
         },
         "bollinger_bands": {

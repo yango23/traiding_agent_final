@@ -14,6 +14,7 @@ const TRADINGVIEW_SYMBOLS = {
 };
 
 // UI Localization Dictionaries
+// UI Localization Dictionaries
 const LOCALIZATION = {
     ru: {
         subtitle: "Учебный ИИ-помощник & Дашборд по техническому анализу",
@@ -36,10 +37,21 @@ const LOCALIZATION = {
             "Какая монета сейчас наиболее интересна для покупки?",
             "Как минимизировать риски потерь новичку?",
             "Как мне настроить индикаторы RSI и MACD?"
-        ]
+        ],
+        lblIndicatorsTitle: "Технические индикаторы",
+        lblSmaLabel: "Скользящие средние",
+        lblFgLabel: "Страх и Жадность",
+        tipRsi: "Индекс относительной силы (RSI). Перекуплен >70, перепродан <30.",
+        tipMacd: "Схождение/расхождение средних (MACD). Показывает импульс тренда.",
+        tipSma: "SMA-50 и SMA-200. Золотой крест — бычий сигнал, Крест смерти — медвежий.",
+        tipBb: "Полосы Боллинджера. Отражают волатильность рынка.",
+        tipFg: "Индекс страха и жадности. Настроение инвесторов: 0 (страх) - 100 (жадность).",
+        lblSecurityBadge: "🛡️ Защищен",
+        lblSecurityBadgeTitle: "Полная безопасность от финансовых советов и вредоносных команд",
+        langToggleTitle: "Переключить язык"
     },
     en: {
-        subtitle: "Educational AI Assistant & Technical Analysis Dashboard",
+        subtitle: "Educational AI Assistant & Dashboard",
         lblSelectCoin: "Select Crypto Asset",
         lblHigh24h: "24h High",
         lblLow24h: "24h Low",
@@ -59,12 +71,23 @@ const LOCALIZATION = {
             "Which coin looks most interesting to buy right now?",
             "How can a beginner minimize trading losses?",
             "How do I set up RSI and MACD indicators?"
-        ]
+        ],
+        lblIndicatorsTitle: "Technical Indicators",
+        lblSmaLabel: "Moving Averages",
+        lblFgLabel: "Fear & Greed",
+        tipRsi: "Relative Strength Index (RSI). Overbought >70, oversold <30.",
+        tipMacd: "Moving Average Convergence Divergence (MACD). Shows trend momentum.",
+        tipSma: "SMA-50 and SMA-200. Golden Cross is bullish, Death Cross is bearish.",
+        tipBb: "Bollinger Bands. Reflects market volatility.",
+        tipFg: "Fear and Greed Index. Sentiment from 0 (fear) to 100 (greed).",
+        lblSecurityBadge: "🛡️ Protected",
+        lblSecurityBadgeTitle: "Full safety from financial advice and command injection",
+        langToggleTitle: "Switch Language"
     }
 };
 
 // State Variables
-let currentLanguage = localStorage.getItem("lang") || "ru";
+let currentLanguage = localStorage.getItem("lang") || "en";
 let currentTheme = localStorage.getItem("theme") || "dark";
 let currentCoin = "bitcoin";
 let activeTab = "summary";
@@ -140,6 +163,23 @@ function localizeUI() {
     document.getElementById("chat-disclaimer").innerHTML = t.chatDisclaimer;
     chatInput.placeholder = t.chatPlaceholder;
     document.getElementById("lbl-loading-summary").textContent = t.lblLoadingSummary;
+    
+    // Additional elements localized dynamically
+    document.getElementById("lbl-indicators-title").textContent = t.lblIndicatorsTitle;
+    document.getElementById("lbl-indicator-sma-label").textContent = t.lblSmaLabel;
+    document.getElementById("lbl-indicator-fg-label").textContent = t.lblFgLabel;
+    
+    document.getElementById("tip-rsi").setAttribute("data-tooltip", t.tipRsi);
+    document.getElementById("tip-macd").setAttribute("data-tooltip", t.tipMacd);
+    document.getElementById("tip-sma").setAttribute("data-tooltip", t.tipSma);
+    document.getElementById("tip-bb").setAttribute("data-tooltip", t.tipBb);
+    document.getElementById("tip-fg").setAttribute("data-tooltip", t.tipFg);
+    
+    const secBadge = document.getElementById("lbl-security-badge");
+    secBadge.textContent = t.lblSecurityBadge;
+    secBadge.setAttribute("title", t.lblSecurityBadgeTitle);
+    
+    langToggleBtn.setAttribute("title", t.langToggleTitle);
 }
 
 // -------------------------------------------------------------------------
@@ -470,9 +510,19 @@ function setIndicatorStatusColor(elementId, status) {
     if (!el) return;
     const lowerStatus = status.toLowerCase();
     
-    if (lowerStatus.includes("перекуплен") || lowerStatus.includes("медвеж") || lowerStatus.includes("смерти") || lowerStatus.includes("страх")) {
+    const isRose = lowerStatus.includes("перекуплен") || lowerStatus.includes("медвеж") || 
+                   lowerStatus.includes("смерти") || lowerStatus.includes("страх") ||
+                   lowerStatus.includes("overbought") || lowerStatus.includes("bearish") || 
+                   lowerStatus.includes("death") || lowerStatus.includes("fear");
+                   
+    const isGreen = lowerStatus.includes("перепродан") || lowerStatus.includes("быч") || 
+                    lowerStatus.includes("золотой") || lowerStatus.includes("жадность") ||
+                    lowerStatus.includes("oversold") || lowerStatus.includes("bullish") || 
+                    lowerStatus.includes("golden") || lowerStatus.includes("greed");
+    
+    if (isRose) {
         el.style.color = "var(--neon-rose)";
-    } else if (lowerStatus.includes("перепродан") || lowerStatus.includes("быч") || lowerStatus.includes("золотой") || lowerStatus.includes("жадность")) {
+    } else if (isGreen) {
         el.style.color = "var(--neon-green)";
     } else {
         el.style.color = "var(--text-primary)";

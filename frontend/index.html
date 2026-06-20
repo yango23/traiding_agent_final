@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,12 +21,12 @@
                 <span class="logo-icon">🛡️</span>
                 <div class="logo-text">
                     <h1>Crypto <span class="neon-text">AI Advisor</span></h1>
-                    <span class="sub-logo" id="header-subtitle">Учебный ИИ-помощник & Дашборд</span>
+                    <span class="sub-logo" id="header-subtitle">Educational AI Assistant & Dashboard</span>
                 </div>
             </div>
             <div class="header-controls">
-                <button id="lang-toggle-btn" class="control-btn" title="Переключить язык">RU</button>
-                <button id="theme-toggle-btn" class="control-btn" title="Переключить тему">🌙</button>
+                <button id="lang-toggle-btn" class="control-btn" title="Switch Language">EN</button>
+                <button id="theme-toggle-btn" class="control-btn" title="Toggle Theme">🌙</button>
             </div>
         </header>
 
@@ -36,7 +36,7 @@
             <!-- LEFT PANEL: Coin Selector & Stats -->
             <section class="left-panel">
                 <div class="glass-card selector-card">
-                    <h3 id="label-select-coin">Выберите актив</h3>
+                    <h3 id="label-select-coin">Select Crypto Asset</h3>
                     <div class="custom-select-wrapper">
                         <select id="coin-selector">
                             <option value="bitcoin" selected>Bitcoin (BTC)</option>
@@ -59,52 +59,52 @@
                     <hr class="card-divider">
                     <div class="stats-grid">
                         <div class="stat-item">
-                            <span class="stat-label" id="lbl-high-24h">24ч Макс</span>
+                            <span class="stat-label" id="lbl-high-24h">24h High</span>
                             <span class="stat-value" id="val-high-24h">$66,200.00</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label" id="lbl-low-24h">24ч Мин</span>
+                            <span class="stat-label" id="lbl-low-24h">24h Low</span>
                             <span class="stat-value" id="val-low-24h">$64,100.00</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label" id="lbl-volume">Объем (24ч)</span>
+                            <span class="stat-label" id="lbl-volume">Volume (24h)</span>
                             <span class="stat-value" id="val-volume">$28.4B</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label" id="lbl-cap">Капитализация</span>
+                            <span class="stat-label" id="lbl-cap">Market Cap</span>
                             <span class="stat-value" id="val-cap">$1.28T</span>
                         </div>
                     </div>
                     <hr class="card-divider">
-                    <h4 class="section-title" id="lbl-indicators-title" style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">Технические индикаторы</h4>
+                    <h4 class="section-title" id="lbl-indicators-title" style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">Technical Indicators</h4>
                     <div class="stats-grid indicators-grid" style="gap: 10px;">
                         <div class="stat-item">
                             <span class="stat-label indicator-label clickable" onclick="askAgentAboutIndicator('RSI')" style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 500;">
-                                RSI (14) <span class="tooltip-icon" id="tip-rsi" data-tooltip="Индекс относительной силы (RSI). Перекуплен >70, перепродан <30.">?</span>
+                                RSI (14) <span class="tooltip-icon" id="tip-rsi" data-tooltip="Relative Strength Index (RSI). Overbought >70, oversold <30.">?</span>
                             </span>
                             <span class="stat-value" id="val-indicator-rsi">-</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label indicator-label clickable" onclick="askAgentAboutIndicator('MACD')" style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 500;">
-                                MACD <span class="tooltip-icon" id="tip-macd" data-tooltip="Схождение/расхождение средних (MACD). Показывает импульс тренда.">?</span>
+                                MACD <span class="tooltip-icon" id="tip-macd" data-tooltip="Moving Average Convergence Divergence (MACD). Shows trend momentum.">?</span>
                             </span>
                             <span class="stat-value" id="val-indicator-macd">-</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label indicator-label clickable" onclick="askAgentAboutIndicator('SMA Crossover')" style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 500;">
-                                Скользящие средние <span class="tooltip-icon" id="tip-sma" data-tooltip="SMA-50 и SMA-200. Золотой крест — бычий сигнал, Крест смерти — медвежий.">?</span>
+                                <span id="lbl-indicator-sma-label">Moving Averages</span> <span class="tooltip-icon" id="tip-sma" data-tooltip="SMA-50 and SMA-200. Golden Cross is bullish, Death Cross is bearish.">?</span>
                             </span>
                             <span class="stat-value" id="val-indicator-sma">-</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label indicator-label clickable" onclick="askAgentAboutIndicator('Bollinger Bands')" style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 500;">
-                                Bollinger Bands <span class="tooltip-icon" id="tip-bb" data-tooltip="Полосы Боллинджера. Отражают волатильность рынка.">?</span>
+                                Bollinger Bands <span class="tooltip-icon" id="tip-bb" data-tooltip="Bollinger Bands. Reflects market volatility.">?</span>
                             </span>
                             <span class="stat-value" id="val-indicator-bb">-</span>
                         </div>
                         <div class="stat-item">
                             <span class="stat-label indicator-label clickable" onclick="askAgentAboutIndicator('Fear & Greed Index')" style="cursor: pointer; display: flex; align-items: center; gap: 4px; font-weight: 500;">
-                                Страх и Жадность <span class="tooltip-icon" id="tip-fg" data-tooltip="Индекс страха и жадности. Настроение инвесторов: 0 (страх) - 100 (жадность).">?</span>
+                                <span id="lbl-indicator-fg-label">Fear & Greed</span> <span class="tooltip-icon" id="tip-fg" data-tooltip="Fear & Greed Index. Sentiment from 0 (fear) to 100 (greed).">?</span>
                             </span>
                             <span class="stat-value" id="val-indicator-fg">-</span>
                         </div>
@@ -122,15 +122,15 @@
                 <!-- TABS CONTAINER -->
                 <div class="glass-card tabs-card">
                     <div class="tab-headers">
-                        <button class="tab-btn active" id="tab-summary-btn" onclick="switchTab('summary')">📝 Сводка ИИ</button>
-                        <button class="tab-btn" id="tab-news-btn" onclick="switchTab('news')">📰 Новости</button>
+                        <button class="tab-btn active" id="tab-summary-btn" onclick="switchTab('summary')">📝 AI Summary</button>
+                        <button class="tab-btn" id="tab-news-btn" onclick="switchTab('news')">📰 News</button>
                     </div>
                     <div class="tab-content-container">
                         <!-- AI SUMMARY TAB -->
                         <div class="tab-content active" id="tab-summary-content">
                             <div class="loading-spinner" id="summary-loading">
                                 <div class="spinner"></div>
-                                <span id="lbl-loading-summary">Генерация ИИ-анализа...</span>
+                                <span id="lbl-loading-summary">Generating AI Analysis...</span>
                             </div>
                             <div id="ai-summary-text" class="markdown-body"></div>
                         </div>
@@ -154,12 +154,12 @@
                     <div class="chat-header">
                         <div class="chat-status">
                             <span class="status-dot green"></span>
-                            <span id="lbl-advisor-status">ИИ-Преподаватель (Обучение)</span>
+                            <span id="lbl-advisor-status">AI Educator (Educational Mode)</span>
                         </div>
-                        <span class="security-badge" title="Полная безопасность от финансовых советов и вредоносных команд">🛡️ Защищен</span>
+                        <span class="security-badge" id="lbl-security-badge" title="Full safety from financial advice and command injection">🛡️ Protected</span>
                     </div>
                     <div class="chat-warning" id="chat-disclaimer">
-                        ⚠️ <strong>Внимание:</strong> Я даю только технический/фундаментальный анализ и обучаю концепциям торговли. Я НЕ даю сигналов и финансовых рекомендаций по покупке/продаже.
+                        ⚠️ <strong>Warning:</strong> I only provide technical/fundamental analysis and teach trading concepts. I DO NOT provide trading signals or direct buy/sell recommendations.
                     </div>
                     <div class="chat-messages" id="chat-messages-container">
                         <!-- Dynamic chat messages -->
@@ -169,7 +169,7 @@
                         <!-- Dynamic suggestions -->
                     </div>
                     <div class="chat-input-area">
-                        <input type="text" id="chat-input" placeholder="Задайте вопрос об активном токене..." autocomplete="off">
+                        <input type="text" id="chat-input" placeholder="Ask a question about the active token..." autocomplete="off">
                         <button id="chat-send-btn" class="send-btn">
                             <svg viewBox="0 0 24 24" width="20" height="20">
                                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"></path>
