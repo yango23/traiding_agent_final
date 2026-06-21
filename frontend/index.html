@@ -172,9 +172,14 @@
 
                 <!-- TABS CONTAINER -->
                 <div class="glass-card tabs-card">
-                    <div class="tab-headers">
-                        <button class="tab-btn active" id="tab-summary-btn" onclick="switchTab('summary')">📝 AI Summary</button>
-                        <button class="tab-btn" id="tab-news-btn" onclick="switchTab('news')">📰 News</button>
+                    <div class="tab-headers" style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: 4px;">
+                            <button class="tab-btn active" id="tab-summary-btn" onclick="switchTab('summary')">📝 AI Summary</button>
+                            <button class="tab-btn" id="tab-news-btn" onclick="switchTab('news')">📰 News</button>
+                        </div>
+                        <button class="control-btn" id="export-report-btn" onclick="exportReport()" style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; padding: 6px 12px; height: fit-content; border: 1px solid var(--card-border); background: var(--input-bg); border-radius: 8px; margin-right: 6px; cursor: pointer; color: var(--text-primary); transition: all 0.2s ease;">
+                            📥 <span id="lbl-export-btn">Export Report</span>
+                        </button>
                     </div>
                     <!-- Simulated warning banner -->
                     <div id="simulated-warning" style="display:none; padding:6px 14px; background:rgba(234,179,8,0.12); border-bottom:1px solid rgba(234,179,8,0.25); font-size:0.72rem; color:#EAB308; display:flex; align-items:center; gap:6px;">

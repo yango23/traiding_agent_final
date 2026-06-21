@@ -56,7 +56,8 @@ const LOCALIZATION = {
             buy: "Покупка",
             strongBuy: "Активная покупка",
             sentimentTitle: "Настроение рынка"
-        }
+        },
+        lblExportBtn: "Скачать отчет"
     },
     en: {
         subtitle: "Educational AI Assistant & Dashboard",
@@ -98,7 +99,8 @@ const LOCALIZATION = {
             buy: "Buy",
             strongBuy: "Strong Buy",
             sentimentTitle: "Market Sentiment"
-        }
+        },
+        lblExportBtn: "Export Report"
     }
 };
 
@@ -117,6 +119,7 @@ let currentCoin = "bitcoin";
 let activeTab = "summary";
 let tvWidgetInstance = null;
 let currentSentimentTimeframe = "12h";
+let lastRawSummary = "";
 
 // Chat histories cached by coin ID
 let chatHistories = {};
@@ -223,6 +226,11 @@ function localizeUI() {
     if (closeBtn) {
         closeBtn.setAttribute("title", currentLanguage === "ru" ? "Закрыть предупреждение" : "Close warning");
     }
+
+    const expBtnLabel = document.getElementById("lbl-export-btn");
+    if (expBtnLabel) {
+        expBtnLabel.textContent = t.lblExportBtn;
+    }
     
     // Translate Market Sentiment Title and Update Gauge
     document.getElementById("lbl-sentiment-title").textContent = t.sentimentLabels.sentimentTitle;
@@ -291,6 +299,7 @@ async function loadAIContent() {
     // 2. Fetch AI Summary
     summaryLoading.style.display = "flex";
     aiSummaryText.style.display = "none";
+    lastRawSummary = "";
     try {
         const response = await fetch("/api/summary", {
             method: "POST",
@@ -299,6 +308,7 @@ async function loadAIContent() {
         });
         const data = await response.json();
         if (data.success) {
+            lastRawSummary = data.summary;
             aiSummaryText.innerHTML = formatMarkdown(data.summary);
             aiSummaryText.style.display = "block";
             // Show/hide simulated-mode warning banner
@@ -1017,6 +1027,83 @@ chatInput.onkeydown = (e) => {
     if (e.key === "Enter") sendMessage();
 };
 chatSendBtn.onclick = sendMessage;
+
+function exportReport() {
+    const coinLabel = coinDisplayName.textContent || coinSelector.options[coinSelector.selectedIndex].text;
+    const price = coinDisplayPrice.textContent;
+    const change = coinDisplayChange.textContent;
+    const high = valHigh24h.textContent;
+    const low = valLow24h.textContent;
+    const vol = valVolume.textContent;
+    const cap = valCap.textContent;
+    
+    const rsi = document.getElementById("val-indicator-rsi").textContent;
+    const macd = document.getElementById("val-indicator-macd").textContent;
+    const sma = document.getElementById("val-indicator-sma").textContent;
+    const bb = document.getElementById("val-indicator-bb").textContent;
+    const fg = document.getElementById("val-indicator-fg").textContent;
+    
+    const sentiment = document.getElementById("gauge-value-text").textContent;
+    const sentimentTimeframe = currentSentimentTimeframe;
+    
+    const now = new Date().toLocaleString();
+    
+    let reportMd = "";
+    if (currentLanguage === "ru") {
+        reportMd = `# Отчет по анализу криптовалюты: ${coinLabel}
+Дата/Время: ${now}
+
+## Обзор рынка
+- **Текущая цена**: ${price} (${change})
+- **Максимум / Минимум (24ч)**: ${high} / ${low}
+- **Объем торгов (24ч)**: ${vol}
+- **Рыночная капитализация**: ${cap}
+
+## Технические индикаторы
+- **RSI (14)**: ${rsi}
+- **MACD**: ${macd}
+- **Скользящие средние (SMA)**: ${sma}
+- **Полосы Боллинджера**: ${bb}
+- **Индекс страха и жадности**: ${fg}
+- **Настроение рынка (${sentimentTimeframe})**: ${sentiment}
+
+## Сводка ИИ-анализа
+${lastRawSummary || "Нет доступных данных по анализу."}
+`;
+    } else {
+        reportMd = `# Crypto Market Analysis Report: ${coinLabel}
+Date/Time: ${now}
+
+## Market Overview
+- **Current Price**: ${price} (${change})
+- **24h High / Low**: ${high} / ${low}
+- **24h Volume**: ${vol}
+- **Market Cap**: ${cap}
+
+## Technical Indicators
+- **RSI (14)**: ${rsi}
+- **MACD**: ${macd}
+- **Moving Averages**: ${sma}
+- **Bollinger Bands**: ${bb}
+- **Fear & Greed**: ${fg}
+- **Market Sentiment (${sentimentTimeframe})**: ${sentiment}
+
+## AI Analysis Summary
+${lastRawSummary || "No AI analysis summary available."}
+`;
+    }
+    
+    // Download file
+    const blob = new Blob([reportMd], { type: "text/markdown;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${currentCoin}_analysis_report.md`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 
 // Initial Bootstrap
 initTheme();

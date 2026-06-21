@@ -23,9 +23,10 @@ async def test_fetch_crypto_news():
     assert "body" in res[0]
     assert "source" in res[0]
 
-def test_calculate_technical_indicators():
+@pytest.mark.asyncio
+async def test_calculate_technical_indicators():
     # Test indicators calculation and descriptions
-    indicators = calculate_technical_indicators(65000.0, "bitcoin")
+    indicators = await calculate_technical_indicators(65000.0, "bitcoin")
     assert "rsi" in indicators
     assert "macd" in indicators
     assert "moving_averages" in indicators

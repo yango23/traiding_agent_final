@@ -258,22 +258,126 @@ async def fetch_crypto_news(coin_id: str, lang: str = "ru") -> list:
     ]
     return fallback
 
-def calculate_technical_indicators(price: float, coin_id: str, lang: str = "ru") -> dict:
+async def fetch_binance_klines(symbol: str, limit: int = 250) -> list:
     """
-    Generates realistic technical indicators based on current price and coin ID.
-    Always returns educational explanations for beginners.
+    Fetches daily klines from Binance public API.
     """
-    lang = lang.lower().strip()
-    seed_offset = sum(ord(c) for c in coin_id)
-    random.seed(int(time.time() / 120) + seed_offset)
+    url = f"https://api.binance.com/api/v3/klines?symbol={symbol}&interval=1d&limit={limit}"
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        response = await client.get(url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            raise Exception(f"Binance API returned status code {response.status_code}")
+
+def calculate_metrics_with_pandas(klines_data) -> dict:
+    import pandas as pd
+    # klines format: list of lists
+    # index 4 is Close price
+    closes = [float(k[4]) for k in klines_data]
+    df = pd.DataFrame({"close": closes})
     
-    rsi = random.uniform(35.0, 75.0)
-    macd_line = random.uniform(-price * 0.005, price * 0.005)
-    signal_line = macd_line * random.uniform(0.8, 1.2)
+    # 1. SMA 50 and 200
+    sma_50 = df["close"].rolling(window=50).mean().iloc[-1]
+    sma_200 = df["close"].rolling(window=200).mean().iloc[-1]
+    
+    # 2. RSI (14)
+    delta = df["close"].diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / loss
+    rsi = (100 - (100 / (1 + rs))).iloc[-1]
+    if pd.isna(rsi):
+        rsi = 50.0 # Neutral fallback
+        
+    # 3. MACD
+    ema_12 = df["close"].ewm(span=12, adjust=False).mean()
+    ema_26 = df["close"].ewm(span=26, adjust=False).mean()
+    macd_line = (ema_12 - ema_26).iloc[-1]
+    signal_line = (ema_12 - ema_26).ewm(span=9, adjust=False).mean().iloc[-1]
     macd_hist = macd_line - signal_line
     
-    sma_50 = price * random.uniform(0.95, 1.05)
-    sma_200 = price * random.uniform(0.90, 1.10)
+    # 4. Bollinger Bands
+    sma_20 = df["close"].rolling(window=20).mean()
+    std_20 = df["close"].rolling(window=20).std()
+    bb_upper = (sma_20 + 2 * std_20).iloc[-1]
+    bb_lower = (sma_20 - 2 * std_20).iloc[-1]
+    
+    return {
+        "rsi": float(rsi),
+        "macd_line": float(macd_line),
+        "signal_line": float(signal_line),
+        "macd_hist": float(macd_hist),
+        "sma_50": float(sma_50),
+        "sma_200": float(sma_200),
+        "bb_upper": float(bb_upper),
+        "bb_lower": float(bb_lower)
+    }
+
+async def fetch_fear_greed() -> int:
+    try:
+        url = "https://api.alternative.me/fng/?limit=1"
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.get(url)
+            if resp.status_code == 200:
+                data = resp.json()
+                val = int(data["data"][0]["value"])
+                return val
+    except Exception as e:
+        print(f"Error fetching Fear & Greed index: {e}")
+    return random.randint(35, 70) # Fallback
+
+async def calculate_technical_indicators(price: float, coin_id: str, lang: str = "ru") -> dict:
+    """
+    Calculates technical indicators dynamically using Binance public API data and pandas.
+    Falls back to simulated calculations if API call fails.
+    """
+    lang = lang.lower().strip()
+    coin_id = coin_id.lower().strip()
+    
+    # Map coin ID to Binance symbol
+    symbol_map = {
+        "bitcoin": "BTCUSDT",
+        "ethereum": "ETHUSDT",
+        "solana": "SOLUSDT",
+        "ripple": "XRPUSDT",
+        "dogecoin": "DOGEUSDT",
+        "shiba-inu": "SHIBUSDT",
+        "pepe": "PEPEUSDT",
+    }
+    symbol = symbol_map.get(coin_id, "BTCUSDT")
+    
+    real_data_success = False
+    try:
+        klines = await fetch_binance_klines(symbol)
+        metrics = calculate_metrics_with_pandas(klines)
+        
+        rsi = metrics["rsi"]
+        macd_line = metrics["macd_line"]
+        signal_line = metrics["signal_line"]
+        macd_hist = metrics["macd_hist"]
+        sma_50 = metrics["sma_50"]
+        sma_200 = metrics["sma_200"]
+        bb_upper = metrics["bb_upper"]
+        bb_lower = metrics["bb_lower"]
+        real_data_success = True
+    except Exception as e:
+        print(f"Error fetching real data from Binance: {e}. Falling back to simulated.")
+        
+    if not real_data_success:
+        seed_offset = sum(ord(c) for c in coin_id)
+        random.seed(int(time.time() / 120) + seed_offset)
+        rsi = random.uniform(35.0, 75.0)
+        macd_line = random.uniform(-price * 0.005, price * 0.005)
+        signal_line = macd_line * random.uniform(0.8, 1.2)
+        macd_hist = macd_line - signal_line
+        sma_50 = price * random.uniform(0.95, 1.05)
+        sma_200 = price * random.uniform(0.90, 1.10)
+        bb_upper = price * random.uniform(1.02, 1.05)
+        bb_lower = price * random.uniform(0.95, 0.98)
+
+    # Fetch real Fear & Greed index
+    fg_value = await fetch_fear_greed()
     
     # Format and add educational text depending on language
     if lang != "ru":
@@ -298,15 +402,12 @@ def calculate_technical_indicators(price: float, coin_id: str, lang: str = "ru")
             "If it is below — a bearish signal ('Death Cross')."
         )
 
-        bb_upper = price * random.uniform(1.02, 1.05)
-        bb_lower = price * random.uniform(0.95, 0.98)
-        bb_status = "In bounds"
+        bb_status = "Overbought (near Upper Band)" if price >= bb_upper * 0.98 else ("Oversold (near Lower Band)" if price <= bb_lower * 1.02 else "In bounds")
         bb_desc = (
             "Bollinger Bands. Reflect market volatility. "
             "Price near the upper band indicates overbought conditions, while near the lower band indicates oversold."
         )
         
-        fg_value = random.randint(25, 80)
         fg_status = "Extreme Fear" if fg_value < 30 else ("Fear" if fg_value < 50 else ("Greed" if fg_value < 75 else "Extreme Greed"))
         fg_desc = (
             "Fear and Greed Index. Reflects general market sentiment. "
@@ -338,19 +439,16 @@ def calculate_technical_indicators(price: float, coin_id: str, lang: str = "ru")
             "Если ниже — медвежий сигнал ('Крест смерти')."
         )
 
-        bb_upper = price * random.uniform(1.02, 1.05)
-        bb_lower = price * random.uniform(0.95, 0.98)
-        bb_status = "В границах"
+        bb_status = "Перекуплен (у верхней границы)" if price >= bb_upper * 0.98 else ("Перепродан (у нижней границы)" if price <= bb_lower * 1.02 else "В границах")
         bb_desc = (
             "Полосы Боллинджера. Отражают волатильность рынка. "
             "Цена вблизи верхней границы указывает на перекупленность, а у нижней — на перепроданность."
         )
         
-        fg_value = random.randint(25, 80)
         fg_status = "Экстремальный страх" if fg_value < 30 else ("Страх" if fg_value < 50 else ("Жадность" if fg_value < 75 else "Экстремальная жадность"))
         fg_desc = (
             "Индекс страха и жадности. Отражает общие настроения на рынке. "
-            "Крайний страх (>25) указывает на панику (время искать точки входа), крайняя жадность (>75) — на перегрев."
+            "Крайний страх (<30) указывает на панику (время искать точки входа), крайняя жадность (>75) — на перегрев."
         )
         
         rsi_status = "Перекуплен" if rsi > 70 else ("Перепродан" if rsi < 30 else "Нейтральный")

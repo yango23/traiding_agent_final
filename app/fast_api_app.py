@@ -54,7 +54,7 @@ async def get_market_data(coin_id: str, lang: str = "ru"):
     """
     try:
         coin_data = await fetch_coin_data(coin_id)
-        indicators = calculate_technical_indicators(coin_data["price"], coin_id, lang)
+        indicators = await calculate_technical_indicators(coin_data["price"], coin_id, lang)
         news = await fetch_crypto_news(coin_id, lang)
         
         return {
