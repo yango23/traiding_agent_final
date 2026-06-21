@@ -39,8 +39,8 @@ const LOCALIZATION = {
             "Как мне настроить индикаторы RSI и MACD?"
         ],
         lblIndicatorsTitle: "Технические индикаторы",
-        lblSmaLabel: "Скользящие средние",
-        lblFgLabel: "Страх и Жадность",
+        lblSmaLabel: "Скользящие (SMA)",
+        lblFgLabel: "Страх / Жадность",
         tipRsi: "Индекс относительной силы (RSI). Перекуплен >70, перепродан <30.",
         tipMacd: "Схождение/расхождение средних (MACD). Показывает импульс тренда.",
         tipSma: "SMA-50 и SMA-200. Золотой крест — бычий сигнал, Крест смерти — медвежий.",
@@ -628,6 +628,9 @@ function preprocessMarkdownTerms(text) {
     const termMapping = {
         "Death Cross": "SMA Crossover",
         "Golden Cross": "SMA Crossover",
+        "SMA-50": "SMA Crossover",
+        "SMA-200": "SMA Crossover",
+        "SMA": "SMA Crossover",
         "RSI": "RSI",
         "MACD": "MACD",
         "Bollinger Bands": "Bollinger Bands",
@@ -644,6 +647,9 @@ function preprocessMarkdownTerms(text) {
         
         "Крест смерти": "SMA Crossover",
         "Золотой крест": "SMA Crossover",
+        "скользящие средние": "SMA Crossover",
+        "скользящих средних": "SMA Crossover",
+        "скользящая средняя": "SMA Crossover",
         "Полосы Боллинджера": "Bollinger Bands",
         "Индекс страха и жадности": "Fear & Greed Index",
         "консолидац": "Market Consolidation",
@@ -652,7 +658,8 @@ function preprocessMarkdownTerms(text) {
         "перекуплен": "RSI Overbought",
         "перепродан": "RSI Oversold",
         "медвеж": "Bearish Trend",
-        "быч": "Bullish Trend"
+        "быч": "Bullish Trend",
+        "мувинг": "SMA Crossover"
     };
     
     const sortedTerms = Object.keys(termMapping).sort((a, b) => b.length - a.length);
@@ -1015,6 +1022,7 @@ function askAgentAboutSentiment() {
 
 coinSelector.onchange = (e) => {
     currentCoin = e.target.value;
+    applyCoinTheme(currentCoin);
     renderTradingViewWidget();
     initChatSession();
     loadAIContent();
@@ -1105,8 +1113,37 @@ ${lastRawSummary || "No AI analysis summary available."}
     document.body.removeChild(link);
 }
 
+const COIN_THEMES = {
+    "bitcoin": { accent: "#F7931A", rgb: "247, 147, 26" },
+    "ethereum": { accent: "#818CF8", rgb: "129, 140, 248" }, 
+    "solana": { accent: "#14F195", rgb: "20, 241, 149" }, 
+    "ripple": { accent: "#006097", rgb: "0, 96, 151" },
+    "dogecoin": { accent: "#F59E0B", rgb: "245, 158, 11" }, 
+    "shiba-inu": { accent: "#EF4444", rgb: "239, 68, 68" }, 
+    "pepe": { accent: "#10B981", rgb: "16, 185, 129" }
+};
+
+function applyCoinTheme(coinId) {
+    const theme = COIN_THEMES[coinId] || COIN_THEMES["bitcoin"];
+    document.documentElement.style.setProperty("--accent-color", theme.accent);
+    document.documentElement.style.setProperty("--accent-rgb", theme.rgb);
+    document.documentElement.style.setProperty("--accent-glow", `rgba(${theme.rgb}, 0.15)`);
+}
+
+// Mouse tracking bg glow
+document.addEventListener("mousemove", (e) => {
+    const glowBg = document.getElementById("glow-bg");
+    if (glowBg) {
+        const x = e.clientX;
+        const y = e.clientY;
+        glowBg.style.setProperty("--mouse-x", `${x}px`);
+        glowBg.style.setProperty("--mouse-y", `${y}px`);
+    }
+});
+
 // Initial Bootstrap
 initTheme();
+applyCoinTheme(currentCoin);
 localizeUI();
 renderTradingViewWidget();
 initChatSession();
