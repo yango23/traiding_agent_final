@@ -102,12 +102,16 @@ const LOCALIZATION = {
     }
 };
 
-// State Variables
-// Force clean state on startup to prevent language mixing from previous sessions
-localStorage.removeItem("chat_histories");
-localStorage.removeItem("lang");
+// Version Check & State Reset on Redeploy
+const APP_VERSION = "1.0.3";
+const savedVersion = localStorage.getItem("app_version");
+if (savedVersion !== APP_VERSION) {
+    localStorage.clear();
+    localStorage.setItem("app_version", APP_VERSION);
+}
 
-let currentLanguage = "en";
+// State Variables
+let currentLanguage = localStorage.getItem("lang") || "en";
 let currentTheme = localStorage.getItem("theme") || "dark";
 let currentCoin = "bitcoin";
 let activeTab = "summary";
@@ -116,6 +120,15 @@ let currentSentimentTimeframe = "12h";
 
 // Chat histories cached by coin ID
 let chatHistories = {};
+try {
+    const savedHistories = localStorage.getItem("chat_histories");
+    if (savedHistories) {
+        chatHistories = JSON.parse(savedHistories);
+    }
+} catch (e) {
+    console.error("Failed to parse chat histories on startup", e);
+    chatHistories = {};
+}
 
 // DOM Elements
 const coinSelector = document.getElementById("coin-selector");
@@ -166,23 +179,16 @@ function toggleLanguage() {
     localStorage.setItem("lang", currentLanguage);
     langToggleBtn.textContent = currentLanguage.toUpperCase();
     
-    // Reset all chat histories so welcome messages and responses are in the new language
-    const coinLabel = coinSelector.options[coinSelector.selectedIndex].text;
-    chatHistories = {};
-    chatHistories[currentCoin] = [{
-        role: "model",
-        content: LOCALIZATION[currentLanguage].welcomeMessage.replace("{coin}", coinLabel)
-    }];
-    saveHistories();
-    
     localizeUI();
     loadAIContent(); // Reload AI Summary & news in new language
-    renderChatMessages(); // Re-render chat (update placeholders)
-    renderQuickChips(); // Re-render suggest chips
+    initChatSession(); // Restore/re-render chat history or initialize welcome message
 }
 
 function localizeUI() {
     const t = LOCALIZATION[currentLanguage];
+    if (langToggleBtn) {
+        langToggleBtn.textContent = currentLanguage.toUpperCase();
+    }
     document.getElementById("header-subtitle").textContent = t.subtitle;
     document.getElementById("label-select-coin").textContent = t.lblSelectCoin;
     document.getElementById("lbl-high-24h").textContent = t.lblHigh24h;
@@ -330,11 +336,15 @@ async function updateQuotaUI() {
         const cUsed = q.chat_calls    || 0;
         const exhausted = q.quota_exhausted || false;
 
+        // Calculate remaining calls
+        const sRemaining = exhausted ? 0 : Math.max(0, limit - sUsed);
+        const cRemaining = exhausted ? 0 : Math.max(0, limit - cUsed);
+
         // --- counts ---
         const sEl = document.getElementById("quota-s");
         const cEl = document.getElementById("quota-c");
-        if (sEl) sEl.textContent = sUsed;
-        if (cEl) cEl.textContent = cUsed;
+        if (sEl) sEl.textContent = sRemaining;
+        if (cEl) cEl.textContent = cRemaining;
 
         // --- progress fills ---
         function setFill(fillId, used) {
@@ -626,15 +636,13 @@ function preprocessMarkdownTerms(text) {
         "Золотой крест": "SMA Crossover",
         "Полосы Боллинджера": "Bollinger Bands",
         "Индекс страха и жадности": "Fear & Greed Index",
-        "консолидации": "Market Consolidation",
-        "консолидация": "Market Consolidation",
+        "консолидац": "Market Consolidation",
         "боковик": "Sideways Trend",
-        "киты": "Market Whales",
-        "китов": "Market Whales",
+        "кит": "Market Whales",
         "перекуплен": "RSI Overbought",
         "перепродан": "RSI Oversold",
-        "медвежий": "Bearish Trend",
-        "бычий": "Bullish Trend"
+        "медвеж": "Bearish Trend",
+        "быч": "Bullish Trend"
     };
     
     const sortedTerms = Object.keys(termMapping).sort((a, b) => b.length - a.length);
@@ -643,8 +651,8 @@ function preprocessMarkdownTerms(text) {
         const topic = termMapping[term];
         const escapedTerm = term.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
         
-        // Match either already wrapped links or raw words to prevent double nesting
-        const regex = new RegExp(`\\[[^\\]]+\\]\\{term:[^}]+\\}|(${escapedTerm})`, "gi");
+        // Match either already wrapped links or raw words to prevent double nesting, matching following letters (suffixes)
+        const regex = new RegExp(`\\[[^\\]]+\\]\\{term:[^}]+\\}|(${escapedTerm}[а-яА-ЯёЁa-zA-Z]*)`, "gi");
         formatted = formatted.replace(regex, (match, g1) => {
             if (g1) {
                 return `[${g1}]{term:${topic}}`;
@@ -670,21 +678,61 @@ function formatMarkdown(text) {
     // 3. Preprocess terms to wrap them in [term]{term:Topic}
     formatted = preprocessMarkdownTerms(formatted);
     
-    // 4. Parse other markdown elements and convert custom term links
+    // 4. Parse bold, italic, code, term links
     formatted = formatted
-        .replace(/\n/g, "<br>")
         .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
         .replace(/\*([^*]+)\*/g, "<em>$1</em>")
         .replace(/`([^`]+)`/g, "<code>$1</code>")
-        .replace(/\[([^\]]+)\]\{term:([^}]+)\}/g, '<span class="term-link" onclick="askAgentAboutTerm(\'$1\', \'$2\')">$1</span>')
-        // Convert numbered section titles (e.g. 1. **Market Tone**:) into styled blocks
-        .replace(/(?:^|<br>)\s*(\d+)\.\s+\*\*([^*]+)\*\*(:)?/g, (match, num, title, colon) => {
-            return `<div class="summary-section-header"><span class="section-number-badge">${num}</span> ${title}${colon || ''}</div>`;
-        })
-        .replace(/(?:^|<br>)-\s+([^<]+)/g, "<br>• $1"); // bullets
+        .replace(/\[([^\]]+)\]\{term:([^}]+)\}/g, '<span class="term-link" onclick="askAgentAboutTerm(\'$1\', \'$2\')">$1</span>');
+
+    // 5. Convert numbered section titles (e.g. 1. **Market Tone**:) into styled block headers
+    formatted = formatted.replace(/(?:^|\n)\s*(\d+)\.\s+\*\*([^*]+)\*\*(:)?/g, (match, num, title, colon) => {
+        return `\n<div class="summary-section-header" style="margin-top: 18px; margin-bottom: 8px;"><span class="section-number-badge">${num}</span> ${title}${colon || ''}</div>\n`;
+    });
+
+    // 6. Convert markdown list items (- or *) into proper HTML lists
+    let lines = formatted.split('\n');
+    let inList = false;
+    for (let i = 0; i < lines.length; i++) {
+        let line = lines[i].trim();
+        if (line.startsWith('- ') || line.startsWith('* ')) {
+            let content = line.substring(2).trim();
+            if (!inList) {
+                lines[i] = `<ul style="margin: 6px 0 10px 16px; padding-left: 0; list-style-type: disc;"><li style="margin-bottom: 4px; line-height: 1.55;">${content}</li>`;
+                inList = true;
+            } else {
+                lines[i] = `<li style="margin-bottom: 4px; line-height: 1.55;">${content}</li>`;
+            }
+        } else {
+            if (inList) {
+                lines[i - 1] += '</ul>';
+                inList = false;
+            }
+        }
+    }
+    if (inList) {
+        lines[lines.length - 1] += '</ul>';
+    }
+    formatted = lines.join('\n');
+
+    // 7. Parse double newlines into clean paragraph blocks
+    let blocks = formatted.split(/\n\s*\n+/);
+    let processedBlocks = [];
+    for (let block of blocks) {
+        block = block.trim();
+        if (!block) continue;
+        if (block.startsWith('<ul') || block.startsWith('<div class="summary-section-header"')) {
+            processedBlocks.push(block);
+        } else {
+            block = block.replace(/\n/g, '<br>');
+            processedBlocks.push(`<p style="margin-bottom: 12px; line-height: 1.6; text-align: justify; text-justify: inter-word;">${block}</p>`);
+        }
+    }
+    formatted = processedBlocks.join('\n');
         
     return formatted;
 }
+
 
 function formatLargeNumber(num) {
     if (num >= 1e12) return `$${(num / 1e12).toFixed(2)}T`;

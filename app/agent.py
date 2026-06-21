@@ -97,6 +97,8 @@ SYSTEM_INSTRUCTION_RU = """Вы — высококвалифицированны
 
 ОБУЧАЮЩИЙ ПОДХОД (Для Новичков):
 1. Не давайте сухих цифр. Если вы упоминаете индикатор (RSI, MACD, скользящие средние), всегда объясняйте простыми словами: что это такое, что означает текущее значение и как его интерпретировать.
+   - Запомните: "Золотой крест" возникает, когда быстрая средняя (SMA-50) пересекает медленную (SMA-200) снизу вверх (бычий сигнал - зеленый).
+   - "Смертельный крест" возникает при пересечении сверху вниз (медвежий сигнал - красный). Никогда не путайте эти направления!
 2. Помогайте пользователю строить торговые стратегии на основе параметров (например: "Стратегия на пересечении SMA-50 и SMA-200 строится следующим образом..."), но обязательно добавляйте дисклеймер о необходимости тестирования на демо-счете.
 3. Сохраняйте дружелюбный, профессиональный и предостерегающий от лишних рисков тон. Помните: ваша цель — минимизировать финансовые потери новичков за счет повышения их финансовой грамотности.
 """
@@ -119,6 +121,8 @@ SAFETY RULES:
 
 EDUCATIONAL APPROACH (For Beginners):
 1. Avoid dry numbers. If you mention an indicator (RSI, MACD, moving averages), always explain in simple terms: what it is, what the current value means, and how to interpret it.
+   - Note: A "Golden Cross" happens when the fast average (SMA-50) crosses the slow average (SMA-200) from below to above (bullish crossover - green).
+   - A "Death Cross" happens when it crosses from above to below (bearish crossover - red). Never mix up these crossover directions!
 2. Help users build trading strategies based on parameters (e.g., "A strategy based on SMA-50 and SMA-200 crossover is built as follows..."), but always add a disclaimer about testing it on a demo account first.
 3. Maintain a friendly, professional, and risk-averse tone. Remember: your goal is to minimize beginners' losses by improving their financial literacy.
 """
@@ -133,8 +137,19 @@ def get_system_instruction(coin_id: str, lang: str = "ru") -> str:
         return SYSTEM_INSTRUCTION_EN.format(coin_name=coin_name, other_coin=other_coin)
 
 # -------------------------------------------------------------------------
+# Daily Cache for AI Summaries (key: {coin_id}_{lang}_{YYYY-MM-DD})
+# -------------------------------------------------------------------------
+from datetime import datetime, timezone
+summary_daily_cache = {}
+
+def get_summary_cache_key(coin_id: str, lang: str) -> str:
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return f"{coin_id.lower().strip()}_{lang.lower().strip()}_{date_str}"
+
+# -------------------------------------------------------------------------
 # Generation Helpers
 # -------------------------------------------------------------------------
+
 
 def get_simulated_summary(coin_id: str, lang: str = "ru") -> str:
     coin_name = COIN_NAMES.get(coin_id.lower().strip(), coin_id.capitalize())
@@ -223,7 +238,12 @@ async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
     Generates a fresh, context-aware AI summary for the chosen coin.
     Injects real-time price, volume, indicators, and news into the prompt.
     """
-    if os.getenv("FORCE_DEMO_MODE", "False").lower() == "true":
+    cache_key = get_summary_cache_key(coin_id, lang)
+    if cache_key in summary_daily_cache:
+        print(f"Serving cached AI summary for {coin_id} ({lang})")
+        return summary_daily_cache[cache_key]
+
+    if quota_tracker["quota_exhausted"] or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true":
         quota_tracker["quota_exhausted"] = True
         return get_simulated_summary(coin_id, lang)
 
@@ -258,7 +278,7 @@ async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
     
     Формат сводки:
     1. **Рыночный тонус**: Опиши текущую динамику (растет/падает/боковик) и активность.
-    2. **Что говорят индикаторы**: Объясни простыми словами, о чем говорят текущие показатели RSI и MACD.
+    2. **Что говорят индикаторы**: Объясни простыми словами, о чем говорят текущие показатели RSI, MACD и скользящие средние (SMA-50 и SMA-200). Пиши это строго в виде единого абзаца. Категорически запрещено разделять индикаторы или скользящие средние на отдельные пункты списка (типа "- SMA-50...", "* SMA..."). Опиши всё слитно в одном тексте.
     3. **Ключевой вывод**: Сделай вывод об общем фоне, напомни о рисках и подчеркни, что это не финансовая рекомендация.
     """
     
@@ -285,7 +305,7 @@ async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
     
     Summary format:
     1. **Market Tone**: Describe current price movement (up/down/sideways) and activity.
-    2. **Indicator Breakdown**: Explain in simple terms what the RSI and MACD are indicating right now.
+    2. **Indicator Breakdown**: Explain in simple terms what the RSI, MACD, and Moving Averages (SMA-50 and SMA-200) are indicating right now. Write this strictly as a single cohesive paragraph. You are forbidden from separating indicators or moving averages into bulleted or dashed list items (such as "- SMA-50..." or "* SMA..."). Describe everything together in plain text.
     3. **Key Takeaway**: Conclude on the overall state, emphasize risks, and reiterate that this is not financial advice.
     """
 
@@ -303,13 +323,12 @@ async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
             )
         )
         quota_tracker["quota_exhausted"] = False
+        summary_daily_cache[cache_key] = response.text
         return response.text
     except Exception as e:
-        err_str = str(e)
-        if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
-            quota_tracker["quota_exhausted"] = True
-        print(f"API Error in generate_coin_summary: {e}")
-        raise e
+        quota_tracker["quota_exhausted"] = True
+        print(f"API Error in generate_coin_summary, falling back to simulated: {e}")
+        return get_simulated_summary(coin_id, lang)
 
 async def chat_with_agent(
     query: str, 
@@ -321,7 +340,7 @@ async def chat_with_agent(
     Streams the agent's chat response using Gemini API.
     Injects context about the coin prices and indicators for high accuracy.
     """
-    if os.getenv("FORCE_DEMO_MODE", "False").lower() == "true":
+    if quota_tracker["quota_exhausted"] or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true":
         quota_tracker["quota_exhausted"] = True
         sim_response = get_simulated_chat_response(query, coin_id, lang)
         chunk_size = 8
@@ -330,52 +349,61 @@ async def chat_with_agent(
             await asyncio.sleep(0.04)
         return
 
-    client = get_gemini_client()
-    coin_data = await fetch_coin_data(coin_id)
-    indicators = calculate_technical_indicators(coin_data["price"], coin_id)
-    
-    # Pre-append current coin context to the model to ensure it is always up-to-date
-    context_injection = (
-        f"[Текущие данные {COIN_NAMES.get(coin_id, coin_id)}: Цена ${coin_data['price']:.4f}, "
-        f"24ч Изменение: {coin_data['change_24h']:.2f}%. RSI: {indicators['rsi']['value']}. "
-        f"MACD: {indicators['macd']['status']}. SMA-50: ${indicators['moving_averages']['sma_50']:.2f}. "
-        f"Не давать советов, объяснять термины!]"
-    )
+    try:
+        client = get_gemini_client()
+        coin_data = await fetch_coin_data(coin_id)
+        indicators = calculate_technical_indicators(coin_data["price"], coin_id, lang)
+        
+        # Pre-append current coin context to the model to ensure it is always up-to-date
+        context_injection = (
+            f"[Текущие данные {COIN_NAMES.get(coin_id, coin_id)}: Цена ${coin_data['price']:.4f}, "
+            f"24ч Изменение: {coin_data['change_24h']:.2f}%. RSI: {indicators['rsi']['value']}. "
+            f"MACD: {indicators['macd']['status']}. SMA-50: ${indicators['moving_averages']['sma_50']:.2f}. "
+            f"Не давать советов, объяснять термины!]"
+        )
 
-    sys_instruction = get_system_instruction(coin_id, lang)
+        sys_instruction = get_system_instruction(coin_id, lang)
 
-    # Format history for Gemini SDK
-    # history is a list of dicts: [{"role": "user"/"model", "content": "text"}]
-    contents = []
-    for h in history:
+        # Format history for Gemini SDK
+        # history is a list of dicts: [{"role": "user"/"model", "content": "text"}]
+        contents = []
+        for h in history:
+            contents.append(
+                types.Content(
+                    role=h["role"],
+                    parts=[types.Part.from_text(text=h["content"])]
+                )
+            )
+            
+        # Append the injection and the new query
         contents.append(
             types.Content(
-                role=h["role"],
-                parts=[types.Part.from_text(text=h["content"])]
+                role="user",
+                parts=[
+                    types.Part.from_text(text=context_injection),
+                    types.Part.from_text(text=query)
+                ]
+            )
+        )
+
+        # Generate stream
+        response_stream = client.models.generate_content_stream(
+            model="gemini-2.5-flash",
+            contents=contents,
+            config=types.GenerateContentConfig(
+                system_instruction=sys_instruction,
+                temperature=0.4,
             )
         )
         
-    # Append the injection and the new query
-    contents.append(
-        types.Content(
-            role="user",
-            parts=[
-                types.Part.from_text(text=context_injection),
-                types.Part.from_text(text=query)
-            ]
-        )
-    )
-
-    # Generate stream
-    response_stream = client.models.generate_content_stream(
-        model="gemini-2.5-flash",
-        contents=contents,
-        config=types.GenerateContentConfig(
-            system_instruction=sys_instruction,
-            temperature=0.4,
-        )
-    )
-    
-    for chunk in response_stream:
-        if chunk.text:
-            yield chunk.text
+        for chunk in response_stream:
+            if chunk.text:
+                yield chunk.text
+    except Exception as e:
+        print(f"API Error in chat_with_agent, falling back to simulated: {e}")
+        quota_tracker["quota_exhausted"] = True
+        sim_response = get_simulated_chat_response(query, coin_id, lang)
+        chunk_size = 8
+        for i in range(0, len(sim_response), chunk_size):
+            yield sim_response[i:i+chunk_size]
+            await asyncio.sleep(0.04)
