@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import asyncio
 from typing import AsyncGenerator
 from google import genai
 from google.genai import types
@@ -157,12 +158,77 @@ The **RSI (14)** is approaching [red]{{overbought territory (near 70)}}, signali
 3. **Key Takeaway**:
 The technical picture for {coin_name} is mixed: there are [green]{{positive signals}} from the MACD and long-term trend, but the RSI warns of a [red]{{correction risk}} in the short term. Note: This analysis is simulated for educational purposes due to the temporary exhaustion of the daily API quota (20 requests/day)."""
 
+def get_simulated_chat_response(query: str, coin_id: str, lang: str = "ru") -> str:
+    coin_name = COIN_NAMES.get(coin_id.lower().strip(), coin_id.capitalize())
+    query_lower = query.lower()
+    
+    if lang == "ru":
+        if any(w in query_lower for w in ["rsi", "macd", "индикатор", "средние", "sma", "мувинг"]):
+            return f"""Вы спросили об индикаторах в контексте {coin_name}.
+В демо-режиме ИИ-консультант может объяснить основные принципы технического анализа:
+* **Индекс относительной силы (RSI)** измеряет скорость и изменение цены. Значения выше 70 указывают на зону [red]{{перекупленности}} (риск снижения), а ниже 30 — на зону [green]{{перепроданности}} (шанс роста). Сейчас по {coin_name} индикатор выглядит сбалансированно.
+* **MACD** указывает на направление и силу тренда. Пересечение линий снизу вверх дает [green]{{бычий сигнал}}, а сверху вниз — [red]{{медвежье пересечение}}.
+* **SMA (Простые скользящие средние)** помогают сгладить цену. Нахождение цены выше SMA-50 считается [green]{{восходящим краткосрочным трендом}}."""
+
+        if any(w in query_lower for w in ["стратегия", "стратегию", "торговать", "план", "strategy"]):
+            return f"""Для {coin_name} классическая образовательная стратегия строится следующим образом:
+1. **Пересечение скользящих средних**:
+   * Когда SMA-50 пересекает SMA-200 снизу вверх, формируется паттерн [green]{{Золотой крест}} (долгосрочный бычий сигнал).
+   * При обратном пересечении сверху вниз формируется [red]{{Смертельный крест}} (медвежий сигнал).
+2. **Фильтрация сигналов по RSI**:
+   * Бычьи пересечения безопаснее искать, когда RSI только выходит из зоны [green]{{перепроданности}} (выше 30).
+   * Медвежьи развороты часто подтверждаются дивергенцией RSI в зоне [red]{{перекупленности}}.
+*Важно: Всегда тестируйте любые торговые гипотезы на демо-счете перед совершением реальных операций.*"""
+
+        return f"""Привет! Я ваш ИИ-преподаватель по техническому анализу {coin_name}.
+В настоящий момент приложение запущено в **демо-режиме** для экономии квоты API и бюджета. 
+
+Тем не менее, я готов обучать вас основам трейдинга:
+* Рассказать о работе технических индикаторов (**RSI**, **MACD**, **SMA**).
+* Помочь разработать и разобрать учебную торговую стратегию.
+* Объяснить любые термины (кликните на подчеркнутые слова на панели слева).
+
+Задайте ваш вопрос об индикаторах или стратегиях для {coin_name}!"""
+
+    else:
+        if any(w in query_lower for w in ["rsi", "macd", "indicator", "average", "sma", "moving"]):
+            return f"""You asked about technical indicators for {coin_name}.
+In demo mode, the AI educator can explain the foundational principles of technical analysis:
+* **Relative Strength Index (RSI)** measures speed and price change. Levels above 70 point to [red]{{overbought}} territory (downside risk), and levels below 30 suggest [green]{{oversold}} conditions (potential recovery).
+* **MACD** indicates trend direction and strength. A crossover above the signal line yields a [green]{{bullish signal}}, whereas a crossover below is a [red]{{bearish crossover}}.
+* **Simple Moving Averages (SMA)** help smooth price action. Trading above SMA-50 implies a [green]{{short-term uptrend}}."""
+
+        if any(w in query_lower for w in ["strategy", "strategies", "trade", "plan"]):
+            return f"""For {coin_name}, a classic educational trading strategy works as follows:
+1. **Moving Average Crossover**:
+   * When SMA-50 crosses above SMA-200, a [green]{{Golden Cross}} is formed (long-term bullish indicator).
+   * When SMA-50 crosses below SMA-200, a [red]{{Death Cross}} is formed (long-term bearish indicator).
+2. **RSI Filtering**:
+   * Bullish crossovers are typically safer when RSI is recovering from [green]{{oversold territory}} (rising above 30).
+   * Bearish reversals are confirmed when RSI shows divergence in [red]{{overbought territory}}.
+*Remember: Always test your trading ideas on a paper/demo account before committing real capital.*"""
+
+        return f"""Hello! I am your AI educator for {coin_name} technical analysis.
+The app is currently running in **demo mode** to preserve API quotas and keys.
+
+However, I am fully equipped to teach you trading foundations:
+* Explain technical indicators (**RSI**, **MACD**, **SMA**).
+* Help you design and discuss educational trading strategies.
+* Answer questions about any term (click dotted terms in the left panel).
+
+Ask me about indicator concepts or strategy structures for {coin_name}!"""
+
 async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
     """
     Generates a fresh, context-aware AI summary for the chosen coin.
     Injects real-time price, volume, indicators, and news into the prompt.
     """
+    if os.getenv("FORCE_DEMO_MODE", "False").lower() == "true":
+        quota_tracker["quota_exhausted"] = True
+        return get_simulated_summary(coin_id, lang)
+
     client = get_gemini_client()
+
     coin_data = await fetch_coin_data(coin_id)
     news = await fetch_crypto_news(coin_id, lang)
     indicators = calculate_technical_indicators(coin_data["price"], coin_id, lang)
@@ -255,6 +321,15 @@ async def chat_with_agent(
     Streams the agent's chat response using Gemini API.
     Injects context about the coin prices and indicators for high accuracy.
     """
+    if os.getenv("FORCE_DEMO_MODE", "False").lower() == "true":
+        quota_tracker["quota_exhausted"] = True
+        sim_response = get_simulated_chat_response(query, coin_id, lang)
+        chunk_size = 8
+        for i in range(0, len(sim_response), chunk_size):
+            yield sim_response[i:i+chunk_size]
+            await asyncio.sleep(0.04)
+        return
+
     client = get_gemini_client()
     coin_data = await fetch_coin_data(coin_id)
     indicators = calculate_technical_indicators(coin_data["price"], coin_id)
