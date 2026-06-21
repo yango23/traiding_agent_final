@@ -313,7 +313,8 @@ body.light-theme .card-divider {
 .stat-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    gap: 8px;
 }
 
 .stat-label {
@@ -324,15 +325,19 @@ body.light-theme .card-divider {
 .stat-value {
     font-size: 0.9rem;
     font-weight: 600;
+    text-align: right;
 }
 
 .indicators-grid .stat-label {
     font-size: 0.8rem;
+    flex-shrink: 0;
 }
 
 .indicators-grid .stat-value {
     font-size: 0.8rem;
-    white-space: nowrap;
+    white-space: normal;
+    text-align: right;
+    word-break: break-word;
 }
 
 /* Center Panel */
