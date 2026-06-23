@@ -33,6 +33,38 @@ This application has been developed with advanced UI design (Glassmorphic Dark/L
 
 ---
 
+## 📈 Advanced Features (Newly Added)
+
+To elevate this project into a robust educational tool, we implemented several advanced components:
+
+### 1. Strategy Backtest Tab
+*   **Backtest Strategies**: Users can select one of three strategy models under the chart: **SMA Crossover** (SMA-12/50), **RSI Bound** (buying at <30, selling at >70), or **Bollinger Bands** (buying at lower band, selling at upper band).
+*   **Historical Simulation**: The POST `/api/backtest` endpoint simulates trades on daily klines over the past 250 days utilizing pandas. It computes **Net Profit %**, **Win Rate %**, **Total Trades**, and **Max Drawdown %**.
+*   **Interactive Equity Chart**: Displays monthly balance progression as a custom, CSS-styled column chart. Hovering over each monthly bar shows a tooltip indicating the exact equity balance.
+
+### 2. Candlestick Pattern Scanner
+*   Programmatically detects classic candlestick formations (such as **Doji**, **Hammer**, **Shooting Star**, and **Bullish/Bearish Engulfing**) on daily Binance charts.
+*   Detected active patterns are integrated into the technical indicators list and passed to the coordinator agent to improve analysis context.
+
+### 3. Educational TA Quiz Sidebar Card
+*   A dedicated **Technical Analysis Quiz** card located in the left sidebar (swapped positions with the API key vault for better visibility).
+*   Features a pool of technical analysis questions in both English and Russian.
+*   Provides automated grading, visual choices feedback (green for correct, red for incorrect), detailed educational explanations, and local storage level progression (*Novice*, *Advanced*, *Pro*).
+*   **Click-to-Query Questions**: The quiz question text is clickable. Clicking it inserts the question into the chatbot and queries the AI agent, causing the advisor to explain the concepts in the chat.
+
+### 4. Native Text-to-Speech (TTS) Reader
+*   Model assistant messages feature a clickable speaker `🔊` button.
+*   Synthesizes and speaks text aloud using browser-native `window.speechSynthesis` (Web Speech API).
+*   Automatically detects the active language locale (`ru-RU` or `en-US`) to match the spoken voice.
+*   Toggles into a Stop `⏹️` icon during speech, allowing users to cancel playback at any time.
+
+### 5. Session-based API Key Vault
+*   If users provide their own Gemini API Studio keys, they are stored locally in the browser's `sessionStorage` (never written to the server's disk or `.env`), maintaining multi-user isolation on the same server.
+*   Requests dynamically pass the key via the `Authorization: Bearer <key>` header.
+*   Transactions authenticated with a custom key automatically bypass the server's global daily quota limits.
+
+---
+
 ## 🛡️ Architecture & Course Security Concepts (STRIDE)
 
 This project strictly adheres to AI security and safety concepts covered in the Kaggle Agent course:
@@ -54,6 +86,12 @@ The backend leverages custom Python tools to query APIs and feed structured cont
 
 ### 4. Credential Leak Prevention
 *   **Git Secret Hook**: Integrates a local Git `pre-commit` hook that runs `git_secret_scanner.py`. The scanner blocks any commit containing Google API Studio keys, GCP Project IDs, or other private identifiers.
+*   **Exclusions in Hooks**: Staged hooks explicitly ignore scanning the `tests/` directory to allow hardcoded mock GCP Project IDs and API keys inside unit tests.
+
+---
+
+## 🧪 Comprehensive Test Coverage
+*   The project includes a robust test suite of **19 tests** covering agent reasoning, FastAPI endpoints, technical tools, backtester simulations, and regex masking guardrails. All tests pass successfully.
 
 ---
 
@@ -63,6 +101,7 @@ The backend leverages custom Python tools to query APIs and feed structured cont
 Configure a `.env` file in the root folder of the project (this file is ignored by Git):
 ```env
 GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+FORCE_DEMO_MODE=False
 GOOGLE_GENAI_USE_VERTEXAI=False
 ```
 
