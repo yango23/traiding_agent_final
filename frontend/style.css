@@ -24,6 +24,9 @@
     --neon-glow-green: 0 0 15px rgba(16, 185, 129, 0.5);
     
     --shadow-main: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    --arrow-color: rgba(255, 255, 255, 0.25);
+    --arrow-hover: rgba(255, 255, 255, 0.45);
+    --arrow-active: rgba(255, 255, 255, 0.65);
     --input-bg: rgba(6, 9, 16, 0.8);
     --header-bg: rgba(5, 7, 12, 0.85);
     --msg-user-bg: rgba(var(--accent-rgb), 0.15);
@@ -53,6 +56,9 @@ body.light-theme {
     --neon-glow-green: 0 0 10px rgba(5, 150, 105, 0.3);
     
     --shadow-main: 0 8px 32px 0 rgba(148, 163, 184, 0.15);
+    --arrow-color: rgba(15, 23, 42, 0.25);
+    --arrow-hover: rgba(15, 23, 42, 0.45);
+    --arrow-active: rgba(15, 23, 42, 0.65);
     --input-bg: rgba(255, 255, 255, 0.9);
     --header-bg: rgba(255, 255, 255, 0.85);
     --msg-user-bg: rgba(var(--accent-rgb), 0.08);
@@ -234,9 +240,15 @@ body {
     margin-bottom: 12px;
 }
 
+.custom-select-wrapper {
+    position: relative;
+    width: 100%;
+}
+
 .custom-select-wrapper select {
     width: 100%;
     padding: 10px;
+    padding-right: 32px;
     background: var(--input-bg);
     color: var(--text-primary);
     border: var(--card-border);
@@ -247,10 +259,32 @@ body {
     cursor: pointer;
     outline: none;
     transition: border-color 0.2s ease;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
 }
 
 .custom-select-wrapper select:focus {
     border-color: var(--neon-blue);
+}
+
+.custom-select-wrapper::after {
+    content: "";
+    position: absolute;
+    right: 14px;
+    top: calc(50% - 2px);
+    border: 5px solid transparent;
+    border-top-color: var(--arrow-color);
+    pointer-events: none;
+    transition: border-top-color 0.15s ease;
+}
+
+.custom-select-wrapper:hover::after {
+    border-top-color: var(--arrow-hover);
+}
+
+.custom-select-wrapper:active::after {
+    border-top-color: var(--arrow-active);
 }
 
 .stats-card {
@@ -629,6 +663,8 @@ body.light-theme .card-divider {
     background: var(--msg-model-bg);
     border: var(--card-border);
     border-bottom-left-radius: 2px;
+    position: relative;
+    padding-right: 32px;
 }
 
 /* Chat suggested chips */
@@ -1023,4 +1059,150 @@ body.light-theme .summary-section-header {
     justify-content: space-between;
     align-items: center;
     margin-top: 2px;
+}
+
+/* Animations for Refresh Data */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+.spinning {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes pulse-glow {
+    0% { opacity: 1; }
+    50% { opacity: 0.65; }
+    100% { opacity: 1; }
+}
+.refreshing-pulse {
+    animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+/* Round Stats Refresh Button styling */
+#refresh-stats-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50% !important;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    background: #0b0f19;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #F8FAFC;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#refresh-stats-btn:hover {
+    background: #151d30;
+    border-color: var(--accent-color);
+    box-shadow: var(--neon-glow-blue), 0 4px 12px rgba(0, 0, 0, 0.5);
+    transform: rotate(180deg) scale(1.05);
+}
+
+/* Light theme overrides */
+body.light-theme #refresh-stats-btn {
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: #0F172A;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme #refresh-stats-btn:hover {
+    background: #f1f5f9;
+    border-color: var(--accent-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: rotate(180deg) scale(1.05);
+}
+
+/* =========================================================================
+   TTS Speak Button, Quiz option highlights, and Backtester chart styles
+   ========================================================================= */
+
+.tts-speak-btn {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    opacity: 0.5;
+    transition: all 0.2s ease;
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.tts-speak-btn:hover {
+    opacity: 1;
+    color: var(--text-primary);
+    transform: scale(1.1);
+}
+
+.quiz-option-label {
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.quiz-option-label:hover {
+    border-color: rgba(var(--accent-rgb), 0.3) !important;
+    background: rgba(var(--accent-rgb), 0.02) !important;
+}
+
+#quiz-explanation {
+    border-left: 3px solid var(--accent-color);
+}
+
+.backtest-chart-col {
+    position: relative;
+}
+
+.backtest-chart-col::after {
+    content: attr(title);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translate(-50%, -4px) scale(0.9);
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid var(--card-border);
+    color: var(--text-primary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    z-index: 10;
+}
+
+.backtest-chart-col:hover::after {
+    opacity: 1;
+    transform: translate(-50%, -4px) scale(1);
+}
+
+.backtest-chart-col div:hover {
+    filter: brightness(1.2);
+    box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.3);
+}
+
+#quiz-question-container {
+    transition: color 0.2s ease, text-decoration 0.2s ease;
+}
+
+#quiz-question-container:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
 }

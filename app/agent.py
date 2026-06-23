@@ -2,6 +2,7 @@ import os
 import re
 import time
 import asyncio
+from datetime import datetime, timezone
 import numpy as np
 from typing import AsyncGenerator
 from google import genai
@@ -14,22 +15,54 @@ from app.tools import fetch_coin_data, fetch_crypto_news, calculate_technical_in
 # -------------------------------------------------------------------------
 FREE_TIER_LIMIT = 20  # Gemini free tier daily limit
 
-quota_tracker = {
-    "summary_calls": 0,
-    "chat_calls": 0,
-    "quota_exhausted": False,
-    "reset_time": None,   # UTC timestamp when quota resets (midnight)
-}
+import json
+
+QUOTA_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "quota_tracker.json")
+
+def load_quota() -> dict:
+    default_quota = {
+        "summary_calls": 0,
+        "chat_calls": 0,
+        "quota_exhausted": False,
+        "reset_date": datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    }
+    if os.path.exists(QUOTA_FILE):
+        try:
+            with open(QUOTA_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            # Check if it was saved today
+            today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            if data.get("reset_date") == today_str:
+                return data
+            else:
+                return default_quota
+        except Exception:
+            return default_quota
+    return default_quota
+
+def save_quota(quota: dict):
+    try:
+        quota["reset_date"] = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        with open(QUOTA_FILE, "w", encoding="utf-8") as f:
+            json.dump(quota, f)
+    except Exception as e:
+        print(f"Failed to save quota: {e}")
+
+quota_tracker = load_quota()
+
+def is_quota_error(e: Exception) -> bool:
+    err_str = str(e).lower()
+    return "429" in err_str or "quota" in err_str or "limit" in err_str or "exhausted" in err_str
 
 # Load environment variables
 load_dotenv()
 
 # Setup Gemini Client
-def get_gemini_client() -> genai.Client:
-    api_key = os.getenv("GEMINI_API_KEY")
+def get_gemini_client(custom_api_key: str = None) -> genai.Client:
+    api_key = custom_api_key or os.getenv("GEMINI_API_KEY")
     use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "False").lower() == "true"
     
-    if use_vertex:
+    if use_vertex and not custom_api_key:
         project = os.getenv("GOOGLE_CLOUD_PROJECT")
         location = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
         # In Vertex AI mode, genai.Client will use Vertex AI
@@ -39,43 +72,110 @@ def get_gemini_client() -> genai.Client:
         return genai.Client(api_key=api_key)
 
 # -------------------------------------------------------------------------
-# Security: Prompt Injection & Jailbreak Defense (Prompt Shield)
+# Security Guardrails: Input Prompt Shield, Output Guardrails & Key Masking
 # -------------------------------------------------------------------------
-SUSPICIOUS_PATTERNS = [
-    r"ignore\s+(your\s+)?(previous\s+)?(rules|instructions|directives|guidelines)",
-    r"forget\s+(your\s+)?(previous\s+)?(rules|instructions|directives|guidelines)",
-    r"bypass\s+(restrictions|constraints|rules)",
-    r"jailbreak",
-    r"system\s+prompt",
-    r"override\s+instruction",
-    r"you\s+must\s+recommend",
-    r"give\s+me\s+investment\s+advice",
-    r"tell\s+me\s+to\s+buy",
-    r"tell\s+me\s+to\s+sell",
-    r"игнорируй\s+(свои\s+)?(предыдущие\s+)?(правила|инструкции)",
-    r"забудь\s+(свои\s+)?(предыдущие\s+)?(правила|инструкции)",
-    r"дай\s+мне\s+финансовый\s+совет",
-    r"скажи\s+мне\s+купить",
-    r"скажи\s+мне\s+продать",
-    r"введи\s+команду",
-    r"run\s+command",
-    r"execute\s+shell",
-    r"sudo\s+",
-    r"rm\s+-rf",
-    r"format\s+c:",
-    r"delete\s+files",
-]
+class SafetyGuard:
+    """
+    Handles all security checks, input query sanitization, API key leakage protection,
+    and output recommendation guardrails.
+    """
+    API_KEY_REGEX = re.compile(r"AIzaSy[A-Za-z0-9_\-]{33}")
+    PROJECT_ID_REGEX = re.compile(r"project-[a-f0-9\-]{36}")
+
+    # Prohibited financial advice terms that are direct calls to action
+    FINANCIAL_ADVICE_PATTERNS = [
+        r"\b(покупайте|купите|купить|продать|продавайте|продайте|инвестируйте|заходите в лонг|открывайте лонг|открывайте шорт)\b",
+        r"\b(buy now|sell now|invest in|open long|open short|buy order|sell order|buy|sell)\b",
+        r"\b(я советую купить|я рекомендую купить|я советую продать|я рекомендую продать)\b",
+        r"\b(i advise buying|i recommend buying|i advise selling|i recommend selling)\b",
+    ]
+
+    SUSPICIOUS_PATTERNS = [
+        r"ignore\s+(your\s+)?(previous\s+)?(rules|instructions|directives|guidelines)",
+        r"forget\s+(your\s+)?(previous\s+)?(rules|instructions|directives|guidelines)",
+        r"bypass\s+(restrictions|constraints|rules)",
+        r"jailbreak",
+        r"system\s+prompt",
+        r"override\s+instruction",
+        r"you\s+must\s+recommend",
+        r"give\s+me\s+investment\s+advice",
+        r"tell\s+me\s+to\s+buy",
+        r"tell\s+me\s+to\s+sell",
+        r"игнорируй\s+(свои\s+)?(предыдущие\s+)?(правила|инструкции)",
+        r"забудь\s+(свои\s+)?(предыдущие\s+)?(правила|инструкции)",
+        r"дай\s+мне\s+финансовый\s+совет",
+        r"скажи\s+мне\s+купить",
+        r"скажи\s+мне\s+продать",
+        r"введи\s+команду",
+        r"run\s+command",
+        r"execute\s+shell",
+        r"sudo\s+",
+        r"rm\s+-rf",
+        r"format\s+c:",
+        r"delete\s+files",
+        
+        # New Jailbreak / Bypass defenses
+        r"\b(dan|jailbreak|developer\s+mode|do\s+anything\s+now)\b",
+        r"reveal\s+your\s+system\s+prompt",
+        r"reveal\s+(your\s+)?instructions",
+        r"раскрой\s+(свой\s+)?системный\s+промпт",
+        r"раскрой\s+(свои\s+)?инструкции",
+        r"system\s+override",
+        r"обход\s+ограничений",
+    ]
+
+    @classmethod
+    def is_query_safe(cls, query: str) -> bool:
+        """
+        Checks user input queries for malicious patterns, jailbreaks, shell commands, or system leaks.
+        """
+        query_lower = query.lower()
+        for pattern in cls.SUSPICIOUS_PATTERNS:
+            if re.search(pattern, query_lower):
+                return False
+        return True
+
+    @classmethod
+    def mask_sensitive_data(cls, text: str) -> str:
+        """
+        Redacts leaked API keys and sensitive project IDs from the text to protect credentials.
+        """
+        text = cls.API_KEY_REGEX.sub("[REDACTED_API_KEY]", text)
+        text = cls.PROJECT_ID_REGEX.sub("YOUR_GCP_PROJECT_ID", text)
+        return text
+
+    @classmethod
+    def validate_agent_output(cls, response_text: str, lang: str = "ru") -> str:
+        """
+        Validates model output to ensure it does not contain direct buy/sell recommendations or command runs.
+        Neutralizes advice by appending warnings or sanitizing text.
+        """
+        response_lower = response_text.lower()
+        contains_advice = False
+        for pattern in cls.FINANCIAL_ADVICE_PATTERNS:
+            if re.search(pattern, response_lower):
+                contains_advice = True
+                break
+
+        if contains_advice:
+            # Append warning disclaimer about unauthorized financial advice detected
+            warning_msg = (
+                "\n\n> [!CAUTION]\n> **Обнаружено возможное нарушение правил безопасности:** Бот сгенерировал фразу, напоминающую финансовую рекомендацию. Пожалуйста, помните, что данный помощник работает исключительно в учебных целях и НЕ дает торговых сигналов."
+                if lang == "ru" else
+                "\n\n> [!CAUTION]\n> **Possible safety violation detected:** The bot generated a response resembling direct financial advice. Please remember that this assistant operates strictly for educational purposes and does NOT provide trade recommendations."
+            )
+            # Remove any direct buy/sell phrases to satisfy compliance
+            clean_text = response_text
+            for pattern in cls.FINANCIAL_ADVICE_PATTERNS:
+                clean_text = re.sub(pattern, "[REDACTED ADVICE]", clean_text, flags=re.IGNORECASE)
+            return clean_text + warning_msg
+        return response_text
 
 def is_query_safe(query: str) -> bool:
     """
-    Checks the user query against known prompt injection and jailbreak patterns.
-    Also blocks command injections.
+    Wrapper for SafetyGuard check.
     """
-    query_lower = query.lower()
-    for pattern in SUSPICIOUS_PATTERNS:
-        if re.search(pattern, query_lower):
-            return False
-    return True
+    return SafetyGuard.is_query_safe(query)
 
 # -------------------------------------------------------------------------
 # System Instructions
@@ -142,7 +242,7 @@ def get_system_instruction(coin_id: str, lang: str = "ru") -> str:
 # -------------------------------------------------------------------------
 # Daily Cache for AI Summaries (key: {coin_id}_{lang}_{YYYY-MM-DD})
 # -------------------------------------------------------------------------
-from datetime import datetime, timezone
+# datetime and timezone imported at top
 summary_daily_cache = {}
 
 def get_summary_cache_key(coin_id: str, lang: str) -> str:
@@ -162,19 +262,19 @@ def get_simulated_summary(coin_id: str, lang: str = "ru") -> str:
 Криптовалюта {coin_name} демонстрирует смешанную динамику с умеренной торговой активностью. Наблюдается краткосрочный [green]{{бычий импульс}} с попыткой пробоя уровней локального сопротивления, однако объемы торгов [red]{{ниже среднего}}, что указывает на недостаточное подтверждение со стороны рынка.
 
 2. **Что говорят индикаторы**:
-Индикатор **RSI (14)** близок к отметке [red]{{70 (зона перекупленности)}}, что сигнализирует о возможном откате или паузе в росте. Гистограмма **MACD** пересекла сигнальную линию снизу вверх, подтверждая [green]{{положительный краткосрочный импульс}}. Скользящие средние (SMA-50 и SMA-200) удерживают долгосрочный [green]{{бычий тренд}}, однако [red]{{разрыв между ними сокращается}}, что может означать ослабление тренда.
+Индикатор **RSI (14)** близок к отметке [red]{{70 (зона перекупленности)}}, что сигнализирует о возможном откате или паузе в росте. Гистограмма **MACD** пересекла сигнальную линию снизу вверх, подтверждая [green]{{положительный краткосрочный импульс}}. Скользящие средние (SMA-50 и SMA-200) удерживают долгосрочный [green]{{бычий тренд}}, но [red]{{разрыв между ними сокращается}}. **Стохастический осциллятор** (%K=78.5, %D=75.2) подтверждает умеренную перекупленность. Текущая цена тестирует уровень классической **точки разворота (Pivot)**, находясь чуть выше поддержки S1. **Индекс страха и жадности** равен 58 ([green]{{умеренная жадность}}), указывая на преобладание позитивных настроений среди участников рынка.
 
 3. **Ключевой вывод**:
-Техническая картина по {coin_name} неоднозначна: есть [green]{{позитивные сигналы}} со стороны MACD и долгосрочного тренда, но RSI предупреждает о [red]{{риске коррекции}} в краткосрочной перспективе. Обратите внимание: данные смоделированы в учебных целях из-за временного исчерпания дневной квоты API (20 запросов/день)."""
+Техническая картина по {coin_name} неоднозначна: есть [green]{{позитивные сигналы}} со стороны MACD, индекса страха/жадности и долгосрочного тренда, но RSI и Стохастик предупреждают о [red]{{риске коррекции}} в краткосрочной перспективе. Обратите внимание: данные смоделированы в учебных целях из-за временного исчерпания дневной квоты API (20 запросов/день)."""
     else:
         return f"""1. **Market Tone**:
 The cryptocurrency {coin_name} is showing mixed dynamics with moderate trading activity. We observe a short-term [green]{{bullish push}} attempting to break through local resistance levels, however trading volumes are [red]{{below average}}, indicating insufficient market confirmation.
 
 2. **Indicator Breakdown**:
-The **RSI (14)** is approaching [red]{{overbought territory (near 70)}}, signaling a possible pullback or pause in the uptrend. The **MACD** histogram crossed above the signal line, confirming a [green]{{short-term positive momentum}}. Moving Averages (SMA-50 and SMA-200) maintain a long-term [green]{{bullish trend}}, however [red]{{the gap between them is narrowing}}, which may indicate a weakening trend.
+The **RSI (14)** is approaching [red]{{overbought territory (near 70)}}, signaling a possible pullback or pause in the uptrend. The **MACD** histogram crossed above the signal line, confirming a [green]{{short-term positive momentum}}. Moving Averages (SMA-50 and SMA-200) maintain a long-term [green]{{bullish trend}}, however [red]{{the gap between them is narrowing}}. The **Stochastic Oscillator** (%K=78.5, %D=75.2) suggests neutral-to-overbought momentum. The price tests the classic **Pivot Point** level, trading just above the S1 support. The **Fear & Greed Index** is at 58 ([green]{{moderate greed}}), indicating general optimism among market participants.
 
 3. **Key Takeaway**:
-The technical picture for {coin_name} is mixed: there are [green]{{positive signals}} from the MACD and long-term trend, but the RSI warns of a [red]{{correction risk}} in the short term. Note: This analysis is simulated for educational purposes due to the temporary exhaustion of the daily API quota (20 requests/day)."""
+The technical picture for {coin_name} is mixed: there are [green]{{positive signals}} from the MACD, Fear & Greed index, and long-term trend, but the RSI and Stochastic warn of a [red]{{correction risk}} in the short term. Note: This analysis is simulated for educational purposes due to the temporary exhaustion of the daily API quota (20 requests/day)."""
 
 def get_simulated_chat_response(query: str, coin_id: str, lang: str = "ru") -> str:
     coin_name = COIN_NAMES.get(coin_id.lower().strip(), coin_id.capitalize())
@@ -291,7 +391,7 @@ async def route_query(client, query: str) -> str:
     Output strictly one word: either 'tech', 'fundamental', or 'general'. Do not output anything else.
     """
     try:
-        response = client.models.generate_content(
+        response = await client.aio.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
             config=types.GenerateContentConfig(
@@ -420,46 +520,121 @@ async def run_risk_educator_summary(client, coin_name, price, change_24h, tech_d
     )
     return response.text
 
-async def generate_coin_summary(coin_id: str, lang: str = "ru") -> str:
+async def generate_coin_summary(
+    coin_id: str, 
+    lang: str = "ru", 
+    force_refresh: bool = False, 
+    custom_api_key: str = None
+) -> str:
     """
     Generates a fresh, context-aware AI summary for the chosen coin.
-    Orchestrates Technical and Fundamental agents to produce the output.
+    Uses a single highly-structured prompt to save quota and reduce latency.
     """
     cache_key = get_summary_cache_key(coin_id, lang)
-    if cache_key in summary_daily_cache:
+    if not force_refresh and cache_key in summary_daily_cache:
         print(f"Serving cached AI summary for {coin_id} ({lang})")
         return summary_daily_cache[cache_key]
 
-    if quota_tracker["quota_exhausted"] or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true":
+    if not custom_api_key and (quota_tracker["quota_exhausted"] or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true"):
         quota_tracker["quota_exhausted"] = True
         return get_simulated_summary(coin_id, lang)
 
     try:
-        client = get_gemini_client()
-        coin_data = await fetch_coin_data(coin_id)
-        news = await fetch_crypto_news(coin_id, lang)
+        client = get_gemini_client(custom_api_key)
+        coin_data = await fetch_coin_data(coin_id, force_refresh=force_refresh)
+        news = await fetch_crypto_news(coin_id, lang, force_refresh=force_refresh)
         indicators = await calculate_technical_indicators(coin_data["price"], coin_id, lang)
         
         news_titles = "\n".join([f"- {item['title']} ({item['source']})" for item in news])
         
         quota_tracker["summary_calls"] += 1
+        save_quota(quota_tracker)
         
-        # Parallel execution of Tech and Fundamental agents
-        tech_draft, fund_draft = await asyncio.gather(
-            run_tech_agent(client, coin_data['name'], coin_data['price'], indicators, lang),
-            run_fundamental_agent(client, coin_data['name'], news_titles, lang)
+        # Prepare the single prompt to perform Tech and Fundamental analysis + risk education in 1 call
+        if lang == "ru":
+            prompt = f"""
+            Подготовь итоговую аналитическую сводку по криптовалюте {coin_data['name']} для новичков на основе следующих данных:
+            
+            ТЕКУЩИЕ ДАННЫЕ РЫНКА:
+            - Текущая цена: ${coin_data['price']:.4f}
+            - Изменение цены за 24ч: {coin_data['change_24h']:.2f}%
+            
+            ТЕХНИЧЕСКИЕ ИНДИКАТОРЫ:
+            - RSI (14): {indicators['rsi']['value']} ({indicators['rsi']['status']})
+            - MACD: Гистограмма {indicators['macd']['hist']}, Статус: {indicators['macd']['status']}
+            - SMA-50: ${indicators['moving_averages']['sma_50']:.4f}, SMA-200: ${indicators['moving_averages']['sma_200']:.4f} ({indicators['moving_averages']['status']})
+            - Bollinger Bands: Upper ${indicators['bollinger_bands']['upper']:.4f}, Lower ${indicators['bollinger_bands']['lower']:.4f} ({indicators['bollinger_bands']['status']})
+            - Стохастический осциллятор (Stochastic Oscillator): %K={indicators['stochastic']['k']:.2f}, %D={indicators['stochastic']['d']:.2f} ({indicators['stochastic']['status']})
+            - Точки разворота (Pivot Points Classic): Pivot ${indicators['pivot_points']['pivot']:.4f}, Поддержка S1 ${indicators['pivot_points']['s1']:.4f}, Сопротивление R1 ${indicators['pivot_points']['r1']:.4f}
+            - Индекс страха и жадности (Fear & Greed Index): {indicators['fear_greed']['value']} ({indicators['fear_greed']['status']})
+            
+            АКТУАЛЬНЫЕ НОВОСТИ:
+            {news_titles}
+            
+            СТРОЖАЙШИЕ ПРАВИЛА ОФОРМЛЕНИЯ И СТРУКТУРЫ:
+            1. Начни ответ СРАЗУ со строки: "1. **Рыночный тонус**". Не пиши никаких приветствий, вступлений или общих заголовков.
+            2. Раздели ответ строго на 3 пункта:
+               1. **Рыночный тонус**: Опиши общую динамику цены (рост, падение, боковик) и 24ч изменение.
+               2. **Что говорят индикаторы**: Объясни показатели RSI, MACD, скользящие средние (SMA-50 и SMA-200), полосы Боллинджера, Стохастический осциллятор, Точки разворота и Индекс страха и жадности. Пиши это строго в виде единого абзаца. Категорически запрещено разделять индикаторы на отдельные пункты списка (типа "- SMA-50...", "* Стохастик..."). Опиши всё слитно в одном тексте.
+               3. **Ключевой вывод**: Сделай вывод об общем фоне на основе новостей и технической картины, напомни о рисках, предупреди, что торговля сопряжена с рисками, и подчеркни, что это не финансовая рекомендация.
+            4. Выделяй важные моменты цветом, используя синтаксис `[green]{{текст}}` для роста/бычьих сигналов и `[red]{{текст}}` для падения/медвежьих сигналов.
+            5. Не используйте HTML-теги для цвета. Пользуйтесь ТОЛЬКО синтаксисом `[green]{{текст}}` и `[red]{{текст}}`.
+            """
+            sys_inst = "Вы — Старший ИИ-консультант и Преподаватель. Вы преобразуете технические и фундаментальные данные рынка в понятный учебный текст с жестким соблюдением правил разметки и безопасности."
+        else:
+            prompt = f"""
+            Prepare the final analytical summary for {coin_data['name']} for beginners based on the following data:
+            
+            CURRENT MARKET DATA:
+            - Current Price: ${coin_data['price']:.4f}
+            - 24h Price Change: {coin_data['change_24h']:.2f}%
+            
+            TECHNICAL INDICATORS:
+            - RSI (14): {indicators['rsi']['value']} ({indicators['rsi']['status']})
+            - MACD: Histogram {indicators['macd']['hist']}, Status: {indicators['macd']['status']}
+            - SMA-50: ${indicators['moving_averages']['sma_50']:.4f}, SMA-200: ${indicators['moving_averages']['sma_200']:.4f} ({indicators['moving_averages']['status']})
+            - Bollinger Bands: Upper ${indicators['bollinger_bands']['upper']:.4f}, Lower ${indicators['bollinger_bands']['lower']:.4f} ({indicators['bollinger_bands']['status']})
+            - Stochastic Oscillator: %K={indicators['stochastic']['k']:.2f}, %D={indicators['stochastic']['d']:.2f} ({indicators['stochastic']['status']})
+            - Classic Pivot Points: Pivot ${indicators['pivot_points']['pivot']:.4f}, Support S1 ${indicators['pivot_points']['s1']:.4f}, Resistance R1 ${indicators['pivot_points']['r1']:.4f}
+            - Fear & Greed Index: {indicators['fear_greed']['value']} ({indicators['fear_greed']['status']})
+            
+            RECENT NEWS:
+            {news_titles}
+            
+            STRICT FORMATTING & STRUCTURE RULES:
+            1. Start your answer IMMEDIATELY with the first section. Do not output any greetings, introductions, or headers. Start strictly with: "1. **Market Tone**".
+            2. Divide the response strictly into 3 sections:
+               1. **Market Tone**: Describe current price movement (up/down/sideways) and the 24h change.
+               2. **Indicator Breakdown**: Explain the RSI, MACD, Moving Averages (SMA-50 and SMA-200), Bollinger Bands, Stochastic Oscillator, Pivot Points, and the Fear & Greed Index. Write this strictly as a single cohesive paragraph. You are forbidden from separating indicators into bulleted or dashed list items. Describe everything together in plain text.
+               3. **Key Takeaway**: Conclude on the overall state based on news and indicators, emphasize risks, warn that trading is risky, and reiterate that this is not financial advice.
+            3. Use `[green]{{text}}` for bullish/rising signals and `[red]{{text}}` for bearish/falling signals.
+            4. Do not use HTML tags for coloring. ONLY use `[green]{{text}}` and `[red]{{text}}`.
+            """
+            sys_inst = "You are a Senior AI Advisor and Educator. You transform technical and fundamental market data into clear educational text while strictly enforcing formatting and safety rules."
+
+        response = await client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=sys_inst,
+                temperature=0.3,
+            )
         )
-        
-        # Coordinator / Risk Educator compiles the final summary
-        summary_text = await run_risk_educator_summary(
-            client, coin_data['name'], coin_data['price'], coin_data['change_24h'], tech_draft, fund_draft, lang
-        )
+        summary_text = response.text
         
         quota_tracker["quota_exhausted"] = False
+        save_quota(quota_tracker)
+        
+        # Apply output safety guardrails and sensitive data masking
+        summary_text = SafetyGuard.validate_agent_output(summary_text, lang)
+        summary_text = SafetyGuard.mask_sensitive_data(summary_text)
+        
         summary_daily_cache[cache_key] = summary_text
         return summary_text
     except Exception as e:
-        quota_tracker["quota_exhausted"] = True
+        if is_quota_error(e):
+            quota_tracker["quota_exhausted"] = True
+            save_quota(quota_tracker)
         print(f"API Error in generate_coin_summary, falling back to simulated: {e}")
         return get_simulated_summary(coin_id, lang)
 
@@ -467,13 +642,14 @@ async def chat_with_agent(
     query: str, 
     history: list, 
     coin_id: str, 
-    lang: str = "ru"
+    lang: str = "ru",
+    custom_api_key: str = None
 ) -> AsyncGenerator[str, None]:
     """
     Streams the agent's chat response using Gemini API.
     Orchestrates Technical and Fundamental agents dynamically.
     """
-    if quota_tracker["quota_exhausted"] or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true":
+    if not custom_api_key and (quota_tracker["quota_exhausted"] or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true"):
         quota_tracker["quota_exhausted"] = True
         sim_response = get_simulated_chat_response(query, coin_id, lang)
         chunk_size = 8
@@ -483,7 +659,7 @@ async def chat_with_agent(
         return
 
     try:
-        client = get_gemini_client()
+        client = get_gemini_client(custom_api_key)
         coin_data = await fetch_coin_data(coin_id)
         indicators = await calculate_technical_indicators(coin_data["price"], coin_id, lang)
         
@@ -568,8 +744,8 @@ async def chat_with_agent(
             )
         )
 
-        # Generate stream
-        response_stream = client.models.generate_content_stream(
+        # Generate stream asynchronously
+        response_stream = await client.aio.models.generate_content_stream(
             model="gemini-2.5-flash",
             contents=contents,
             config=types.GenerateContentConfig(
@@ -578,14 +754,73 @@ async def chat_with_agent(
             )
         )
         
-        for chunk in response_stream:
+        accumulated_text = ""
+        async for chunk in response_stream:
             if chunk.text:
-                yield chunk.text
+                masked_chunk = SafetyGuard.mask_sensitive_data(chunk.text)
+                accumulated_text += masked_chunk
+                yield masked_chunk
+
+        # Check if the fully accumulated response contains direct financial advice.
+        # If so, append the safety warning at the end of the stream.
+        response_lower = accumulated_text.lower()
+        contains_advice = False
+        for pattern in SafetyGuard.FINANCIAL_ADVICE_PATTERNS:
+            if re.search(pattern, response_lower):
+                contains_advice = True
+                break
+        if contains_advice:
+            warning_msg = (
+                "\n\n> [!CAUTION]\n> **Обнаружено возможное нарушение правил безопасности:** Бот сгенерировал фразу, напоминающую финансовую рекомендацию. Пожалуйста, помните, что данный помощник работает исключительно в учебных целях и НЕ дает торговых сигналов."
+                if lang == "ru" else
+                "\n\n> [!CAUTION]\n> **Possible safety violation detected:** The bot generated a response resembling direct financial advice. Please remember that this assistant operates strictly for educational purposes and does NOT provide trade recommendations."
+            )
+            yield warning_msg
     except Exception as e:
         print(f"API Error in chat_with_agent, falling back to simulated: {e}")
-        quota_tracker["quota_exhausted"] = True
+        if is_quota_error(e) and not custom_api_key:
+            quota_tracker["quota_exhausted"] = True
+            save_quota(quota_tracker)
         sim_response = get_simulated_chat_response(query, coin_id, lang)
         chunk_size = 8
         for i in range(0, len(sim_response), chunk_size):
             yield sim_response[i:i+chunk_size]
             await asyncio.sleep(0.04)
+
+def set_custom_api_key(key: str):
+    # Update in environment so get_gemini_client picks it up
+    os.environ["GEMINI_API_KEY"] = key
+    
+    # Write to local .env file to persist it across restarts
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    env_path = os.path.join(base_dir, ".env")
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            new_lines = []
+            key_replaced = False
+            for line in lines:
+                if line.strip().startswith("GEMINI_API_KEY="):
+                    new_lines.append(f"GEMINI_API_KEY={key}\n")
+                    key_replaced = True
+                elif line.strip().startswith("FORCE_DEMO_MODE="):
+                    new_lines.append("FORCE_DEMO_MODE=False\n")
+                else:
+                    new_lines.append(line)
+            if not key_replaced:
+                new_lines.append(f"\nGEMINI_API_KEY={key}\n")
+            with open(env_path, "w", encoding="utf-8") as f:
+                f.writelines(new_lines)
+        except Exception as e:
+            print(f"Failed to write API key to .env: {e}")
+            
+    # Clear daily caches
+    global summary_daily_cache
+    summary_daily_cache.clear()
+    
+    # Reset quota exhausted tracker and call counters
+    quota_tracker["quota_exhausted"] = False
+    quota_tracker["summary_calls"] = 0
+    quota_tracker["chat_calls"] = 0
+    save_quota(quota_tracker)

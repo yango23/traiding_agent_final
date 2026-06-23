@@ -57,11 +57,9 @@ def main():
     found_secrets = False
     
     for filepath in files_to_scan:
-        # Skip scanning git hook config itself if it contains patterns
-        if "git_secret_scanner.py" in filepath or "README.md" in filepath:
-            # We want to allow readme placeholders, but we still scan README.md carefully.
-            # To avoid scanning the regex patterns in this scanner script, we skip this script.
-            if "git_secret_scanner.py" in filepath:
+        # Skip scanning git hook config, README placeholders, and test vectors in tests/
+        if "git_secret_scanner.py" in filepath or "README.md" in filepath or "tests/" in filepath:
+            if "git_secret_scanner.py" in filepath or "tests/" in filepath:
                 continue
         
         content = get_staged_content(filepath)

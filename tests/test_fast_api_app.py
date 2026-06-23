@@ -27,7 +27,7 @@ def test_get_summary_endpoint(mock_summary):
     data = response.json()
     assert data["success"] is True
     assert data["summary"] == "Mocked AI Summary for Bitcoin"
-    mock_summary.assert_called_once_with("bitcoin", "ru")
+    mock_summary.assert_called_once_with("bitcoin", "ru", False, custom_api_key=None)
 
 def test_chat_endpoint_safety_refusal():
     # Test that jailbreaks are caught and safety refusal is streamed
@@ -107,3 +107,13 @@ def test_chat_endpoint_streaming_success(mock_chat):
     assert chunk_3["text"] == "student!"
     
     assert lines[-1].strip() == "data: [DONE]"
+
+def test_update_api_key_endpoint():
+    with patch("app.agent.set_custom_api_key") as mock_set_key:
+        response = client.post("/api/update-api-key", json={"api_key": "AIzaSyFakeKey1234567890"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["success"] is True
+        assert "updated successfully" in data["message"]
+        mock_set_key.assert_called_once_with("AIzaSyFakeKey1234567890")
+

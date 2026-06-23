@@ -11,7 +11,7 @@
     <!-- TradingView widget script -->
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <!-- CSS style -->
-    <link rel="stylesheet" href="/static/style.css?v=1.0.5">
+    <link rel="stylesheet" href="/static/style.css?v=1.2.0">
 </head>
 <body class="dark-theme">
     <div id="glow-bg"></div>
@@ -51,7 +51,14 @@
                     </div>
                 </div>
 
-                <div class="glass-card stats-card" id="market-stats-card">
+                <div class="glass-card stats-card" id="market-stats-card" style="position: relative;">
+                    <button id="refresh-stats-btn" onclick="refreshStatsOnly()" title="Refresh market data only">
+                        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="refresh-stats-icon">
+                          <polyline points="23 4 23 10 17 10"></polyline>
+                          <polyline points="1 20 1 14 7 14"></polyline>
+                          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                        </svg>
+                    </button>
                     <div class="stats-header">
                         <h2 id="coin-display-name">Bitcoin (BTC)</h2>
                         <span id="coin-display-price" class="price-text">$65,000.00</span>
@@ -162,6 +169,33 @@
                     </div>
                     <div class="gauge-value-text" id="gauge-value-text" onclick="askAgentAboutSentiment()" title="Click to ask AI about this sentiment status">Neutral</div>
                 </div>
+
+                <!-- EDUCATIONAL QUIZ CARD -->
+                <div class="glass-card quiz-card" id="quiz-sidebar-card" style="padding: 14px 18px; margin-top: 14px;">
+                    <h4 id="lbl-quiz-title" style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">Technical Analysis Quiz</h4>
+                    <div id="quiz-score-banner" style="font-size: 0.75rem; color: var(--text-primary); font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                        <span>Score: <strong id="quiz-score-val">0</strong></span>
+                        <span>Level: <strong id="quiz-level-val">Novice</strong></span>
+                    </div>
+                    <div id="quiz-question-container" style="font-size: 0.8rem; line-height: 1.35; margin-bottom: 10px; font-weight: 500;">
+                        <!-- Loading question -->
+                    </div>
+                    <div id="quiz-options-container" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px;">
+                        <!-- Radio buttons -->
+                    </div>
+                    <button class="control-btn" id="quiz-submit-btn" onclick="submitQuizAnswer()" style="width: 100%; font-weight: 700; padding: 8px 12px; font-size: 0.82rem;">Submit Answer</button>
+                    <div id="quiz-explanation" style="font-size: 0.72rem; margin-top: 8px; line-height: 1.3; padding: 6px; border-radius: 6px; background: rgba(255,255,255,0.03); display: none;"></div>
+                </div>
+
+                <!-- API KEY CONFIGURATION CARD -->
+                <div class="glass-card api-key-card" style="padding: 14px 18px; margin-top: 14px;">
+                    <h4 id="lbl-api-key-title" style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;">Gemini API Key</h4>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <input type="password" id="api-key-input" placeholder="Enter API Key..." style="width: 100%; padding: 8px 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 8px; font-family: inherit; font-size: 0.82rem; outline: none; transition: border-color 0.2s ease;">
+                        <button class="control-btn" id="api-key-submit-btn" onclick="saveApiKey()" style="width: 100%; font-weight: 700; padding: 8px 12px; font-size: 0.82rem;">Apply Key</button>
+                    </div>
+                    <div id="api-key-status" style="font-size: 0.72rem; margin-top: 6px; display: none;"></div>
+                </div>
             </section>
 
             <!-- CENTER PANEL: TradingView Chart & Tabs (Summary/News) -->
@@ -177,13 +211,19 @@
                         <div style="display: flex; gap: 4px;">
                             <button class="tab-btn active" id="tab-summary-btn" onclick="switchTab('summary')">📝 AI Summary</button>
                             <button class="tab-btn" id="tab-news-btn" onclick="switchTab('news')">📰 News</button>
+                            <button class="tab-btn" id="tab-backtester-btn" onclick="switchTab('backtester')">📈 Backtester</button>
                         </div>
-                        <button class="control-btn" id="export-report-btn" onclick="exportReport()" style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; padding: 6px 12px; height: fit-content; border: 1px solid var(--card-border); background: var(--input-bg); border-radius: 8px; margin-right: 6px; cursor: pointer; color: var(--text-primary); transition: all 0.2s ease;">
-                            📥 <span id="lbl-export-btn">Export Report</span>
-                        </button>
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <button class="control-btn" id="refresh-data-btn" onclick="refreshDashboardData()" style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; padding: 6px 12px; height: fit-content; border: 1px solid var(--card-border); background: var(--input-bg); border-radius: 8px; cursor: pointer; color: var(--text-primary); transition: all 0.2s ease;">
+                                <span class="refresh-icon" style="display: inline-block;">🔄</span> <span id="lbl-refresh-btn">Refresh Data</span>
+                            </button>
+                            <button class="control-btn" id="export-report-btn" onclick="exportReport()" style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; padding: 6px 12px; height: fit-content; border: 1px solid var(--card-border); background: var(--input-bg); border-radius: 8px; margin-right: 6px; cursor: pointer; color: var(--text-primary); transition: all 0.2s ease;">
+                                📥 <span id="lbl-export-btn">Export Report</span>
+                            </button>
+                        </div>
                     </div>
                     <!-- Simulated warning banner -->
-                    <div id="simulated-warning" style="display:none; padding:6px 14px; background:rgba(234,179,8,0.12); border-bottom:1px solid rgba(234,179,8,0.25); font-size:0.72rem; color:#EAB308; display:flex; align-items:center; gap:6px;">
+                    <div id="simulated-warning" style="display:none; padding:6px 14px; background:rgba(234,179,8,0.12); border-bottom:1px solid rgba(234,179,8,0.25); font-size:0.72rem; color:#EAB308; align-items:center; gap:6px;">
                         <span>⚠️</span>
                         <span id="simulated-warning-text">AI quota exhausted — showing simulated analysis (demo mode)</span>
                     </div>
@@ -201,6 +241,54 @@
                         <div class="tab-content" id="tab-news-content">
                             <div class="news-list" id="news-container-list">
                                 <!-- Dynamic news item -->
+                            </div>
+                        </div>
+
+                        <!-- BACKTESTER TAB -->
+                        <div class="tab-content" id="tab-backtester-content">
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; align-items: flex-end;">
+                                <div style="flex: 1; min-width: 180px;">
+                                    <label for="backtest-strategy-selector" style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;" id="lbl-select-strategy">Strategy</label>
+                                    <div class="custom-select-wrapper">
+                                        <select id="backtest-strategy-selector">
+                                            <option value="sma_crossover" selected>SMA Crossover</option>
+                                            <option value="rsi_bounds">RSI Bound (30/70)</option>
+                                            <option value="bollinger_bands">Bollinger Bands</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button class="control-btn" id="run-backtest-btn" onclick="runStrategyBacktest()" style="font-weight: 700; padding: 8px 16px; font-size: 0.82rem; height: 36px;">Run Backtest</button>
+                            </div>
+                            <div id="backtest-loading" style="display: none; text-align: center; padding: 20px;">
+                                <div class="spinner" style="margin: 0 auto 10px;"></div>
+                                <span id="lbl-loading-backtest">Running Strategy Simulation...</span>
+                            </div>
+                            <div id="backtest-results" style="display: none;">
+                                <div class="backtest-summary-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; margin-bottom: 14px;">
+                                    <div class="backtest-result-item" style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; text-align: center;">
+                                        <span style="font-size: 0.72rem; color: var(--text-muted); display: block;" id="lbl-bt-profit">Net Profit</span>
+                                        <strong id="val-bt-profit" style="font-size: 1rem; color: var(--neon-green);">+12.4%</strong>
+                                    </div>
+                                    <div class="backtest-result-item" style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; text-align: center;">
+                                        <span style="font-size: 0.72rem; color: var(--text-muted); display: block;" id="lbl-bt-winrate">Win Rate</span>
+                                        <strong id="val-bt-winrate" style="font-size: 1rem; color: var(--text-primary);">55.4%</strong>
+                                    </div>
+                                    <div class="backtest-result-item" style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; text-align: center;">
+                                        <span style="font-size: 0.72rem; color: var(--text-muted); display: block;" id="lbl-bt-trades">Total Trades</span>
+                                        <strong id="val-bt-trades" style="font-size: 1rem; color: var(--text-primary);">12</strong>
+                                    </div>
+                                    <div class="backtest-result-item" style="background: rgba(255,255,255,0.02); padding: 8px; border-radius: 6px; text-align: center;">
+                                        <span style="font-size: 0.72rem; color: var(--text-muted); display: block;" id="lbl-bt-drawdown">Max Drawdown</span>
+                                        <strong id="val-bt-drawdown" style="font-size: 1rem; color: var(--neon-rose);">15.4%</strong>
+                                    </div>
+                                </div>
+                                <h5 style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;" id="lbl-bt-curve">Equity Growth Curve</h5>
+                                <div id="backtest-chart" class="backtest-chart-container" style="display: flex; align-items: flex-end; justify-content: space-between; height: 100px; padding: 10px 4px; border-bottom: 1px dashed var(--card-border); gap: 4px; margin-bottom: 6px;">
+                                    <!-- Equity bars injected here -->
+                                </div>
+                                <div id="backtest-chart-labels" style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); padding: 0 4px;">
+                                    <!-- Date labels -->
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -269,6 +357,6 @@
     </div>
 
     <!-- JS app script -->
-    <script src="/static/app.js?v=1.0.5"></script>
+    <script src="/static/app.js?v=1.2.0"></script>
 </body>
 </html>

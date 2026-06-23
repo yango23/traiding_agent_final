@@ -30,6 +30,9 @@ async def test_calculate_technical_indicators():
     assert "rsi" in indicators
     assert "macd" in indicators
     assert "moving_averages" in indicators
+    assert "stochastic" in indicators
+    assert "pivot_points" in indicators
+    assert "fear_greed" in indicators
     
     assert "value" in indicators["rsi"]
     assert "status" in indicators["rsi"]
@@ -37,3 +40,37 @@ async def test_calculate_technical_indicators():
     
     assert "hist" in indicators["macd"]
     assert "sma_50" in indicators["moving_averages"]
+
+    assert "k" in indicators["stochastic"]
+    assert "d" in indicators["stochastic"]
+    assert "status" in indicators["stochastic"]
+
+    assert "pivot" in indicators["pivot_points"]
+    assert "r1" in indicators["pivot_points"]
+    assert "s1" in indicators["pivot_points"]
+
+    assert "value" in indicators["fear_greed"]
+    assert "previous_value" in indicators["fear_greed"]
+    assert "status" in indicators["fear_greed"]
+
+def test_detect_candlestick_patterns():
+    from app.tools import detect_candlestick_patterns
+    # Mock data to simulate Doji (small body relative to range)
+    klines_doji = [
+        [0, "100", "105", "95", "100", "1000"],
+        [0, "100", "105", "95", "100", "1000"],
+        [0, "100", "105", "95", "100", "1000"],
+        [0, "100", "105", "95", "100", "1000"],
+        [0, "100", "105", "95", "100.01", "1000"]
+    ]
+    patterns = detect_candlestick_patterns(klines_doji)
+    assert "Doji" in patterns
+
+def test_run_backtest_simulation():
+    from app.tools import run_backtest_simulation
+    res = run_backtest_simulation("BTCUSDT", "sma_crossover")
+    assert res["success"] is True
+    assert "net_profit" in res
+    assert "win_rate" in res
+    assert "total_trades" in res
+    assert "equity_curve" in res

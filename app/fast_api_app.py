@@ -1,11 +1,11 @@
 import os
 import json
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, Header
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from app.tools import fetch_coin_data, fetch_crypto_news, calculate_technical_indicators
+from app.tools import fetch_coin_data, fetch_crypto_news, calculate_technical_indicators, run_backtest_simulation
 from app.agent import chat_with_agent, generate_coin_summary, is_query_safe, quota_tracker
 
 app = FastAPI(
@@ -34,6 +34,11 @@ class ChatRequest(BaseModel):
 class SummaryRequest(BaseModel):
     coin_id: str = Field(description="The cryptocurrency ID")
     lang: str = Field(default="ru", description="Selected language (ru or en)")
+    force_refresh: bool = Field(default=False, description="Whether to bypass the cache and fetch fresh data")
+
+class BacktestRequest(BaseModel):
+    coin_id: str = Field(description="The cryptocurrency ID")
+    strategy: str = Field(description="The strategy to backtest: sma_crossover, rsi_bounds, bollinger_bands")
 
 # -------------------------------------------------------------------------
 # Static File Routing
@@ -47,15 +52,15 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 # -------------------------------------------------------------------------
 
 @app.get("/api/market-data/{coin_id}")
-async def get_market_data(coin_id: str, lang: str = "ru"):
+async def get_market_data(coin_id: str, lang: str = "ru", force_refresh: bool = False):
     """
     Returns full market data, indicators, and news for a specific coin.
     Used by the dashboard to render details under the chart.
     """
     try:
-        coin_data = await fetch_coin_data(coin_id)
+        coin_data = await fetch_coin_data(coin_id, force_refresh=force_refresh)
         indicators = await calculate_technical_indicators(coin_data["price"], coin_id, lang)
-        news = await fetch_crypto_news(coin_id, lang)
+        news = await fetch_crypto_news(coin_id, lang, force_refresh=force_refresh)
         
         return {
             "success": True,
@@ -67,12 +72,23 @@ async def get_market_data(coin_id: str, lang: str = "ru"):
         raise HTTPException(status_code=500, detail=f"Failed to fetch market data: {str(e)}")
 
 @app.post("/api/summary")
-async def get_ai_summary(request: SummaryRequest):
+async def get_ai_summary(request: SummaryRequest, authorization: str = Header(None)):
     """
     Generates a structured educational AI summary for the coin.
     """
+    custom_key = None
+    if authorization and authorization.startswith("Bearer "):
+        custom_key = authorization.split(" ")[1].strip()
+        if custom_key == "undefined" or not custom_key:
+            custom_key = None
+            
     try:
-        summary_text = await generate_coin_summary(request.coin_id, request.lang)
+        summary_text = await generate_coin_summary(
+            request.coin_id, 
+            request.lang, 
+            request.force_refresh, 
+            custom_api_key=custom_key
+        )
         is_simulated = not quota_tracker.get("quota_exhausted") is False
         return {"success": True, "summary": summary_text, "simulated": quota_tracker["quota_exhausted"]}
     except Exception as e:
@@ -102,11 +118,17 @@ async def get_quota_status():
     }
 
 @app.post("/api/chat")
-async def chat_endpoint(request: ChatRequest):
+async def chat_endpoint(request: ChatRequest, authorization: str = Header(None)):
     """
     Streams the agent's response via Server-Sent Events (SSE).
     Includes query validation for maximum security.
     """
+    custom_key = None
+    if authorization and authorization.startswith("Bearer "):
+        custom_key = authorization.split(" ")[1].strip()
+        if custom_key == "undefined" or not custom_key:
+            custom_key = None
+
     # 1. Security: Validate user query for prompt injection or shell commands
     if not is_query_safe(request.query):
         # We return a structured message refusing to execute, keeping the agent safe
@@ -122,11 +144,9 @@ async def chat_endpoint(request: ChatRequest):
         return StreamingResponse(safe_refusal(), media_type="text/event-stream")
 
     # 2. Safety: Ensure user query does not reference arbitrary coin queries in chat
-    # (Checking if user is asking about other coins in the current chat session)
     query_lower = request.query.lower()
     active_coin = request.coin_id.lower().strip()
     
-    # Simple check: if they mention other major coins and not the active one
     other_coins_mention = []
     coin_keywords = {
         "bitcoin": ["btc", "биткоин", "bitcoin"],
@@ -144,7 +164,6 @@ async def chat_endpoint(request: ChatRequest):
                 other_coins_mention.append(c_id)
                 
     if other_coins_mention:
-        # If they ask about another coin, gently redirect them
         async def redirect_message():
             target_coin_name = other_coins_mention[0].capitalize()
             msg = (
@@ -160,13 +179,16 @@ async def chat_endpoint(request: ChatRequest):
 
     # 3. Stream response from Gemini
     quota_tracker["chat_calls"] += 1
+    from app.agent import save_quota
+    save_quota(quota_tracker)
     async def event_generator():
         try:
             async for chunk in chat_with_agent(
                 query=request.query,
                 history=request.history,
                 coin_id=request.coin_id,
-                lang=request.lang
+                lang=request.lang,
+                custom_api_key=custom_key
             ):
                 # Send chunks as JSON
                 yield f"data: {json.dumps({'text': chunk})}\n\n"
@@ -178,6 +200,40 @@ async def chat_endpoint(request: ChatRequest):
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+class ApiKeyRequest(BaseModel):
+    api_key: str = Field(description="The new Gemini API Key")
+
+@app.post("/api/update-api-key")
+async def update_api_key_endpoint(request: ApiKeyRequest):
+    try:
+        from app.agent import set_custom_api_key
+        set_custom_api_key(request.api_key)
+        return {"success": True, "message": "API key updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/backtest")
+async def backtest_endpoint(request: BacktestRequest):
+    """
+    Runs historical trading backtesting over the selected coin klines.
+    """
+    symbol_map = {
+        "bitcoin": "BTCUSDT",
+        "ethereum": "ETHUSDT",
+        "solana": "SOLUSDT",
+        "ripple": "XRPUSDT",
+        "dogecoin": "DOGEUSDT",
+        "shiba-inu": "SHIBUSDT",
+        "pepe": "PEPEUSDT",
+    }
+    symbol = symbol_map.get(request.coin_id.lower().strip(), "BTCUSDT")
+    try:
+        from app.tools import run_backtest_simulation
+        res = run_backtest_simulation(symbol, request.strategy)
+        return res
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Backtest simulation failed: {str(e)}")
 
 # -------------------------------------------------------------------------
 # Static File Fallbacks

@@ -57,7 +57,12 @@ const LOCALIZATION = {
             strongBuy: "Активная покупка",
             sentimentTitle: "Настроение рынка"
         },
-        lblExportBtn: "Скачать отчет"
+        lblExportBtn: "Скачать отчет",
+        lblApiKeyTitle: "Ключ API Gemini",
+        apiKeyPlaceholder: "Введите API-ключ...",
+        btnApplyKey: "Применить ключ",
+        lblRefreshBtn: "Обновить данные",
+        tipRefreshStats: "Обновить только рыночные данные"
     },
     en: {
         subtitle: "Educational AI Assistant & Dashboard",
@@ -100,12 +105,17 @@ const LOCALIZATION = {
             strongBuy: "Strong Buy",
             sentimentTitle: "Market Sentiment"
         },
-        lblExportBtn: "Export Report"
+        lblExportBtn: "Export Report",
+        lblApiKeyTitle: "Gemini API Key",
+        apiKeyPlaceholder: "Enter API Key...",
+        btnApplyKey: "Apply Key",
+        lblRefreshBtn: "Refresh Data",
+        tipRefreshStats: "Refresh market data only"
     }
 };
 
 // Version Check & State Reset on Redeploy
-const APP_VERSION = "1.0.3";
+const APP_VERSION = "1.2.0";
 const savedVersion = localStorage.getItem("app_version");
 if (savedVersion !== APP_VERSION) {
     localStorage.clear();
@@ -120,6 +130,115 @@ let activeTab = "summary";
 let tvWidgetInstance = null;
 let currentSentimentTimeframe = "12h";
 let lastRawSummary = "";
+
+// Auth Headers Vault helper
+function getAuthHeaders() {
+    const headers = { "Content-Type": "application/json" };
+    const customKey = sessionStorage.getItem("custom_api_key");
+    if (customKey) {
+        headers["Authorization"] = `Bearer ${customKey}`;
+    }
+    return headers;
+}
+
+// TA Quiz Database
+const QUIZ_QUESTIONS = {
+    ru: [
+        {
+            q: "Что означает пересечение линии SMA-50 выше SMA-200?",
+            options: [
+                "«Смертельный крест» — медвежий сигнал на продажу",
+                "«Золотой крест» — бычий сигнал на покупку",
+                "Сигнал о сильной перекупленности по RSI",
+                "Сигнал о росте волатильности рынка"
+            ],
+            answer: 1,
+            explanation: "Пересечение краткосрочной скользящей средней (SMA-50) снизу вверх через долгосрочную (SMA-200) называется «Золотым крестом» и является классическим бычьим сигналом."
+        },
+        {
+            q: "Какой уровень RSI традиционно указывает на перепроданность актива?",
+            options: [
+                "Выше 70",
+                "Около 50",
+                "Ниже 30",
+                "Равный 0"
+            ],
+            answer: 2,
+            explanation: "Значения RSI ниже 30 традиционно считаются признаком перепроданности, что указывает на возможное завершение нисходящего тренда и отскок вверх."
+        },
+        {
+            q: "Какое поведение цены характерно при выходе за верхнюю границу полос Боллинджера?",
+            options: [
+                "Цена считается перекупленной, возможен откат",
+                "Цена считается перепроданной, возможен рост",
+                "Начинается фаза консолидации",
+                "Это гарантирует продолжение бесконечного роста"
+            ],
+            answer: 0,
+            explanation: "Полосы Боллинджера отражают волатильность. Выход цены за верхнюю полосу указывает на перекупленность и повышает вероятность отката к средней линии."
+        },
+        {
+            q: "Что показывает гистограмма индикатора MACD?",
+            options: [
+                "Объем торгов на бирже",
+                "Расстояние между линией MACD и сигнальной линией",
+                "Сумму всех скользящих средних",
+                "Уровень страха мелких инвесторов"
+            ],
+            answer: 1,
+            explanation: "Гистограмма MACD визуализирует разницу (расстояние) между линией MACD и сигнальной линией. Рост гистограммы выше нуля подтверждает усиление бычьего импульса."
+        }
+    ],
+    en: [
+        {
+            q: "What does it mean when the SMA-50 line crosses above the SMA-200?",
+            options: [
+                "'Death Cross' — a bearish sell signal",
+                "'Golden Cross' — a bullish buy signal",
+                "RSI indicates overbought conditions",
+                "Bollinger Bands show volatility growth"
+            ],
+            answer: 1,
+            explanation: "When a shorter-term moving average (SMA-50) crosses above a longer-term moving average (SMA-200), it forms a 'Golden Cross', which is a classic bullish indicator."
+        },
+        {
+            q: "Which RSI level traditionally indicates that an asset is oversold?",
+            options: [
+                "Above 70",
+                "Around 50",
+                "Below 30",
+                "Exactly 0"
+            ],
+            answer: 2,
+            explanation: "RSI values below 30 traditionally indicate that the asset is oversold, suggesting a potential price rebound or trend reversal."
+        },
+        {
+            q: "What price behavior is expected when it exits above the upper Bollinger Band?",
+            options: [
+                "The asset is overbought, suggesting a potential pullback",
+                "The asset is oversold, suggesting a potential pump",
+                "Market enters consolidation phase",
+                "It guarantees a continuation of parabolic growth"
+            ],
+            answer: 0,
+            explanation: "Bollinger Bands reflect volatility. When price reaches or exceeds the upper band, it is considered relatively high (overbought), increasing the likelihood of a pullback."
+        },
+        {
+            q: "What does the MACD histogram show?",
+            options: [
+                "Market trading volume",
+                "The difference between the MACD line and the signal line",
+                "The sum of all moving averages",
+                "The retail investor fear level"
+            ],
+            answer: 1,
+            explanation: "The MACD histogram represents the difference between the MACD line and its signal line. An increasing histogram above zero indicates growing bullish momentum."
+        }
+    ]
+};
+
+let currentQuizQuestionIndex = 0;
+let quizScore = parseInt(localStorage.getItem("quiz_score") || "0");
 
 // Chat histories cached by coin ID
 let chatHistories = {};
@@ -232,9 +351,50 @@ function localizeUI() {
         expBtnLabel.textContent = t.lblExportBtn;
     }
     
+    const refBtnLabel = document.getElementById("lbl-refresh-btn");
+    if (refBtnLabel) {
+        refBtnLabel.textContent = t.lblRefreshBtn;
+    }
+    
+    const refStatsBtn = document.getElementById("refresh-stats-btn");
+    if (refStatsBtn) {
+        refStatsBtn.setAttribute("title", t.tipRefreshStats);
+    }
+    
     // Translate Market Sentiment Title and Update Gauge
     document.getElementById("lbl-sentiment-title").textContent = t.sentimentLabels.sentimentTitle;
     updateSentimentUI();
+
+    // Translate API Key Card
+    const apiKeyTitle = document.getElementById("lbl-api-key-title");
+    const apiKeyInput = document.getElementById("api-key-input");
+    const apiKeyBtn = document.getElementById("api-key-submit-btn");
+    if (apiKeyTitle) apiKeyTitle.textContent = t.lblApiKeyTitle;
+    if (apiKeyInput) apiKeyInput.placeholder = t.apiKeyPlaceholder;
+    if (apiKeyBtn) apiKeyBtn.textContent = t.btnApplyKey;
+
+    // Translate Backtester
+    const lblSelectStrat = document.getElementById("lbl-select-strategy");
+    if (lblSelectStrat) lblSelectStrat.textContent = currentLanguage === "ru" ? "Стратегия" : "Strategy";
+    const runBtBtn = document.getElementById("run-backtest-btn");
+    if (runBtBtn) runBtBtn.textContent = currentLanguage === "ru" ? "Запустить бэктест" : "Run Backtest";
+    const lblLoadingBt = document.getElementById("lbl-loading-backtest");
+    if (lblLoadingBt) lblLoadingBt.textContent = currentLanguage === "ru" ? "Запуск симуляции стратегии..." : "Running Strategy Simulation...";
+    const lblBtProfit = document.getElementById("lbl-bt-profit");
+    if (lblBtProfit) lblBtProfit.textContent = currentLanguage === "ru" ? "Чистая прибыль" : "Net Profit";
+    const lblBtWinrate = document.getElementById("lbl-bt-winrate");
+    if (lblBtWinrate) lblBtWinrate.textContent = currentLanguage === "ru" ? "Доля побед" : "Win Rate";
+    const lblBtTrades = document.getElementById("lbl-bt-trades");
+    if (lblBtTrades) lblBtTrades.textContent = currentLanguage === "ru" ? "Всего сделок" : "Total Trades";
+    const lblBtDrawdown = document.getElementById("lbl-bt-drawdown");
+    if (lblBtDrawdown) lblBtDrawdown.textContent = currentLanguage === "ru" ? "Макс. просадка" : "Max Drawdown";
+    const lblBtCurve = document.getElementById("lbl-bt-curve");
+    if (lblBtCurve) lblBtCurve.textContent = currentLanguage === "ru" ? "График роста капитала" : "Equity Growth Curve";
+
+    // Translate Quiz
+    const lblQuizTitle = document.getElementById("lbl-quiz-title");
+    if (lblQuizTitle) lblQuizTitle.textContent = currentLanguage === "ru" ? "Викторина по тех. анализу" : "Technical Analysis Quiz";
+    loadQuizQuestion();
 }
 
 // -------------------------------------------------------------------------
@@ -282,10 +442,9 @@ function renderSummaryError() {
     aiSummaryText.style.display = "block";
 }
 
-async function loadAIContent() {
-    // 1. Fetch Stats, Indicators and News from API
+async function loadStatsOnly(forceRefresh = false) {
     try {
-        const response = await fetch(`/api/market-data/${currentCoin}?lang=${currentLanguage}`);
+        const response = await fetch(`/api/market-data/${currentCoin}?lang=${currentLanguage}${forceRefresh ? '&force_refresh=true' : ''}`);
         const data = await response.json();
         if (data.success) {
             updateStatsUI(data.market_data);
@@ -295,6 +454,11 @@ async function loadAIContent() {
     } catch (e) {
         console.error("Failed to load market data", e);
     }
+}
+
+async function loadAIContent(forceRefresh = false) {
+    // 1. Fetch Stats, Indicators and News from API
+    await loadStatsOnly(forceRefresh);
 
     // 2. Fetch AI Summary
     summaryLoading.style.display = "flex";
@@ -303,8 +467,8 @@ async function loadAIContent() {
     try {
         const response = await fetch("/api/summary", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ coin_id: currentCoin, lang: currentLanguage })
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ coin_id: currentCoin, lang: currentLanguage, force_refresh: forceRefresh })
         });
         const data = await response.json();
         if (data.success) {
@@ -333,6 +497,80 @@ async function loadAIContent() {
     }
 }
 
+async function refreshDashboardData() {
+    const btn = document.getElementById("refresh-data-btn");
+    const icon = btn ? btn.querySelector(".refresh-icon") : null;
+    
+    if (icon) {
+        icon.classList.add("spinning");
+    }
+    if (btn) {
+        btn.disabled = true;
+        const label = document.getElementById("lbl-refresh-btn");
+        if (label) {
+            label.textContent = currentLanguage === "ru" ? "Обновление..." : "Refreshing...";
+        }
+    }
+    
+    const statsCard = document.getElementById("market-stats-card");
+    if (statsCard) {
+        statsCard.classList.add("refreshing-pulse");
+    }
+    
+    try {
+        await loadAIContent(true);
+    } catch (e) {
+        console.error("Refresh failed", e);
+    } finally {
+        if (icon) {
+            icon.classList.remove("spinning");
+        }
+        if (statsCard) {
+            statsCard.classList.remove("refreshing-pulse");
+        }
+        if (btn) {
+            btn.disabled = false;
+            const label = document.getElementById("lbl-refresh-btn");
+            if (label) {
+                label.textContent = LOCALIZATION[currentLanguage].lblRefreshBtn;
+            }
+        }
+    }
+}
+
+async function refreshStatsOnly() {
+    const btn = document.getElementById("refresh-stats-btn");
+    const icon = btn ? btn.querySelector(".refresh-stats-icon") : null;
+    
+    if (icon) {
+        icon.classList.add("spinning");
+    }
+    if (btn) {
+        btn.disabled = true;
+    }
+    
+    const statsCard = document.getElementById("market-stats-card");
+    if (statsCard) {
+        statsCard.classList.add("refreshing-pulse");
+    }
+    
+    try {
+        await loadStatsOnly(true);
+    } catch (e) {
+        console.error("Refresh stats failed", e);
+    } finally {
+        if (icon) {
+            icon.classList.remove("spinning");
+        }
+        if (statsCard) {
+            statsCard.classList.remove("refreshing-pulse");
+        }
+        if (btn) {
+            btn.disabled = false;
+        }
+    }
+}
+
 // -------------------------------------------------------------------------
 // Quota Status Indicator
 // -------------------------------------------------------------------------
@@ -346,15 +584,11 @@ async function updateQuotaUI() {
         const cUsed = q.chat_calls    || 0;
         const exhausted = q.quota_exhausted || false;
 
-        // Calculate remaining calls
-        const sRemaining = exhausted ? 0 : Math.max(0, limit - sUsed);
-        const cRemaining = exhausted ? 0 : Math.max(0, limit - cUsed);
-
         // --- counts ---
         const sEl = document.getElementById("quota-s");
         const cEl = document.getElementById("quota-c");
-        if (sEl) sEl.textContent = sRemaining;
-        if (cEl) cEl.textContent = cRemaining;
+        if (sEl) sEl.textContent = exhausted ? limit : sUsed;
+        if (cEl) cEl.textContent = exhausted ? limit : cUsed;
 
         // --- progress fills ---
         function setFill(fillId, used) {
@@ -477,11 +711,71 @@ function renderChatMessages() {
         const msgEl = document.createElement("div");
         msgEl.className = `chat-msg ${msg.role}`;
         msgEl.innerHTML = formatMarkdown(msg.content);
+
+        // TTS speaker button for assistant model replies
+        if (msg.role === "model") {
+            const speakBtn = document.createElement("button");
+            speakBtn.className = "tts-speak-btn";
+            speakBtn.innerHTML = "🔊";
+            speakBtn.title = currentLanguage === "ru" ? "Озвучить" : "Speak aloud";
+            
+            // Clean markdown for text synthesis
+            const cleanText = msg.content
+                .replace(/\[green\]\{([^}]+)\}/g, '$1')
+                .replace(/\[red\]\{([^}]+)\}/g, '$1')
+                .replace(/\*\*([^*]+)\*\*/g, '$1')
+                .replace(/\*([^*]+)\*/g, '$1')
+                .replace(/`([^`]+)`/g, '$1');
+                
+            speakBtn.onclick = (e) => {
+                e.stopPropagation();
+                speakMessage(cleanText, speakBtn);
+            };
+            msgEl.appendChild(speakBtn);
+        }
+
         chatMessagesContainer.appendChild(msgEl);
     });
     
     // Auto scroll to bottom
     chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+}
+
+let currentSpeakingBtn = null;
+
+function speakMessage(text, btn) {
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        if (currentSpeakingBtn) {
+            currentSpeakingBtn.innerHTML = "🔊";
+        }
+        if (currentSpeakingBtn === btn) {
+            currentSpeakingBtn = null;
+            return;
+        }
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    const langCode = currentLanguage === "ru" ? "ru-RU" : "en-US";
+    const voice = voices.find(v => v.lang.startsWith(langCode));
+    if (voice) {
+        utterance.voice = voice;
+    }
+    utterance.lang = langCode;
+
+    utterance.onend = () => {
+        btn.innerHTML = "🔊";
+        currentSpeakingBtn = null;
+    };
+    utterance.onerror = () => {
+        btn.innerHTML = "🔊";
+        currentSpeakingBtn = null;
+    };
+
+    btn.innerHTML = "⏹️";
+    currentSpeakingBtn = btn;
+    window.speechSynthesis.speak(utterance);
 }
 
 function renderQuickChips() {
@@ -529,7 +823,7 @@ async function sendMessage() {
         const historyToSend = chatHistories[currentCoin].slice(0, -1); // send history excluding the new query itself
         const response = await fetch("/api/chat", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getAuthHeaders(),
             body: JSON.stringify({
                 query: text,
                 history: historyToSend,
@@ -608,14 +902,25 @@ function switchTab(tabId) {
     // Manage active headers
     document.getElementById("tab-summary-btn").classList.remove("active");
     document.getElementById("tab-news-btn").classList.remove("active");
+    const btBtn = document.getElementById("tab-backtester-btn");
+    if (btBtn) btBtn.classList.remove("active");
     
     document.getElementById(`tab-${tabId}-btn`).classList.add("active");
     
     // Manage active contents
     document.getElementById("tab-summary-content").classList.remove("active");
     document.getElementById("tab-news-content").classList.remove("active");
+    const btContent = document.getElementById("tab-backtester-content");
+    if (btContent) btContent.classList.remove("active");
     
     document.getElementById(`tab-${tabId}-content`).classList.add("active");
+
+    if (tabId === "backtester") {
+        const results = document.getElementById("backtest-results");
+        if (results && results.style.display === "none") {
+            runStrategyBacktest();
+        }
+    }
 }
 
 // -------------------------------------------------------------------------
@@ -767,7 +1072,22 @@ function updateIndicatorsUI(indicators) {
     document.getElementById("val-indicator-macd").innerHTML = `<span class="term-link" onclick="askAgentAboutTerm('${indicators.macd.status}', 'MACD')">${indicators.macd.status}</span>`;
     document.getElementById("val-indicator-sma").innerHTML = `<span class="term-link" onclick="askAgentAboutTerm('${indicators.moving_averages.status}', 'Moving Averages')">${indicators.moving_averages.status}</span>`;
     document.getElementById("val-indicator-bb").innerHTML = `<span class="term-link" onclick="askAgentAboutTerm('${indicators.bollinger_bands.status}', 'Bollinger Bands')">${indicators.bollinger_bands.status}</span>`;
-    document.getElementById("val-indicator-fg").innerHTML = `${indicators.fear_greed.value} (<span class="term-link" onclick="askAgentAboutTerm('${indicators.fear_greed.status}', 'Fear & Greed')">${indicators.fear_greed.status}</span>)`;
+    
+    // Fear & Greed with trend indicator
+    const fgVal = indicators.fear_greed.value;
+    const fgPrev = indicators.fear_greed.previous_value;
+    let trendHtml = "";
+    if (fgPrev !== undefined) {
+        const diff = fgVal - fgPrev;
+        if (diff > 0) {
+            trendHtml = ` <span class="trend-indicator up" style="color: var(--neon-green); font-size: 0.78rem; font-weight: 700; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">↗ +${diff}</span>`;
+        } else if (diff < 0) {
+            trendHtml = ` <span class="trend-indicator down" style="color: var(--neon-rose); font-size: 0.78rem; font-weight: 700; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">↘ ${diff}</span>`;
+        } else {
+            trendHtml = ` <span class="trend-indicator flat" style="color: var(--text-muted); font-size: 0.78rem;">→ 0</span>`;
+        }
+    }
+    document.getElementById("val-indicator-fg").innerHTML = `${fgVal} (<span class="term-link" onclick="askAgentAboutTerm('${indicators.fear_greed.status}', 'Fear & Greed')">${indicators.fear_greed.status}</span>)${trendHtml}`;
     
     // Set visual indicators styling
     setIndicatorStatusColor("val-indicator-rsi", indicators.rsi.status);
@@ -1150,6 +1470,272 @@ initChatSession();
 loadAIContent();
 initResizeHandle();
 updateQuotaUI();
+loadQuizQuestion();
 // Refresh quota indicator every 60 seconds
 setInterval(updateQuotaUI, 60000);
 
+// TA Quiz helper functions
+function loadQuizQuestion() {
+    const lang = currentLanguage;
+    const questions = QUIZ_QUESTIONS[lang];
+    currentQuizQuestionIndex = currentQuizQuestionIndex % questions.length;
+    const qObj = questions[currentQuizQuestionIndex];
+
+    const qContainer = document.getElementById("quiz-question-container");
+    const oContainer = document.getElementById("quiz-options-container");
+    const explanationDiv = document.getElementById("quiz-explanation");
+    const scoreVal = document.getElementById("quiz-score-val");
+    const levelVal = document.getElementById("quiz-level-val");
+
+    if (scoreVal) scoreVal.textContent = quizScore;
+    if (levelVal) {
+        let levelText = "";
+        if (quizScore >= 8) levelText = lang === "ru" ? "Профи" : "Pro";
+        else if (quizScore >= 4) levelText = lang === "ru" ? "Продвинутый" : "Advanced";
+        else levelText = lang === "ru" ? "Новичок" : "Novice";
+        levelVal.textContent = levelText;
+    }
+
+    if (explanationDiv) {
+        explanationDiv.style.display = "none";
+        explanationDiv.innerHTML = "";
+    }
+
+    if (qContainer) {
+        qContainer.textContent = qObj.q;
+        qContainer.style.cursor = "pointer";
+        qContainer.title = lang === "ru" ? "Спросить ИИ об этом вопросе" : "Ask AI about this question";
+        qContainer.onclick = () => {
+            chatInput.value = qObj.q;
+            sendMessage();
+        };
+    }
+
+    if (oContainer) {
+        oContainer.innerHTML = "";
+        qObj.options.forEach((opt, idx) => {
+            const label = document.createElement("label");
+            label.className = "quiz-option-label";
+            label.style.display = "flex";
+            label.style.alignItems = "center";
+            label.style.gap = "8px";
+            label.style.padding = "8px 10px";
+            label.style.background = "var(--input-bg)";
+            label.style.border = "1px solid var(--card-border)";
+            label.style.borderRadius = "8px";
+            label.style.fontSize = "0.78rem";
+            label.style.cursor = "pointer";
+            label.style.transition = "all 0.2s ease";
+
+            const radio = document.createElement("input");
+            radio.type = "radio";
+            radio.name = "quiz-choice";
+            radio.value = idx;
+            radio.style.cursor = "pointer";
+
+            label.appendChild(radio);
+            label.appendChild(document.createTextNode(opt));
+            oContainer.appendChild(label);
+            
+            label.onclick = (e) => {
+                if (e.target !== radio) {
+                    radio.checked = true;
+                }
+                document.querySelectorAll(".quiz-option-label").forEach(l => {
+                    l.style.borderColor = "var(--card-border)";
+                    l.style.background = "var(--input-bg)";
+                });
+                label.style.borderColor = "var(--accent-color)";
+                label.style.background = "rgba(var(--accent-rgb), 0.05)";
+            };
+        });
+    }
+
+    const submitBtn = document.getElementById("quiz-submit-btn");
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = lang === "ru" ? "Проверить ответ" : "Submit Answer";
+        submitBtn.onclick = submitQuizAnswer;
+    }
+}
+
+function submitQuizAnswer() {
+    const selectedRadio = document.querySelector('input[name="quiz-choice"]:checked');
+    if (!selectedRadio) {
+        alert(currentLanguage === "ru" ? "Пожалуйста, выберите вариант ответа!" : "Please select an answer!");
+        return;
+    }
+
+    const answerIdx = parseInt(selectedRadio.value);
+    const questions = QUIZ_QUESTIONS[currentLanguage];
+    const qObj = questions[currentQuizQuestionIndex];
+    const explanationDiv = document.getElementById("quiz-explanation");
+    const submitBtn = document.getElementById("quiz-submit-btn");
+
+    document.querySelectorAll('input[name="quiz-choice"]').forEach(r => r.disabled = true);
+
+    const labels = document.querySelectorAll(".quiz-option-label");
+    labels.forEach((label, idx) => {
+        label.style.cursor = "default";
+        label.onclick = null;
+        if (idx === qObj.answer) {
+            label.style.borderColor = "var(--neon-green)";
+            label.style.background = "rgba(16, 185, 129, 0.08)";
+        } else if (idx === answerIdx) {
+            label.style.borderColor = "var(--neon-rose)";
+            label.style.background = "rgba(244, 63, 94, 0.08)";
+        }
+    });
+
+    const isCorrect = (answerIdx === qObj.answer);
+    if (isCorrect) {
+        quizScore += 2;
+    } else {
+        quizScore = Math.max(0, quizScore - 1);
+    }
+    localStorage.setItem("quiz_score", quizScore);
+
+    const scoreVal = document.getElementById("quiz-score-val");
+    if (scoreVal) scoreVal.textContent = quizScore;
+
+    if (explanationDiv) {
+        explanationDiv.innerHTML = `
+            <strong style="color: ${isCorrect ? 'var(--neon-green)' : 'var(--neon-rose)'};">
+                ${isCorrect ? (currentLanguage === "ru" ? "Правильно!" : "Correct!") : (currentLanguage === "ru" ? "Неверно!" : "Incorrect!")}
+            </strong><br>
+            ${qObj.explanation}
+        `;
+        explanationDiv.style.display = "block";
+    }
+
+    if (submitBtn) {
+        submitBtn.textContent = currentLanguage === "ru" ? "Следующий вопрос" : "Next Question";
+        submitBtn.onclick = () => {
+            currentQuizQuestionIndex++;
+            loadQuizQuestion();
+        };
+    }
+}
+
+// Strategy backtesting runner logic
+async function runStrategyBacktest() {
+    const strategySelector = document.getElementById("backtest-strategy-selector");
+    const strategy = strategySelector.value;
+    const loading = document.getElementById("backtest-loading");
+    const results = document.getElementById("backtest-results");
+    const runBtn = document.getElementById("run-backtest-btn");
+
+    if (runBtn) runBtn.disabled = true;
+    if (loading) loading.style.display = "block";
+    if (results) results.style.display = "none";
+
+    try {
+        const response = await fetch("/api/backtest", {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ coin_id: currentCoin, strategy: strategy })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById("val-bt-profit").textContent = `${data.net_profit >= 0 ? '+' : ''}${data.net_profit.toFixed(2)}%`;
+            document.getElementById("val-bt-profit").style.color = data.net_profit >= 0 ? "var(--neon-green)" : "var(--neon-rose)";
+            
+            document.getElementById("val-bt-winrate").textContent = `${data.win_rate.toFixed(2)}%`;
+            document.getElementById("val-bt-trades").textContent = data.total_trades;
+            document.getElementById("val-bt-drawdown").textContent = `${data.max_drawdown.toFixed(2)}%`;
+
+            const chartContainer = document.getElementById("backtest-chart");
+            const labelsContainer = document.getElementById("backtest-chart-labels");
+            
+            if (chartContainer && labelsContainer) {
+                chartContainer.innerHTML = "";
+                labelsContainer.innerHTML = "";
+                
+                const curve = data.equity_curve || [];
+                if (curve.length > 0) {
+                    const values = curve.map(c => c.value);
+                    const minVal = Math.min(...values);
+                    const maxVal = Math.max(...values);
+                    const valRange = maxVal - minVal || 1.0;
+
+                    curve.forEach(pt => {
+                        const barCol = document.createElement("div");
+                        barCol.className = "backtest-chart-col";
+                        barCol.style.flex = "1";
+                        barCol.style.height = "100%";
+                        barCol.style.display = "flex";
+                        barCol.style.flexDirection = "column";
+                        barCol.style.justifyContent = "flex-end";
+                        barCol.style.alignItems = "center";
+                        barCol.style.position = "relative";
+
+                        const pct = ((pt.value - minVal) / valRange) * 80 + 10;
+                        
+                        const bar = document.createElement("div");
+                        bar.style.width = "70%";
+                        bar.style.height = `${pct}%`;
+                        bar.style.borderRadius = "3px 3px 0 0";
+                        bar.style.background = pt.value >= 1000 ? "rgba(16, 185, 129, 0.65)" : "rgba(244, 63, 94, 0.65)";
+                        bar.style.transition = "height 0.4s ease";
+                        bar.title = `$${pt.value.toFixed(2)}`;
+
+                        barCol.appendChild(bar);
+                        chartContainer.appendChild(barCol);
+
+                        const lbl = document.createElement("span");
+                        lbl.style.flex = "1";
+                        lbl.style.textAlign = "center";
+                        lbl.textContent = pt.label;
+                        labelsContainer.appendChild(lbl);
+                    });
+                }
+            }
+
+            if (results) results.style.display = "block";
+        } else {
+            alert(currentLanguage === "ru" ? "Ошибка выполнения бэктеста." : "Failed to run backtest simulation.");
+        }
+    } catch (e) {
+        console.error("Backtest error", e);
+        alert(currentLanguage === "ru" ? "Ошибка соединения при выполнении бэктеста." : "Connection error running backtest.");
+    } finally {
+        if (loading) loading.style.display = "none";
+        if (runBtn) runBtn.disabled = false;
+    }
+}
+
+function saveApiKey() {
+    const keyInput = document.getElementById("api-key-input");
+    const statusDiv = document.getElementById("api-key-status");
+    const key = keyInput.value.trim();
+    if (!key) {
+        statusDiv.textContent = currentLanguage === "ru" ? "❌ Пожалуйста, введите ключ" : "❌ Please enter a key";
+        statusDiv.style.color = "var(--neon-rose)";
+        statusDiv.style.display = "block";
+        return;
+    }
+
+    try {
+        sessionStorage.setItem("custom_api_key", key);
+        statusDiv.textContent = currentLanguage === "ru" ? "✅ Ключ успешно применен!" : "✅ Key applied successfully!";
+        statusDiv.style.color = "var(--neon-green)";
+        statusDiv.style.display = "block";
+        keyInput.value = ""; // clear input
+        
+        // Reload content to use the new key
+        loadAIContent();
+        // Clear current chat session and re-welcome user to get live interaction
+        chatHistories[currentCoin] = null;
+        initChatSession();
+        
+        // Hide status after 4 seconds
+        setTimeout(() => {
+            statusDiv.style.display = "none";
+        }, 4000);
+    } catch (e) {
+        statusDiv.textContent = currentLanguage === "ru" ? "❌ Ошибка сохранения" : "❌ Storage error";
+        statusDiv.style.color = "var(--neon-rose)";
+        statusDiv.style.display = "block";
+    }
+}
