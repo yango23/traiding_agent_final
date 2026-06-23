@@ -567,6 +567,7 @@ async def generate_coin_summary(
             - Стохастический осциллятор (Stochastic Oscillator): %K={indicators['stochastic']['k']:.2f}, %D={indicators['stochastic']['d']:.2f} ({indicators['stochastic']['status']})
             - Точки разворота (Pivot Points Classic): Pivot ${indicators['pivot_points']['pivot']:.4f}, Поддержка S1 ${indicators['pivot_points']['s1']:.4f}, Сопротивление R1 ${indicators['pivot_points']['r1']:.4f}
             - Индекс страха и жадности (Fear & Greed Index): {indicators['fear_greed']['value']} ({indicators['fear_greed']['status']})
+            - Обнаруженные свечные паттерны (Detected Candlestick Patterns): {', '.join(indicators['detected_patterns']) if indicators['detected_patterns'] else 'Нет'}
             
             АКТУАЛЬНЫЕ НОВОСТИ:
             {news_titles}
@@ -575,7 +576,7 @@ async def generate_coin_summary(
             1. Начни ответ СРАЗУ со строки: "1. **Рыночный тонус**". Не пиши никаких приветствий, вступлений или общих заголовков.
             2. Раздели ответ строго на 3 пункта:
                1. **Рыночный тонус**: Опиши общую динамику цены (рост, падение, боковик) и 24ч изменение.
-               2. **Что говорят индикаторы**: Объясни показатели RSI, MACD, скользящие средние (SMA-50 и SMA-200), полосы Боллинджера, Стохастический осциллятор, Точки разворота и Индекс страха и жадности. Пиши это строго в виде единого абзаца. Категорически запрещено разделять индикаторы на отдельные пункты списка (типа "- SMA-50...", "* Стохастик..."). Опиши всё слитно в одном тексте.
+               2. **Что говорят индикаторы**: Объясни показатели RSI, MACD, скользящие средние (SMA-50 и SMA-200), полосы Боллинджера, Стохастический осциллятор, Точки разворота, Индекс страха и жадности и обнаруженные свечные паттерны (если они есть). Пиши это строго в виде единого абзаца. Категорически запрещено разделять индикаторы на отдельные пункты списка (типа "- SMA-50...", "* Стохастик..."). Опиши всё слитно в одном тексте.
                3. **Ключевой вывод**: Сделай вывод об общем фоне на основе новостей и технической картины, напомни о рисках, предупреди, что торговля сопряжена с рисками, и подчеркни, что это не финансовая рекомендация.
             4. Выделяй важные моменты цветом, используя синтаксис `[green]{{текст}}` для роста/бычьих сигналов и `[red]{{текст}}` для падения/медвежьих сигналов.
             5. Не используйте HTML-теги для цвета. Пользуйтесь ТОЛЬКО синтаксисом `[green]{{текст}}` и `[red]{{текст}}`.
@@ -597,6 +598,7 @@ async def generate_coin_summary(
             - Stochastic Oscillator: %K={indicators['stochastic']['k']:.2f}, %D={indicators['stochastic']['d']:.2f} ({indicators['stochastic']['status']})
             - Classic Pivot Points: Pivot ${indicators['pivot_points']['pivot']:.4f}, Support S1 ${indicators['pivot_points']['s1']:.4f}, Resistance R1 ${indicators['pivot_points']['r1']:.4f}
             - Fear & Greed Index: {indicators['fear_greed']['value']} ({indicators['fear_greed']['status']})
+            - Detected Candlestick Patterns: {', '.join(indicators['detected_patterns']) if indicators['detected_patterns'] else 'None'}
             
             RECENT NEWS:
             {news_titles}
@@ -605,7 +607,7 @@ async def generate_coin_summary(
             1. Start your answer IMMEDIATELY with the first section. Do not output any greetings, introductions, or headers. Start strictly with: "1. **Market Tone**".
             2. Divide the response strictly into 3 sections:
                1. **Market Tone**: Describe current price movement (up/down/sideways) and the 24h change.
-               2. **Indicator Breakdown**: Explain the RSI, MACD, Moving Averages (SMA-50 and SMA-200), Bollinger Bands, Stochastic Oscillator, Pivot Points, and the Fear & Greed Index. Write this strictly as a single cohesive paragraph. You are forbidden from separating indicators into bulleted or dashed list items. Describe everything together in plain text.
+               2. **Indicator Breakdown**: Explain the RSI, MACD, Moving Averages (SMA-50 and SMA-200), Bollinger Bands, Stochastic Oscillator, Pivot Points, the Fear & Greed Index, and any detected candlestick patterns (if any). Write this strictly as a single cohesive paragraph. You are forbidden from separating indicators into bulleted or dashed list items. Describe everything together in plain text.
                3. **Key Takeaway**: Conclude on the overall state based on news and indicators, emphasize risks, warn that trading is risky, and reiterate that this is not financial advice.
             3. Use `[green]{{text}}` for bullish/rising signals and `[red]{{text}}` for bearish/falling signals.
             4. Do not use HTML tags for coloring. ONLY use `[green]{{text}}` and `[red]{{text}}`.
@@ -676,6 +678,7 @@ async def chat_with_agent(
                 f"MACD: {indicators['macd']['status']} (hist={indicators['macd']['hist']}). "
                 f"SMA-50: ${indicators['moving_averages']['sma_50']:.2f}, SMA-200: ${indicators['moving_averages']['sma_200']:.2f} ({indicators['moving_averages']['status']}). "
                 f"Bollinger Bands: Upper ${indicators['bollinger_bands']['upper']:.2f}, Lower ${indicators['bollinger_bands']['lower']:.2f}. "
+                f"Detected Candlestick Patterns: {', '.join(indicators['detected_patterns']) if indicators['detected_patterns'] else 'None'}. "
                 f"Отвечайте на вопросы пользователя по индикаторам и графикам, объясняйте термины просто.]"
             )
             # Route to Tech instruction

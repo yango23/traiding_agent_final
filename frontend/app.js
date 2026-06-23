@@ -62,7 +62,9 @@ const LOCALIZATION = {
         apiKeyPlaceholder: "Введите API-ключ...",
         btnApplyKey: "Применить ключ",
         lblRefreshBtn: "Обновить данные",
-        tipRefreshStats: "Обновить только рыночные данные"
+        tipRefreshStats: "Обновить только рыночные данные",
+        lblPatternsLabel: "Свечные паттерны",
+        tipPatterns: "Активные паттерны, сканируемые на дневном графике Binance (например, Доджи, Молот, Падающая звезда, Поглощение)."
     },
     en: {
         subtitle: "Educational AI Assistant & Dashboard",
@@ -110,7 +112,9 @@ const LOCALIZATION = {
         apiKeyPlaceholder: "Enter API Key...",
         btnApplyKey: "Apply Key",
         lblRefreshBtn: "Refresh Data",
-        tipRefreshStats: "Refresh market data only"
+        tipRefreshStats: "Refresh market data only",
+        lblPatternsLabel: "Candlestick Patterns",
+        tipPatterns: "Active patterns scanned on the daily Binance chart (e.g. Doji, Hammer, Shooting Star, Engulfing)."
     }
 };
 
@@ -328,12 +332,16 @@ function localizeUI() {
     document.getElementById("lbl-indicators-title").textContent = t.lblIndicatorsTitle;
     document.getElementById("lbl-indicator-sma-label").textContent = t.lblSmaLabel;
     document.getElementById("lbl-indicator-fg-label").textContent = t.lblFgLabel;
+    const patternsLabel = document.getElementById("lbl-indicator-patterns-label");
+    if (patternsLabel) patternsLabel.textContent = t.lblPatternsLabel;
     
     document.getElementById("tip-rsi").setAttribute("data-tooltip", t.tipRsi);
     document.getElementById("tip-macd").setAttribute("data-tooltip", t.tipMacd);
     document.getElementById("tip-sma").setAttribute("data-tooltip", t.tipSma);
     document.getElementById("tip-bb").setAttribute("data-tooltip", t.tipBb);
     document.getElementById("tip-fg").setAttribute("data-tooltip", t.tipFg);
+    const patternsTip = document.getElementById("tip-patterns");
+    if (patternsTip) patternsTip.setAttribute("data-tooltip", t.tipPatterns);
     
     const secBadge = document.getElementById("lbl-security-badge");
     secBadge.textContent = t.lblSecurityBadge;
@@ -723,6 +731,8 @@ function renderChatMessages() {
             const cleanText = msg.content
                 .replace(/\[green\]\{([^}]+)\}/g, '$1')
                 .replace(/\[red\]\{([^}]+)\}/g, '$1')
+                .replace(/\[green\](.*?)\[\/green\]/gi, '$1')
+                .replace(/\[red\](.*?)\[\/red\]/gi, '$1')
                 .replace(/\*\*([^*]+)\*\*/g, '$1')
                 .replace(/\*([^*]+)\*/g, '$1')
                 .replace(/`([^`]+)`/g, '$1');
@@ -992,10 +1002,12 @@ function formatMarkdown(text) {
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
         
-    // 2. Parse green/red highlights using curly braces BEFORE preprocessing terms
+    // 2. Parse green/red highlights using curly braces or BBCode tags BEFORE preprocessing terms
     formatted = formatted
         .replace(/\[green\]\{([^}]+)\}/g, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
-        .replace(/\[red\]\{([^}]+)\}/g, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>');
+        .replace(/\[red\]\{([^}]+)\}/g, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>')
+        .replace(/\[green\](.*?)\[\/green\]/gi, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
+        .replace(/\[red\](.*?)\[\/red\]/gi, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>');
         
     // 3. Preprocess terms to wrap them in [term]{term:Topic}
     formatted = preprocessMarkdownTerms(formatted);
@@ -1089,6 +1101,29 @@ function updateIndicatorsUI(indicators) {
     }
     document.getElementById("val-indicator-fg").innerHTML = `${fgVal} (<span class="term-link" onclick="askAgentAboutTerm('${indicators.fear_greed.status}', 'Fear & Greed')">${indicators.fear_greed.status}</span>)${trendHtml}`;
     
+    // Candlestick Patterns
+    const patternsVal = document.getElementById("val-indicator-patterns");
+    if (patternsVal) {
+        const list = indicators.detected_patterns || [];
+        if (list.length === 0) {
+            patternsVal.innerHTML = currentLanguage === "ru" ? "Нет" : "None";
+            patternsVal.style.color = "var(--text-primary)";
+        } else {
+            const listStr = list.join(", ");
+            patternsVal.innerHTML = `<span class="term-link" onclick="askAgentAboutTerm('${listStr}', 'Candlestick Patterns')">${listStr}</span>`;
+            // Color green if Hammer/Bullish, red if Shooting Star/Bearish, neutral otherwise
+            const isBullish = list.some(p => p.toLowerCase().includes("bullish") || p.toLowerCase().includes("hammer"));
+            const isBearish = list.some(p => p.toLowerCase().includes("bearish") || p.toLowerCase().includes("shooting"));
+            if (isBullish && !isBearish) {
+                patternsVal.style.color = "var(--neon-green)";
+            } else if (isBearish && !isBullish) {
+                patternsVal.style.color = "var(--neon-rose)";
+            } else {
+                patternsVal.style.color = "var(--text-primary)";
+            }
+        }
+    }
+
     // Set visual indicators styling
     setIndicatorStatusColor("val-indicator-rsi", indicators.rsi.status);
     setIndicatorStatusColor("val-indicator-macd", indicators.macd.status);
