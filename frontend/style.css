@@ -836,7 +836,7 @@ body.light-theme .tooltip-icon:hover::after {
 .term-link {
     color: var(--text-primary);
     cursor: pointer;
-    text-decoration: underline dashed var(--neon-blue);
+    text-decoration: underline dashed rgba(56, 189, 248, 0.4);
     text-underline-offset: 3px;
     transition: all 0.2s ease;
     display: inline;
@@ -844,9 +844,19 @@ body.light-theme .tooltip-icon:hover::after {
 }
 
 .term-link:hover {
-    color: var(--neon-blue);
-    text-decoration: underline solid var(--neon-blue);
-    text-shadow: 0 0 8px var(--neon-blue);
+    color: #38bdf8;
+    text-decoration: underline solid #38bdf8;
+    text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+}
+
+body.light-theme .term-link {
+    text-decoration-color: rgba(2, 132, 199, 0.4);
+}
+
+body.light-theme .term-link:hover {
+    color: #0284c7;
+    text-decoration-color: #0284c7;
+    text-shadow: 0 0 8px rgba(2, 132, 199, 0.4);
 }
 
 .text-neon-green .term-link,
