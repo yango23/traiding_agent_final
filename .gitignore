@@ -24,3 +24,5 @@ node_modules/
 dist/
 build/
 *.log
+quota_tracker.json
+

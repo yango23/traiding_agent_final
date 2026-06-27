@@ -36,7 +36,7 @@ const LOCALIZATION = {
             "Создать торговую стратегию для {coin}",
             "Какая монета сейчас наиболее интересна для покупки?",
             "Как минимизировать риски потерь новичку?",
-            "Как мне настроить индикаторы RSI и MACD?"
+            "indicator_of_the_day"
         ],
         lblIndicatorsTitle: "Технические индикаторы",
         lblSmaLabel: "Скользящие (SMA)",
@@ -86,7 +86,7 @@ const LOCALIZATION = {
             "Create a trading strategy for {coin}",
             "Which coin looks most interesting to buy right now?",
             "How can a beginner minimize trading losses?",
-            "How do I set up RSI and MACD indicators?"
+            "indicator_of_the_day"
         ],
         lblIndicatorsTitle: "Technical Indicators",
         lblSmaLabel: "Moving Averages",
@@ -119,7 +119,7 @@ const LOCALIZATION = {
 };
 
 // Version Check & State Reset on Redeploy
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.4.0";
 const savedVersion = localStorage.getItem("app_version");
 if (savedVersion !== APP_VERSION) {
     localStorage.clear();
@@ -191,6 +191,94 @@ const QUIZ_QUESTIONS = {
             ],
             answer: 1,
             explanation: "Гистограмма MACD визуализирует разницу (расстояние) между линией MACD и сигнальной линией. Рост гистограммы выше нуля подтверждает усиление бычьего импульса."
+        },
+        {
+            q: "Что обычно сигнализирует свечной паттерн Доджи (Doji)?",
+            options: [
+                "Резкое продолжение текущего сильного тренда",
+                "Неопределенность на рынке и возможный близкий разворот тренда",
+                "Обязательное падение цены в ближайшие 24 часа",
+                "Полное отсутствие торгов по активу на бирже"
+            ],
+            answer: 1,
+            explanation: "Свеча Доджи формируется, когда цена открытия и закрытия практически равны. Это показывает равенство сил быков и медведей, сигнализируя о неопределенности и возможном развороте."
+        },
+        {
+            q: "Что происходит, когда цена пробивает сильный уровень сопротивления (Resistance) снизу вверх?",
+            options: [
+                "Этот уровень сопротивления часто становится новым уровнем поддержки (Support)",
+                "Этот уровень сопротивления исчезает навсегда и больше не влияет на цену",
+                "Цена гарантированно упадет обратно ниже этого уровня на следующей свече",
+                "Индикатор Fear & Greed автоматически падает до зоны экстремального страха"
+            ],
+            answer: 0,
+            explanation: "Когда уровень сопротивления пробивается вверх, роли меняются: бывшее сопротивление часто превращается в новый уровень поддержки (зеркальный уровень)."
+        },
+        {
+            q: "Как интерпретируются значения Стохастического осциллятора (Stochastic) выше 80?",
+            options: [
+                "Актив перепродан, формируется сигнал на покупку",
+                "Актив перекуплен, возможен разворот цены вниз",
+                "Объем торгов вырос более чем на 80% за последние сутки",
+                "Тренд перешел в стадию долгосрочной консолидации"
+            ],
+            answer: 1,
+            explanation: "Традиционно значения Стохастика выше 80 указывают на перекупленность актива, а значения ниже 20 — на перепроданность."
+        },
+        {
+            q: "Какое значение имеет рост объемов торгов при пробое ценового уровня?",
+            options: [
+                "Объем не имеет значения при техническом анализе пробоев",
+                "Высокий объем подтверждает истинность пробоя и силу импульса",
+                "Высокий объем указывает на ложный пробой и скорый возврат цены",
+                "Это означает, что маркетмейкеры полностью вышли из данного актива"
+            ],
+            answer: 1,
+            explanation: "Объем подтверждает тренд. Пробой уровня на высоком объеме торгов указывает на сильный интерес участников рынка и повышает вероятность продолжения движения."
+        },
+        {
+            q: "Что означает дивергенция (divergence) между графиком цены и индикатором RSI?",
+            options: [
+                "Сигнал о продолжении текущего сильного тренда без изменений",
+                "Расхождение цены и индикатора, предвещающее возможный разворот тренда",
+                "Сигнал о временном закрытии торгов по данному активу",
+                "Указание на равенство объемов торгов покупателей и продавцов"
+            ],
+            answer: 1,
+            explanation: "Дивергенция возникает, когда цена обновляет экстремум (максимум или минимум), а индикатор этого не подтверждает. Это один из сильнейших сигналов о затухании импульса и возможном развороте тренда."
+        },
+        {
+            q: "Какую роль играет линия шеи (neckline) в фигуре разворота «Голова и плечи» (Head and Shoulders)?",
+            options: [
+                "Это уровень поддержки, пробой которого вниз подтверждает разворот тренда",
+                "Это уровень сопротивления, пробой которого вверх означает продолжение роста",
+                "Это средняя скользящая, рассчитываемая за последние 100 дней",
+                "Это индикатор волатильности, аналогичный полосам Боллинджера"
+            ],
+            answer: 0,
+            explanation: "Линия шеи строится по минимумам фигуры. В классическом техническом анализе пробой этой линии сверху вниз завершает формирование фигуры «Голова и плечи» и служит сигналом к продаже."
+        },
+        {
+            q: "Какой тип скользящей средней (Moving Average) реагирует на последние изменения цены быстрее?",
+            options: [
+                "Простая скользящая средняя (SMA)",
+                "Экспоненциальная скользящая средняя (EMA)",
+                "Взвешенная скользящая средняя (WMA)",
+                "Все скользящие средние реагируют с абсолютно одинаковой скоростью"
+            ],
+            answer: 1,
+            explanation: "Экспоненциальная скользящая средняя (EMA) придает больший вес последним ценовым данным, поэтому она реагирует на изменения цен быстрее, чем простая скользящая средняя (SMA)."
+        },
+        {
+            q: "Какое рыночное состояние характеризуется паттерном «Флаг» (Flag)?",
+            options: [
+                "Долгосрочный разворот тренда в противоположную сторону",
+                "Краткосрочная пауза (консолидация) перед продолжением предшествующего движения",
+                "Полный флэт без какого-либо направления в течение нескольких месяцев",
+                "Переход актива в фазу делистинга"
+            ],
+            answer: 1,
+            explanation: "Паттерн «Флаг» является фигурой продолжения тренда. После сильного импульсного движения цена консолидируется в узком канале, после чего обычно следует пробой в направлении первоначального импульса."
         }
     ],
     en: [
@@ -237,9 +325,284 @@ const QUIZ_QUESTIONS = {
             ],
             answer: 1,
             explanation: "The MACD histogram represents the difference between the MACD line and its signal line. An increasing histogram above zero indicates growing bullish momentum."
+        },
+        {
+            q: "What does a Doji candlestick pattern typically signal?",
+            options: [
+                "A strong continuation of the current trend",
+                "Market indecision and a potential trend reversal",
+                "An obligatory price drop in the next 24 hours",
+                "A complete lack of trading volume on the exchange"
+            ],
+            answer: 1,
+            explanation: "A Doji candle is formed when the opening and closing prices are virtually equal. It shows that bulls and bears are at an impasse, indicating market indecision and a potential trend change."
+        },
+        {
+            q: "What often happens when the price breaks above a strong resistance level?",
+            options: [
+                "The resistance level often turns into a new support level",
+                "The resistance level disappears forever and no longer affects price",
+                "The price is guaranteed to drop back below this level on the next candle",
+                "The Fear & Greed Index automatically drops to the Extreme Fear zone"
+            ],
+            answer: 0,
+            explanation: "When a resistance level is broken to the upside, roles reverse: the former resistance often becomes a new support level (known as support/resistance flip)."
+        },
+        {
+            q: "How are Stochastic Oscillator values above 80 traditionally interpreted?",
+            options: [
+                "The asset is oversold, generating a buy signal",
+                "The asset is overbought, suggesting a potential downward reversal",
+                "Trading volume has increased by over 80% in the last 24 hours",
+                "The trend has entered a long-term consolidation phase"
+            ],
+            answer: 1,
+            explanation: "Traditionally, Stochastic values above 80 indicate that the asset is overbought, while values below 20 indicate that the asset is oversold."
+        },
+        {
+            q: "What is the significance of rising trading volume during a price level breakout?",
+            options: [
+                "Volume has no significance in the technical analysis of breakouts",
+                "High volume confirms the validity of the breakout and momentum strength",
+                "High volume indicates a fake breakout (fakeout) and quick price return",
+                "It means market makers have completely exited the asset"
+            ],
+            answer: 1,
+            explanation: "Volume confirms the trend. A breakout on high trading volume indicates strong market participant interest and increases the likelihood of a sustained move."
+        },
+        {
+            q: "What does a divergence between the price chart and the RSI indicator signify?",
+            options: [
+                "A signal that the current trend will continue unchanged",
+                "A disagreement between price and momentum, signaling a potential trend reversal",
+                "An indication that trading for the asset has been temporarily suspended",
+                "A sign that buy and sell trading volumes are perfectly equal"
+            ],
+            answer: 1,
+            explanation: "Divergence occurs when the price makes a new high or low but the indicator does not. It is one of the strongest signals of momentum loss and potential trend reversal."
+        },
+        {
+            q: "What role does the neckline play in a Head and Shoulders reversal pattern?",
+            options: [
+                "It is a support level, and breaking below it confirms the trend reversal",
+                "It is a resistance level, and breaking above it signals continued growth",
+                "It is a moving average calculated over the last 100 days",
+                "It is a volatility indicator similar to Bollinger Bands"
+            ],
+            answer: 0,
+            explanation: "The neckline is drawn by connecting the lows of the pattern. In classical technical analysis, a breakout below this line completes the Head and Shoulders pattern and serves as a sell signal."
+        },
+        {
+            q: "Which type of Moving Average responds to recent price changes faster?",
+            options: [
+                "Simple Moving Average (SMA)",
+                "Exponential Moving Average (EMA)",
+                "Weighted Moving Average (WMA)",
+                "All moving averages respond with the exact same speed"
+            ],
+            answer: 1,
+            explanation: "The Exponential Moving Average (EMA) places a greater weight on the most recent price data, allowing it to react to price fluctuations faster than a Simple Moving Average (SMA)."
+        },
+        {
+            q: "What market condition is characterized by a Flag chart pattern?",
+            options: [
+                "A long-term trend reversal in the opposite direction",
+                "A short-term pause (consolidation) before continuing the prior trend",
+                "A complete flat market without any direction for several months",
+                "The transition of the asset into a delisting phase"
+            ],
+            answer: 1,
+            explanation: "The Flag pattern is a trend continuation pattern. Following a sharp price movement, the price consolidates in a narrow channel, which is typically followed by a breakout in the direction of the initial move."
         }
     ]
 };
+
+const INDICATORS_OF_THE_DAY = [
+    {
+        id: "rsi",
+        name: {
+            en: "RSI (Relative Strength Index)",
+            ru: "RSI (Индекс относительной силы)"
+        },
+        desc: {
+            en: "A momentum oscillator that measures the speed and change of price movements between 0 and 100.",
+            ru: "Осциллятор импульса, измеряющий скорость и изменение ценовых движений в диапазоне от 0 до 100."
+        },
+        query: {
+            en: "Tell me in detail about the RSI (Relative Strength Index) indicator. What is it, how does it work, what default settings to use (length 14, levels 30/70), and how to configure and apply it on the TradingView widget?",
+            ru: "Расскажи подробно про индикатор RSI (Relative Strength Index). Что это такое, как он работает, какие стандартные настройки использовать (например, длина 14, уровни 30/70) и как настроить и применить его на виджете TradingView?"
+        }
+    },
+    {
+        id: "macd",
+        name: {
+            en: "MACD (Moving Average Convergence Divergence)",
+            ru: "MACD (Схождение/расхождение скользящих средних)"
+        },
+        desc: {
+            en: "A trend-following momentum indicator that shows the relationship between two moving averages of price.",
+            ru: "Трендовый индикатор импульса, показывающий взаимосвязь между двумя скользящими средними цены."
+        },
+        query: {
+            en: "Tell me in detail about the MACD indicator. What is it, how does it work (MACD line, signal line, histogram), what default settings to use (12, 26, 9), and how to configure and apply it on the TradingView widget?",
+            ru: "Расскажи подробно про индикатор MACD. Что это такое, как он работает (линия MACD, сигнальная линия, гистограмма), какие стандартные настройки использовать (12, 26, 9) и как настроить и применить его на виджете TradingView?"
+        }
+    },
+    {
+        id: "bollinger",
+        name: {
+            en: "Bollinger Bands",
+            ru: "Полосы Боллинджера"
+        },
+        desc: {
+            en: "A volatility indicator consisting of a simple moving average and two standard deviation bands.",
+            ru: "Индикатор волатильности, состоящий из простой скользящей средней и двух полос среднеквадратического отклонения."
+        },
+        query: {
+            en: "Tell me in detail about the Bollinger Bands indicator. What is it, how does it work (upper, middle, lower bands), what default settings to use (20, 2), and how to configure and apply it on the TradingView widget?",
+            ru: "Расскажи подробно про индикатор Bollinger Bands (Полосы Боллинджера). Что это такое, как он работает (верхняя, средняя и нижняя полосы), какие стандартные настройки использовать (20, 2) и как настроить и применить его на виджете TradingView?"
+        }
+    },
+    {
+        id: "stochastic",
+        name: {
+            en: "Stochastic Oscillator",
+            ru: "Стохастический осциллятор"
+        },
+        desc: {
+            en: "A momentum indicator comparing a closing price to its price range over a certain period.",
+            ru: "Индикатор импульса, сравнивающий цену закрытия с диапазоном ее цен за определенный период."
+        },
+        query: {
+            en: "Tell me in detail about the Stochastic Oscillator. What is it, how does it work (lines %K and %D, overbought/oversold levels), what settings to use (14, 3, 3), and how to configure and apply it on the TradingView widget?",
+            ru: "Расскажи подробно про Стохастический осциллятор (Stochastic Oscillator). Что это такое, как он работает (линии %K и %D, зоны перекупленности/перепроданности), какие настройки использовать (14, 3, 3) и как настроить и применить его на виджете TradingView?"
+        }
+    },
+    {
+        id: "ema",
+        name: {
+            en: "EMA (Exponential Moving Average)",
+            ru: "EMA (Экспоненциальная скользящая средняя)"
+        },
+        desc: {
+            en: "A moving average that places a greater weight and significance on the most recent data points.",
+            ru: "Скользящая средняя, придающая больший вес и значение самым последним ценовым точкам."
+        },
+        query: {
+            en: "Tell me in detail about the EMA (Exponential Moving Average) indicator. What is it, how does it differ from SMA, what common periods to use (e.g. EMA 9, 20, 50, 200), and how to configure and apply it on the TradingView widget?",
+            ru: "Расскажи подробно про индикатор EMA (Exponential Moving Average). Что это такое, чем отличается от SMA, какие стандартные периоды использовать (например, EMA 9, 20, 50, 200) и как настроить и применить его на виджете TradingView?"
+        }
+    },
+    {
+        id: "ichimoku",
+        name: {
+            en: "Ichimoku Cloud",
+            ru: "Облако Ишимоку"
+        },
+        desc: {
+            en: "A comprehensive indicator that defines support/resistance, trend direction, and momentum.",
+            ru: "Комплексный индикатор, определяющий уровни поддержки/сопротивления, направление тренда и импульс."
+        },
+        query: {
+            en: "Tell me in detail about the Ichimoku Cloud indicator. What is it, what lines is it composed of (Tenkan-sen, Kijun-sen, Senkou Span A/B, Chikou Span), how to read its signals, and how to configure it on the TradingView widget?",
+            ru: "Расскажи подробно про индикатор Ichimoku Cloud (Облако Ишимоку). Что это такое, из каких линий оно состоит (Tenkan-sen, Kijun-sen, Senkou Span A/B, Chikou Span), как читать сигналы облака и как настроить его на виджете TradingView?"
+        }
+    },
+    {
+        id: "fibonacci",
+        name: {
+            en: "Fibonacci Retracement",
+            ru: "Коррекция Фибоначчи"
+        },
+        desc: {
+            en: "A tool using horizontal lines to indicate areas of support or resistance at the key Fibonacci levels.",
+            ru: "Инструмент горизонтальных линий для отображения уровней поддержки/сопротивления на ключевых числах Фибоначчи."
+        },
+        query: {
+            en: "Tell me in detail about the Fibonacci Retracement tool. What is it, which levels are key (0.382, 0.5, 0.618), how to draw the grid correctly, and how to configure and apply this tool on the TradingView widget?",
+            ru: "Расскажи подробно про инструмент Коррекция Фибоначчи (Fibonacci Retracement). Что это такое, какие уровни являются ключевыми (0.382, 0.5, 0.618), как правильно натягивать сетку на график и как настроить и применить этот инструмент на виджете TradingView?"
+        }
+    },
+    {
+        id: "vwap",
+        name: {
+            en: "VWAP (Volume Weighted Average Price)",
+            ru: "VWAP (Средневзвешенная объемом цена)"
+        },
+        desc: {
+            en: "A trading benchmark that gives the average price an asset has traded at throughout the day, based on volume.",
+            ru: "Торговый ориентир, показывающий среднюю цену актива за день с учетом объема торгов."
+        },
+        query: {
+            en: "Tell me in detail about the VWAP (Volume Weighted Average Price) indicator. What is it, why is it important for intraday traders, how to interpret it, and how to configure and apply it on the TradingView widget?",
+            ru: "Расскажи подробно про индикатор VWAP (Volume Weighted Average Price). Что это такое, почему он важен для внутридневных трейдеров, как его интерпретировать и как настроить и применить его на виджете TradingView?"
+        }
+    },
+    {
+        id: "atr",
+        name: {
+            en: "ATR (Average True Range)",
+            ru: "ATR (Средний истинный диапазон)"
+        },
+        desc: {
+            en: "A volatility indicator that shows how much an asset moves, on average, during a given time frame.",
+            ru: "Индикатор волатильности, показывающий, насколько в среднем перемещается цена актива за определенный таймфрейм."
+        },
+        query: {
+            en: "Tell me in detail about the ATR (Average True Range) indicator. What is it, how does it measure volatility, how to use it to set Stop Loss levels, and how to configure and apply it on the TradingView widget?",
+            ru: "Расскажи подробно про индикатор ATR (Average True Range). Что это такое, как он измеряет волатильность, как использовать его для выставления стоп-лоссов (Stop Loss) и как настроить и применить его на виджете TradingView?"
+        }
+    },
+    {
+        id: "adx",
+        name: {
+            en: "ADX (Average Directional Index)",
+            ru: "ADX (Индекс среднего направления)"
+        },
+        desc: {
+            en: "An indicator used to measure the overall strength of a trend, regardless of its direction.",
+            ru: "Индикатор для измерения общей силы тренда, независимо от его направления."
+        },
+        query: {
+            en: "Tell me in detail about the ADX (Average Directional Index) indicator. What is it, how does it measure trend strength, what thresholds are important (e.g. above 25), and how to configure and apply it on the TradingView widget?",
+            ru: "Расскажи подробно про индикатор ADX (Average Directional Index). Что это такое, как он измеряет силу тренда (в отличие от направления), какие уровни важны (например, выше 25) и как настроить и применить его на виджете TradingView?"
+        }
+    },
+    {
+        id: "parabolic_sar",
+        name: {
+            en: "Parabolic SAR",
+            ru: "Parabolic SAR"
+        },
+        desc: {
+            en: "A trend-following indicator used to determine direction and identify potential trend reversals.",
+            ru: "Трендовый индикатор для определения направления движения цены и поиска потенциальных точек разворота."
+        },
+        query: {
+            en: "Tell me in detail about the Parabolic SAR indicator. What is it, how do dots above or below the price show trend direction and reversal points, and how to configure and apply it on the TradingView widget?",
+            ru: "Расскажи подробно про индикатор Parabolic SAR. Что это такое, как точки над и под ценой показывают направление тренда и точки разворота, и как настроить и применить его на виджете TradingView?"
+        }
+    },
+    {
+        id: "supertrend",
+        name: {
+            en: "Supertrend",
+            ru: "Супертренд"
+        },
+        desc: {
+            en: "A simple trend-following indicator based on ATR that plots buy/sell signals on the chart.",
+            ru: "Простой трендовый индикатор на основе ATR, который строит линии поддержки/сопротивления и дает торговые сигналы."
+        },
+        query: {
+            en: "Tell me in detail about the Supertrend indicator. What is it, how does it use ATR to construct support/resistance levels and generate buy/sell signals, and how to configure and apply it on the TradingView widget?",
+            ru: "Расскажи подробно про индикатор Supertrend (Супертренд). Что это такое, как он использует ATR для построения уровней поддержки/сопротивления и генерации сигналов buy/sell, и как настроить и применить его на виджете TradingView?"
+        }
+    }
+];
+
+// Calculate default indicator of the day based on the day of the year
+const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+let currentIndicatorIndex = dayOfYear % INDICATORS_OF_THE_DAY.length;
 
 let currentQuizQuestionIndex = 0;
 let quizScore = parseInt(localStorage.getItem("quiz_score") || "0");
@@ -733,6 +1096,8 @@ function renderChatMessages() {
                 .replace(/\[red\]\{([^}]+)\}/g, '$1')
                 .replace(/\[green\](.*?)\[\/green\]/gi, '$1')
                 .replace(/\[red\](.*?)\[\/red\]/gi, '$1')
+                .replace(/\[green\]([a-zA-Z0-9_-]+)/g, '$1')
+                .replace(/\[red\]([a-zA-Z0-9_-]+)/g, '$1')
                 .replace(/\*\*([^*]+)\*\*/g, '$1')
                 .replace(/\*([^*]+)\*/g, '$1')
                 .replace(/`([^`]+)`/g, '$1');
@@ -793,15 +1158,28 @@ function renderQuickChips() {
     const coinLabel = coinSelector.options[coinSelector.selectedIndex].text;
     const chipsText = LOCALIZATION[currentLanguage].chips;
     
+    // Select a fresh, unmentioned indicator of the day
+    const ind = getFreshIndicatorOfTheDay();
+    
     chipsText.forEach(text => {
         const chipEl = document.createElement("span");
         chipEl.className = "chip";
-        const formattedText = text.replace("{coin}", coinLabel);
-        chipEl.textContent = formattedText;
-        chipEl.onclick = () => {
-            chatInput.value = formattedText;
-            sendMessage();
-        };
+        
+        if (text === "indicator_of_the_day") {
+            const displayName = currentLanguage === "ru" ? `Изучить индикатор дня: ${ind.name.ru}` : `Study indicator of the day: ${ind.name.en}`;
+            chipEl.textContent = displayName;
+            chipEl.onclick = () => {
+                chatInput.value = ind.query[currentLanguage];
+                sendMessage();
+            };
+        } else {
+            const formattedText = text.replace("{coin}", coinLabel);
+            chipEl.textContent = formattedText;
+            chipEl.onclick = () => {
+                chatInput.value = formattedText;
+                sendMessage();
+            };
+        }
         quickChipsContainer.appendChild(chipEl);
     });
 }
@@ -895,6 +1273,7 @@ async function sendMessage() {
         chatInput.disabled = false;
         chatSendBtn.disabled = false;
         chatInput.focus();
+        renderQuickChips();
     }
 }
 
@@ -941,6 +1320,20 @@ function preprocessMarkdownTerms(text) {
     let formatted = text;
     
     const termMapping = {
+        "Bearish Engulfing": "Bearish Engulfing",
+        "Bullish Engulfing": "Bullish Engulfing",
+        "Shooting Star": "Shooting Star",
+        "Hammer": "Hammer",
+        "Doji": "Doji",
+        "медвежье поглощение": "Bearish Engulfing",
+        "бычье поглощение": "Bullish Engulfing",
+        "медвежьего поглощения": "Bearish Engulfing",
+        "бычьего поглощения": "Bullish Engulfing",
+        "падающая звезда": "Shooting Star",
+        "падающей звезды": "Shooting Star",
+        "молот": "Hammer",
+        "доджи": "Doji",
+        
         "Death Cross": "SMA Crossover",
         "Golden Cross": "SMA Crossover",
         "SMA-50": "SMA Crossover",
@@ -1007,7 +1400,9 @@ function formatMarkdown(text) {
         .replace(/\[green\]\{([^}]+)\}/g, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
         .replace(/\[red\]\{([^}]+)\}/g, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>')
         .replace(/\[green\](.*?)\[\/green\]/gi, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
-        .replace(/\[red\](.*?)\[\/red\]/gi, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>');
+        .replace(/\[red\](.*?)\[\/red\]/gi, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>')
+        .replace(/\[green\]([a-zA-Z0-9_-]+)/g, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
+        .replace(/\[red\]([a-zA-Z0-9_-]+)/g, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>');
         
     // 3. Preprocess terms to wrap them in [term]{term:Topic}
     formatted = preprocessMarkdownTerms(formatted);
@@ -1495,6 +1890,38 @@ document.addEventListener("mousemove", (e) => {
         glowBg.style.setProperty("--mouse-y", `${y}px`);
     }
 });
+
+// Indicator of the Day helper functions
+function isIndicatorMentioned(ind) {
+    const history = chatHistories[currentCoin] || [];
+    const idLower = ind.id.toLowerCase();
+    const nameEnLower = ind.name.en.toLowerCase();
+    const nameRuLower = ind.name.ru.toLowerCase();
+    
+    for (const msg of history) {
+        const text = (msg.content || "").toLowerCase();
+        if (text.includes(idLower) || text.includes(nameEnLower) || text.includes(nameRuLower)) {
+            return true;
+        }
+        if (ind.id === "bollinger" && text.includes("боллинджер")) return true;
+        if (ind.id === "stochastic" && text.includes("стохастик")) return true;
+        if (ind.id === "ichimoku" && text.includes("ишимоку")) return true;
+        if (ind.id === "fibonacci" && text.includes("фибоначч")) return true;
+    }
+    return false;
+}
+
+function getFreshIndicatorOfTheDay() {
+    const baseIndex = dayOfYear % INDICATORS_OF_THE_DAY.length;
+    for (let i = 0; i < INDICATORS_OF_THE_DAY.length; i++) {
+        const candidateIndex = (baseIndex + i) % INDICATORS_OF_THE_DAY.length;
+        const ind = INDICATORS_OF_THE_DAY[candidateIndex];
+        if (!isIndicatorMentioned(ind)) {
+            return ind;
+        }
+    }
+    return INDICATORS_OF_THE_DAY[baseIndex];
+}
 
 // Initial Bootstrap
 initTheme();

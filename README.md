@@ -46,11 +46,17 @@ To elevate this project into a robust educational tool, we implemented several a
 *   Programmatically detects classic candlestick formations (such as **Doji**, **Hammer**, **Shooting Star**, and **Bullish/Bearish Engulfing**) on daily Binance charts.
 *   Detected active patterns are integrated into the technical indicators list and passed to the coordinator agent to improve analysis context.
 
-### 3. Educational TA Quiz Sidebar Card
+### 3. Educational TA Quiz Database (12 Questions)
 *   A dedicated **Technical Analysis Quiz** card located in the left sidebar (swapped positions with the API key vault for better visibility).
-*   Features a pool of technical analysis questions in both English and Russian.
+*   Expanded pool of **12 comprehensive technical analysis questions** in both English and Russian, covering candle patterns, EMA vs SMA speed differences, H&S necklines, RSI divergences, and more.
 *   Provides automated grading, visual choices feedback (green for correct, red for incorrect), detailed educational explanations, and local storage level progression (*Novice*, *Advanced*, *Pro*).
 *   **Click-to-Query Questions**: The quiz question text is clickable. Clicking it inserts the question into the chatbot and queries the AI agent, causing the advisor to explain the concepts in the chat.
+
+### 6. Dynamic Indicator of the Day Hint Chip
+*   Replaced the static RSI/MACD setup chip with a dynamic **Indicator of the Day** prompt chip: `Изучить индикатор дня: {Name}` / `Study indicator of the day: {Name}`.
+*   Pulls from a curated database of **12 popular indicators** (RSI, MACD, Bollinger Bands, Stochastic, EMA, Ichimoku, Fibonacci, VWAP, ATR, ADX, Parabolic SAR, Supertrend).
+*   **Smart History Filtering**: Scans the active chat history (`chatHistories[currentCoin]`) to detect if an indicator has already been discussed in this session. If it has, the chip automatically cycles and recommends the next un-discussed indicator.
+*   **Reactive Update**: The chip list refreshes immediately when sending or receiving messages, keeping the suggested indicators relevant.
 
 ### 4. Native Text-to-Speech (TTS) Reader
 *   Model assistant messages feature a clickable speaker `🔊` button.
@@ -101,13 +107,15 @@ The backend leverages custom Python tools to query APIs and feed structured cont
 Configure a `.env` file in the root folder of the project (this file is ignored by Git):
 ```env
 GEMINI_API_KEY=YOUR_GEMINI_API_KEY
-FORCE_DEMO_MODE=False
+FORCE_DEMO_MODE=True
 GOOGLE_GENAI_USE_VERTEXAI=False
 ```
 
 ### 2. Startup
-Run the application using the `uv` package manager:
-```bash
-uv run uvicorn app.fast_api_app:app --port 8000
-```
-Open **[http://localhost:8000](http://localhost:8000)** in your browser.
+You can launch the project in two ways:
+*   **Windows One-Click Launcher**: Double-click **[run_local.bat](file:///f:/AGA/crypto-advisor/run_local.bat)** in the project root. This automatically activates the environment, launches your default web browser at `http://127.0.0.1:8000`, and starts the FastAPI server.
+*   **Manual UV Command**: Run the following in your terminal:
+    ```bash
+    uv run uvicorn app.fast_api_app:app --port 8000
+    ```
+    And navigate manually to **[http://127.0.0.1:8000](http://127.0.0.1:8000)**.
