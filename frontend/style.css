@@ -834,17 +834,37 @@ body.light-theme .tooltip-icon:hover::after {
 
 /* Clickable technical terms in stats panel */
 .term-link {
+    color: var(--text-primary);
     cursor: pointer;
-    text-decoration: underline dashed currentColor;
+    text-decoration: underline dashed var(--neon-blue);
     text-underline-offset: 3px;
     transition: all 0.2s ease;
     display: inline;
+    font-weight: 500;
 }
 
 .term-link:hover {
-    opacity: 0.8;
-    text-decoration: underline solid currentColor;
-    text-shadow: 0 0 8px currentColor;
+    color: var(--neon-blue);
+    text-decoration: underline solid var(--neon-blue);
+    text-shadow: 0 0 8px var(--neon-blue);
+}
+
+.text-neon-green .term-link,
+.text-neon-red .term-link {
+    color: inherit;
+    text-decoration-color: currentColor;
+}
+
+.text-neon-green .term-link:hover {
+    color: var(--neon-green);
+    text-decoration: underline solid var(--neon-green);
+    text-shadow: 0 0 8px var(--neon-green);
+}
+
+.text-neon-red .term-link:hover {
+    color: var(--neon-rose);
+    text-decoration: underline solid var(--neon-rose);
+    text-shadow: 0 0 8px var(--neon-rose);
 }
 
 /* Market Sentiment Gauge Dial Styling */
@@ -997,8 +1017,10 @@ body.light-theme .summary-section-header {
     color: var(--text-secondary);
 }
 
-.markdown-body strong {
+.markdown-body strong,
+.markdown-body b {
     color: var(--text-primary);
+    font-weight: 600;
 }
 
 /* =========================================================================

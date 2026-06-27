@@ -119,7 +119,7 @@ const LOCALIZATION = {
 };
 
 // Version Check & State Reset on Redeploy
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.5.0";
 const savedVersion = localStorage.getItem("app_version");
 if (savedVersion !== APP_VERSION) {
     localStorage.clear();
