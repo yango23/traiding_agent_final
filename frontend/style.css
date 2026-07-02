@@ -664,7 +664,8 @@ body.light-theme .card-divider {
     border: var(--card-border);
     border-bottom-left-radius: 2px;
     position: relative;
-    padding-right: 32px;
+    padding-right: 12px;
+    padding-bottom: 34px; /* Space for the bottom-aligned speak button */
 }
 
 /* Chat suggested chips */
@@ -1161,17 +1162,17 @@ body.light-theme #refresh-stats-btn:hover {
 
 .tts-speak-btn {
     position: absolute;
-    top: 6px;
+    bottom: 6px;
     right: 8px;
-    background: transparent;
-    border: none;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     cursor: pointer;
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     color: var(--text-muted);
-    opacity: 0.5;
+    opacity: 0.75;
     transition: all 0.2s ease;
-    padding: 2px;
-    border-radius: 4px;
+    padding: 3px 8px;
+    border-radius: 6px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1181,7 +1182,9 @@ body.light-theme #refresh-stats-btn:hover {
 .tts-speak-btn:hover {
     opacity: 1;
     color: var(--text-primary);
-    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-1px);
 }
 
 .quiz-option-label {

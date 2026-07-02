@@ -119,7 +119,7 @@ const LOCALIZATION = {
 };
 
 // Version Check & State Reset on Redeploy
-const APP_VERSION = "1.6.0";
+const APP_VERSION = "1.7.0";
 const savedVersion = localStorage.getItem("app_version");
 if (savedVersion !== APP_VERSION) {
     localStorage.clear();
@@ -1087,7 +1087,7 @@ function renderChatMessages() {
         if (msg.role === "model") {
             const speakBtn = document.createElement("button");
             speakBtn.className = "tts-speak-btn";
-            speakBtn.innerHTML = "🔊";
+            speakBtn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${currentLanguage === "ru" ? "Прослушать" : "Listen"}</span>`;
             speakBtn.title = currentLanguage === "ru" ? "Озвучить" : "Speak aloud";
             
             // Clean markdown for text synthesis
@@ -1119,10 +1119,15 @@ function renderChatMessages() {
 let currentSpeakingBtn = null;
 
 function speakMessage(text, btn) {
+    const listenLabel = currentLanguage === "ru" ? "Прослушать" : "Listen";
+    const stopLabel = currentLanguage === "ru" ? "Остановить" : "Stop";
+
     if (window.speechSynthesis.speaking) {
         window.speechSynthesis.cancel();
         if (currentSpeakingBtn) {
-            currentSpeakingBtn.innerHTML = "🔊";
+            const prevLang = currentSpeakingBtn.title === "Озвучить" ? "ru" : "en";
+            const prevListenLabel = prevLang === "ru" ? "Прослушать" : "Listen";
+            currentSpeakingBtn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${prevListenLabel}</span>`;
         }
         if (currentSpeakingBtn === btn) {
             currentSpeakingBtn = null;
@@ -1140,15 +1145,15 @@ function speakMessage(text, btn) {
     utterance.lang = langCode;
 
     utterance.onend = () => {
-        btn.innerHTML = "🔊";
+        btn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${listenLabel}</span>`;
         currentSpeakingBtn = null;
     };
     utterance.onerror = () => {
-        btn.innerHTML = "🔊";
+        btn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${listenLabel}</span>`;
         currentSpeakingBtn = null;
     };
 
-    btn.innerHTML = "⏹️";
+    btn.innerHTML = `⏹️ <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${stopLabel}</span>`;
     currentSpeakingBtn = btn;
     window.speechSynthesis.speak(utterance);
 }
@@ -1265,6 +1270,29 @@ async function sendMessage() {
         // Save response to history
         chatHistories[currentCoin].push({ role: "model", content: modelResponseText });
         saveHistories();
+
+        // Add the speaker button to the dynamic model message bubble
+        const speakBtn = document.createElement("button");
+        speakBtn.className = "tts-speak-btn";
+        speakBtn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${currentLanguage === "ru" ? "Прослушать" : "Listen"}</span>`;
+        speakBtn.title = currentLanguage === "ru" ? "Озвучить" : "Speak aloud";
+        
+        const cleanText = modelResponseText
+            .replace(/\[green\]\{([^}]+)\}/g, '$1')
+            .replace(/\[red\]\{([^}]+)\}/g, '$1')
+            .replace(/\[green\](.*?)\[\/green\]/gi, '$1')
+            .replace(/\[red\](.*?)\[\/red\]/gi, '$1')
+            .replace(/\[green\]([a-zA-Z0-9_-]+)/g, '$1')
+            .replace(/\[red\]([a-zA-Z0-9_-]+)/g, '$1')
+            .replace(/\*\*([^*]+)\*\*/g, '$1')
+            .replace(/\*([^*]+)\*/g, '$1')
+            .replace(/`([^`]+)`/g, '$1');
+            
+        speakBtn.onclick = (e) => {
+            e.stopPropagation();
+            speakMessage(cleanText, speakBtn);
+        };
+        modelMsgEl.appendChild(speakBtn);
 
     } catch (err) {
         console.error("Stream reading error", err);
