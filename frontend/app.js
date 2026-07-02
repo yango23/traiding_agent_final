@@ -63,7 +63,8 @@ const LOCALIZATION = {
         lblRefreshBtn: "Обновить данные",
         tipRefreshStats: "Обновить только рыночные данные",
         lblPatternsLabel: "Свечные паттерны",
-        tipPatterns: "Активные паттерны, сканируемые на дневном графике Binance (например, Доджи, Молот, Падающая звезда, Поглощение)."
+        tipPatterns: "Активные паттерны, сканируемые на дневном графике Binance (например, Доджи, Молот, Падающая звезда, Поглощение).",
+        tipApiKey: "Вы можете указать свой собственный API-ключ Gemini для сброса ограничений суточной квоты или выхода из демонстрационного режима. Все ключи хранятся исключительно в сессионном хранилище вашего браузера и никогда не передаются автору и не используются в сторонних целях."
     },
     en: {
         subtitle: "Educational AI Assistant & Dashboard",
@@ -113,12 +114,13 @@ const LOCALIZATION = {
         lblRefreshBtn: "Refresh Data",
         tipRefreshStats: "Refresh market data only",
         lblPatternsLabel: "Candlestick Patterns",
-        tipPatterns: "Active patterns scanned on the daily Binance chart (e.g. Doji, Hammer, Shooting Star, Engulfing)."
+        tipPatterns: "Active patterns scanned on the daily Binance chart (e.g. Doji, Hammer, Shooting Star, Engulfing).",
+        tipApiKey: "Users can specify their own Gemini API key to bypass daily quota limits or exit demo mode. Keys are stored securely in session storage, the author never collects, saves, or uses your keys for any other purpose."
     }
 };
 
 // Version Check & State Reset on Redeploy
-const APP_VERSION = "1.8.0";
+const APP_VERSION = "1.9.0";
 const savedVersion = localStorage.getItem("app_version");
 if (savedVersion !== APP_VERSION) {
     localStorage.clear();
@@ -705,6 +707,10 @@ function localizeUI() {
     const patternsTip = document.getElementById("tip-patterns");
     if (patternsTip) patternsTip.setAttribute("data-tooltip", t.tipPatterns);
     
+    const apiKeyTip = document.getElementById("tip-api-key");
+    if (apiKeyTip) apiKeyTip.setAttribute("data-tooltip", t.tipApiKey);
+    
+    
     const secBadge = document.getElementById("lbl-security-badge");
     secBadge.textContent = t.lblSecurityBadge;
     secBadge.setAttribute("title", t.lblSecurityBadgeTitle);
@@ -740,7 +746,14 @@ function localizeUI() {
     const apiKeyInput = document.getElementById("api-key-input");
     const apiKeyBtn = document.getElementById("api-key-submit-btn");
     if (apiKeyTitle) apiKeyTitle.textContent = t.lblApiKeyTitle;
-    if (apiKeyInput) apiKeyInput.placeholder = t.apiKeyPlaceholder;
+    if (apiKeyInput) {
+        const activeKey = sessionStorage.getItem("custom_api_key");
+        if (activeKey) {
+            apiKeyInput.placeholder = currentLanguage === "ru" ? "•••••••• (Активен)" : "•••••••• (Active)";
+        } else {
+            apiKeyInput.placeholder = t.apiKeyPlaceholder;
+        }
+    }
     if (apiKeyBtn) apiKeyBtn.textContent = t.btnApplyKey;
 
     // Translate Backtester
@@ -2333,6 +2346,7 @@ function saveApiKey() {
 
     try {
         sessionStorage.setItem("custom_api_key", key);
+        localizeUI();
         statusDiv.textContent = currentLanguage === "ru" ? "✅ Ключ успешно применен!" : "✅ Key applied successfully!";
         statusDiv.style.color = "var(--neon-green)";
         statusDiv.style.display = "block";

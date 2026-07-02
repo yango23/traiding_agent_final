@@ -11,7 +11,7 @@
     <!-- TradingView widget script -->
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <!-- CSS style -->
-    <link rel="stylesheet" href="/static/style.css?v=1.8.0">
+    <link rel="stylesheet" href="/static/style.css?v=1.9.0">
 </head>
 <body class="dark-theme">
     <div id="glow-bg"></div>
@@ -195,7 +195,10 @@
 
                 <!-- API KEY CONFIGURATION CARD -->
                 <div class="glass-card api-key-card" style="padding: 14px 18px; margin-top: 14px;">
-                    <h4 id="lbl-api-key-title" style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;">Gemini API Key</h4>
+                    <h4 style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; display: inline-flex; align-items: center; gap: 6px;">
+                        <span id="lbl-api-key-title">Gemini API Key</span>
+                        <span class="tooltip-icon" id="tip-api-key" data-tooltip="Users can specify their own Gemini API key to reset daily quota limits or exit demo mode. Keys are temporarily stored in session storage, the author never collects, saves, or uses your keys for any other purpose.">?</span>
+                    </h4>
                     <div style="display: flex; flex-direction: column; gap: 8px;">
                         <input type="password" id="api-key-input" placeholder="Enter API Key..." style="width: 100%; padding: 8px 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 8px; font-family: inherit; font-size: 0.82rem; outline: none; transition: border-color 0.2s ease;">
                         <button class="control-btn" id="api-key-submit-btn" onclick="saveApiKey()" style="width: 100%; font-weight: 700; padding: 8px 12px; font-size: 0.82rem;">Apply Key</button>
@@ -363,6 +366,6 @@
     </div>
 
     <!-- JS app script -->
-    <script src="/static/app.js?v=1.8.0"></script>
+    <script src="/static/app.js?v=1.9.0"></script>
 </body>
 </html>
