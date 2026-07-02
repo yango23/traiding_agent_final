@@ -1,6 +1,7 @@
 import os
 import json
 import httpx
+from datetime import datetime, timezone, timedelta
 from fastapi import FastAPI, HTTPException, Body, Header, Query
 from fastapi.responses import StreamingResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -47,6 +48,20 @@ class BacktestRequest(BaseModel):
 # Locate directories relative to this file
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+
+# -------------------------------------------------------------------------
+# Helpers
+# -------------------------------------------------------------------------
+
+VALID_LANGS = frozenset({"ru", "en"})
+
+def _extract_api_key(authorization: str | None) -> str | None:
+    """Extract a valid Bearer token from the Authorization header, or return None."""
+    if authorization and authorization.startswith("Bearer "):
+        key = authorization.split(" ", 1)[1].strip()
+        if key and key != "undefined":
+            return key
+    return None
 
 # -------------------------------------------------------------------------
 # Endpoints
@@ -110,12 +125,10 @@ async def get_ai_summary(request: SummaryRequest, authorization: str = Header(No
     """
     Generates a structured educational AI summary for the coin.
     """
-    custom_key = None
-    if authorization and authorization.startswith("Bearer "):
-        custom_key = authorization.split(" ")[1].strip()
-        if custom_key == "undefined" or not custom_key:
-            custom_key = None
-            
+    if request.lang not in VALID_LANGS:
+        raise HTTPException(status_code=400, detail="Invalid language selected")
+    
+    custom_key = _extract_api_key(authorization)
     try:
         summary_text = await generate_coin_summary(
             request.coin_id, 
@@ -123,7 +136,6 @@ async def get_ai_summary(request: SummaryRequest, authorization: str = Header(No
             request.force_refresh, 
             custom_api_key=custom_key
         )
-        is_simulated = not quota_tracker.get("quota_exhausted") is False
         return {"success": True, "summary": summary_text, "simulated": quota_tracker["quota_exhausted"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate summary: {str(e)}")
@@ -133,7 +145,6 @@ async def get_quota_status():
     """
     Returns current API quota usage counters + time until daily reset (midnight UTC).
     """
-    from datetime import datetime, timezone, timedelta
     now_utc = datetime.now(timezone.utc)
     midnight_utc = (now_utc + timedelta(days=1)).replace(
         hour=0, minute=0, second=0, microsecond=0
@@ -157,11 +168,7 @@ async def chat_endpoint(request: ChatRequest, authorization: str = Header(None))
     Streams the agent's response via Server-Sent Events (SSE).
     Includes query validation for maximum security.
     """
-    custom_key = None
-    if authorization and authorization.startswith("Bearer "):
-        custom_key = authorization.split(" ")[1].strip()
-        if custom_key == "undefined" or not custom_key:
-            custom_key = None
+    custom_key = _extract_api_key(authorization)
 
     # 1. Security: Validate user query for prompt injection or shell commands
     if not is_query_safe(request.query):

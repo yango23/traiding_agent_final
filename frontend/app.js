@@ -14,7 +14,6 @@ const TRADINGVIEW_SYMBOLS = {
 };
 
 // UI Localization Dictionaries
-// UI Localization Dictionaries
 const LOCALIZATION = {
     ru: {
         subtitle: "Учебный ИИ-помощник & Дашборд по техническому анализу",
@@ -1085,18 +1084,7 @@ function renderChatMessages() {
 
         // TTS speaker button for assistant model replies
         if (msg.role === "model") {
-            const speakBtn = document.createElement("button");
-            speakBtn.className = "tts-speak-btn";
-            speakBtn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${currentLanguage === "ru" ? "Прослушать" : "Listen"}</span>`;
-            speakBtn.title = currentLanguage === "ru" ? "Озвучить" : "Speak aloud";
-            
-            const cleanText = getCleanTtsText(msg.content);
-                
-            speakBtn.onclick = (e) => {
-                e.stopPropagation();
-                speakMessage(cleanText, speakBtn);
-            };
-            msgEl.appendChild(speakBtn);
+            createAndAttachSpeakButton(msg.content, msgEl);
         }
 
         chatMessagesContainer.appendChild(msgEl);
@@ -1110,6 +1098,26 @@ let currentSpeakingBtn = null;
 let currentTtsAudio = null;
 let ttsAudioQueue = [];
 let currentQueueIndex = 0;
+
+/**
+ * Creates and returns a TTS speak button for an AI model message element.
+ * Attaches click handler and appends the button to the message container.
+ * @param {string} rawText - Raw markdown text of the message to be spoken.
+ * @param {HTMLElement} msgEl - The message element to append the button to.
+ */
+function createAndAttachSpeakButton(rawText, msgEl) {
+    const speakBtn = document.createElement("button");
+    speakBtn.className = "tts-speak-btn";
+    speakBtn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${currentLanguage === "ru" ? "Прослушать" : "Listen"}</span>`;
+    speakBtn.title = currentLanguage === "ru" ? "Озвучить" : "Speak aloud";
+    const cleanText = getCleanTtsText(rawText);
+    speakBtn.onclick = (e) => {
+        e.stopPropagation();
+        speakMessage(cleanText, speakBtn);
+    };
+    msgEl.appendChild(speakBtn);
+    return speakBtn;
+}
 
 function stopActiveTts() {
     if (currentTtsAudio) {
@@ -1402,23 +1410,14 @@ async function sendMessage() {
             }
         }
 
-        // Save response to history
-        chatHistories[currentCoin].push({ role: "model", content: modelResponseText });
-        saveHistories();
+        // Bug fix: don't save empty responses to history (e.g. if stream yields nothing)
+        if (modelResponseText.trim()) {
+            chatHistories[currentCoin].push({ role: "model", content: modelResponseText });
+            saveHistories();
+            // Add TTS speak button using shared helper
+            createAndAttachSpeakButton(modelResponseText, modelMsgEl);
+        }
 
-        // Add the speaker button to the dynamic model message bubble
-        const speakBtn = document.createElement("button");
-        speakBtn.className = "tts-speak-btn";
-        speakBtn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${currentLanguage === "ru" ? "Прослушать" : "Listen"}</span>`;
-        speakBtn.title = currentLanguage === "ru" ? "Озвучить" : "Speak aloud";
-        
-        const cleanText = getCleanTtsText(modelResponseText);
-            
-        speakBtn.onclick = (e) => {
-            e.stopPropagation();
-            speakMessage(cleanText, speakBtn);
-        };
-        modelMsgEl.appendChild(speakBtn);
 
     } catch (err) {
         console.error("Stream reading error", err);
