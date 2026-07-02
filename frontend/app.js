@@ -1107,6 +1107,130 @@ function renderChatMessages() {
 }
 
 let currentSpeakingBtn = null;
+let currentTtsAudio = null;
+let ttsAudioQueue = [];
+let currentQueueIndex = 0;
+
+function stopActiveTts() {
+    if (currentTtsAudio) {
+        currentTtsAudio.pause();
+        currentTtsAudio = null;
+    }
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+    }
+    ttsAudioQueue = [];
+    currentQueueIndex = 0;
+    if (currentSpeakingBtn) {
+        const prevLang = currentSpeakingBtn.title === "Озвучить" ? "ru" : "en";
+        const prevListenLabel = prevLang === "ru" ? "Прослушать" : "Listen";
+        currentSpeakingBtn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${prevListenLabel}</span>`;
+        currentSpeakingBtn = null;
+    }
+}
+
+function splitTextIntoTtsChunks(text) {
+    const maxLen = 160;
+    const rawParts = text.split(/([.!?;\n,]+)/g);
+    const chunks = [];
+    let currentChunk = "";
+
+    for (let i = 0; i < rawParts.length; i++) {
+        const part = rawParts[i];
+        if (!part) continue;
+        
+        if (currentChunk.length + part.length > maxLen) {
+            if (currentChunk.trim()) {
+                chunks.push(currentChunk.trim());
+            }
+            if (part.length > maxLen) {
+                // Hard split by space
+                const words = part.split(/\s+/);
+                let wordChunk = "";
+                for (const word of words) {
+                    if (wordChunk.length + word.length + 1 > maxLen) {
+                        if (wordChunk.trim()) chunks.push(wordChunk.trim());
+                        wordChunk = word;
+                    } else {
+                        wordChunk += (wordChunk ? " " : "") + word;
+                    }
+                }
+                currentChunk = wordChunk;
+            } else {
+                currentChunk = part;
+            }
+        } else {
+            currentChunk += part;
+        }
+    }
+    if (currentChunk.trim()) {
+        chunks.push(currentChunk.trim());
+    }
+    return chunks;
+}
+
+function playTtsQueue(lang, btn) {
+    if (currentQueueIndex >= ttsAudioQueue.length) {
+        stopActiveTts();
+        return;
+    }
+
+    const chunk = ttsAudioQueue[currentQueueIndex];
+    // Use our backend proxy to avoid CORS restrictions from browser
+    const url = `/api/tts?lang=${encodeURIComponent(lang)}&text=${encodeURIComponent(chunk)}`;
+    
+    currentTtsAudio = new Audio(url);
+    currentTtsAudio.onended = () => {
+        currentQueueIndex++;
+        playTtsQueue(lang, btn);
+    };
+    currentTtsAudio.onerror = (e) => {
+        console.warn("Google TTS proxy chunk error, falling back to browser voice", e);
+        fallbackSpeechSynthesis(chunk, lang, btn);
+    };
+    currentTtsAudio.play().catch(err => {
+        console.warn("Autoplay error, falling back to browser voice", err);
+        fallbackSpeechSynthesis(chunk, lang, btn);
+    });
+}
+
+function fallbackSpeechSynthesis(chunkText, lang, btn) {
+    if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+    }
+    
+    const utterance = new SpeechSynthesisUtterance(chunkText);
+    const voices = window.speechSynthesis.getVoices();
+    const langCode = lang === "ru" ? "ru-RU" : "en-US";
+    const langVoices = voices.filter(v => v.lang.toLowerCase().startsWith(lang));
+    let selectedVoice = null;
+    
+    if (langVoices.length > 0) {
+        const priorityKeywords = ["natural", "google", "neural", "microsoft", "desktop", "mobile"];
+        for (const kw of priorityKeywords) {
+            selectedVoice = langVoices.find(v => v.name.toLowerCase().includes(kw));
+            if (selectedVoice) break;
+        }
+        if (!selectedVoice) {
+            selectedVoice = langVoices[0];
+        }
+    }
+    
+    if (selectedVoice) {
+        utterance.voice = selectedVoice;
+    }
+    utterance.lang = langCode;
+
+    utterance.onend = () => {
+        currentQueueIndex++;
+        playTtsQueue(lang, btn);
+    };
+    utterance.onerror = () => {
+        currentQueueIndex++;
+        playTtsQueue(lang, btn);
+    };
+    window.speechSynthesis.speak(utterance);
+}
 
 function getCleanTtsText(content) {
     let clean = content
@@ -1148,58 +1272,25 @@ function getCleanTtsText(content) {
 }
 
 function speakMessage(text, btn) {
-    const listenLabel = currentLanguage === "ru" ? "Прослушать" : "Listen";
     const stopLabel = currentLanguage === "ru" ? "Остановить" : "Stop";
 
-    if (window.speechSynthesis.speaking) {
-        window.speechSynthesis.cancel();
-        if (currentSpeakingBtn) {
-            const prevLang = currentSpeakingBtn.title === "Озвучить" ? "ru" : "en";
-            const prevListenLabel = prevLang === "ru" ? "Прослушать" : "Listen";
-            currentSpeakingBtn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${prevListenLabel}</span>`;
-        }
-        if (currentSpeakingBtn === btn) {
-            currentSpeakingBtn = null;
+    if (currentSpeakingBtn) {
+        const wasClickedBtn = (currentSpeakingBtn === btn);
+        stopActiveTts();
+        if (wasClickedBtn) {
             return;
         }
     }
 
-    const utterance = new SpeechSynthesisUtterance(text);
-    const voices = window.speechSynthesis.getVoices();
-    const langCode = currentLanguage === "ru" ? "ru-RU" : "en-US";
-    
-    // Voice Selection Priority
-    const langVoices = voices.filter(v => v.lang.toLowerCase().startsWith(currentLanguage));
-    let selectedVoice = null;
-    
-    if (langVoices.length > 0) {
-        const priorityKeywords = ["natural", "google", "neural", "microsoft", "desktop", "mobile"];
-        for (const kw of priorityKeywords) {
-            selectedVoice = langVoices.find(v => v.name.toLowerCase().includes(kw));
-            if (selectedVoice) break;
-        }
-        if (!selectedVoice) {
-            selectedVoice = langVoices[0];
-        }
-    }
-    
-    if (selectedVoice) {
-        utterance.voice = selectedVoice;
-    }
-    utterance.lang = langCode;
+    const chunks = splitTextIntoTtsChunks(text);
+    if (chunks.length === 0) return;
 
-    utterance.onend = () => {
-        btn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${listenLabel}</span>`;
-        currentSpeakingBtn = null;
-    };
-    utterance.onerror = () => {
-        btn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${listenLabel}</span>`;
-        currentSpeakingBtn = null;
-    };
-
-    btn.innerHTML = `⏹️ <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${stopLabel}</span>`;
+    ttsAudioQueue = chunks;
+    currentQueueIndex = 0;
     currentSpeakingBtn = btn;
-    window.speechSynthesis.speak(utterance);
+    btn.innerHTML = `⏹️ <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${stopLabel}</span>`;
+
+    playTtsQueue(currentLanguage, btn);
 }
 
 function renderQuickChips() {

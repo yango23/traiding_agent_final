@@ -1,7 +1,8 @@
 import os
 import json
-from fastapi import FastAPI, HTTPException, Body, Header
-from fastapi.responses import StreamingResponse, FileResponse
+import httpx
+from fastapi import FastAPI, HTTPException, Body, Header, Query
+from fastapi.responses import StreamingResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -50,6 +51,39 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 # -------------------------------------------------------------------------
 # Endpoints
 # -------------------------------------------------------------------------
+
+@app.get("/api/tts")
+async def text_to_speech_proxy(text: str = Query(..., max_length=200), lang: str = Query(default="ru")):
+    """
+    Server-side proxy to Google Translate TTS to avoid browser CORS restrictions.
+    Fetches the audio from Google and streams it back as audio/mpeg.
+    """
+    if lang not in ("ru", "en", "ru-RU", "en-US"):
+        raise HTTPException(status_code=400, detail="Invalid lang parameter")
+    tl = lang.split("-")[0]  # normalize to 2-letter code
+    # Build the URL properly
+    params = {"ie": "UTF-8", "tl": tl, "client": "tw-ob", "q": text}
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+        "Referer": "https://translate.google.com/",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            resp = await client.get(
+                "https://translate.google.com/translate_tts",
+                params=params,
+                headers=headers
+            )
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail=f"Google TTS returned {resp.status_code}")
+        return Response(
+            content=resp.content,
+            media_type="audio/mpeg",
+            headers={"Cache-Control": "no-store"}
+        )
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"TTS proxy error: {str(e)}")
+
 
 @app.get("/api/market-data/{coin_id}")
 async def get_market_data(coin_id: str, lang: str = "ru", force_refresh: bool = False):
