@@ -58,16 +58,16 @@ To elevate this project into a robust educational tool, we implemented several a
 *   **Smart History Filtering**: Scans the active chat history (`chatHistories[currentCoin]`) to detect if an indicator has already been discussed in this session. If it has, the chip automatically cycles and recommends the next un-discussed indicator.
 *   **Reactive Update**: The chip list refreshes immediately when sending or receiving messages, keeping the suggested indicators relevant.
 
-### 4. Native Text-to-Speech (TTS) Reader
-*   Model assistant messages feature a clickable speaker `🔊` button.
-*   Synthesizes and speaks text aloud using browser-native `window.speechSynthesis` (Web Speech API).
-*   Automatically detects the active language locale (`ru-RU` or `en-US`) to match the spoken voice.
-*   Toggles into a Stop `⏹️` icon during speech, allowing users to cancel playback at any time.
+### 4. Advanced Text-to-Speech (TTS) with CORS Proxy
+*   **Google Translate Neural TTS**: Assistant messages feature an interactive `🔊 Прослушать` / `🔊 Listen` pill button positioned cleanly under the message body. It routes text to our server-side `/api/tts` proxy, retrieving high-quality neural voice recordings from Google Translate and bypassing CORS restrictions.
+*   **Sentence-based Queued Stream**: Automatically chunks text into lengths under 160 characters and plays segments sequentially using HTML5 `Audio()` players, ensuring a smooth, uninterrupted reading flow.
+*   **Phonetic Russian Localization**: Financial terms and English tickers (like *RSI*, *MACD*, *SMA*, *Death Cross*, *oversold*, *BTC*, *ETH*) are programmatically translated into Russian phonetic sounds (e.g. *«эр эс и»*, *«мак ди»*, *«скользящая средняя»*, *«биткоин»*, *«перепроданность»*) before speech synthesis, eliminating robotic accents.
+*   **Browser-Native Fallback**: Keeps a native `window.speechSynthesis` queue fallback if the server proxy is offline or blocked by browser autoplay constraints.
 
-### 5. Session-based API Key Vault
-*   If users provide their own Gemini API Studio keys, they are stored locally in the browser's `sessionStorage` (never written to the server's disk or `.env`), maintaining multi-user isolation on the same server.
-*   Requests dynamically pass the key via the `Authorization: Bearer <key>` header.
-*   Transactions authenticated with a custom key automatically bypass the server's global daily quota limits.
+### 5. Session-based API Key Vault & Privacy Tooltip
+*   **API Key Help Tooltip**: Added a tooltip question mark `?` next to the *Gemini API Key* header, explaining that users can enter their own API key to bypass daily quota limitations and exit demo mode. It explicitly details that the key is stored solely in browser `sessionStorage` (highly private; never stored on the server or used by the author).
+*   **Dynamic Visual Status**: The input placeholder dynamically updates to `•••••••• (Active)` / `•••••••• (Активен)` when a key is active in the session.
+*   **Local Multi-user Isolation**: Keys are passed per-request using the `Authorization: Bearer <key>` header, keeping user sessions isolated.
 
 ---
 
