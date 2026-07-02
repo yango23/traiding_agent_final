@@ -119,7 +119,7 @@ const LOCALIZATION = {
 };
 
 // Version Check & State Reset on Redeploy
-const APP_VERSION = "1.7.0";
+const APP_VERSION = "1.8.0";
 const savedVersion = localStorage.getItem("app_version");
 if (savedVersion !== APP_VERSION) {
     localStorage.clear();
@@ -1090,17 +1090,7 @@ function renderChatMessages() {
             speakBtn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${currentLanguage === "ru" ? "Прослушать" : "Listen"}</span>`;
             speakBtn.title = currentLanguage === "ru" ? "Озвучить" : "Speak aloud";
             
-            // Clean markdown for text synthesis
-            const cleanText = msg.content
-                .replace(/\[green\]\{([^}]+)\}/g, '$1')
-                .replace(/\[red\]\{([^}]+)\}/g, '$1')
-                .replace(/\[green\](.*?)\[\/green\]/gi, '$1')
-                .replace(/\[red\](.*?)\[\/red\]/gi, '$1')
-                .replace(/\[green\]([a-zA-Z0-9_-]+)/g, '$1')
-                .replace(/\[red\]([a-zA-Z0-9_-]+)/g, '$1')
-                .replace(/\*\*([^*]+)\*\*/g, '$1')
-                .replace(/\*([^*]+)\*/g, '$1')
-                .replace(/`([^`]+)`/g, '$1');
+            const cleanText = getCleanTtsText(msg.content);
                 
             speakBtn.onclick = (e) => {
                 e.stopPropagation();
@@ -1117,6 +1107,45 @@ function renderChatMessages() {
 }
 
 let currentSpeakingBtn = null;
+
+function getCleanTtsText(content) {
+    let clean = content
+        .replace(/\[green\]\{([^}]+)\}/g, '$1')
+        .replace(/\[red\]\{([^}]+)\}/g, '$1')
+        .replace(/\[green\](.*?)\[\/green\]/gi, '$1')
+        .replace(/\[red\](.*?)\[\/red\]/gi, '$1')
+        .replace(/\[green\]([a-zA-Z0-9_-]+)/g, '$1')
+        .replace(/\[red\]([a-zA-Z0-9_-]+)/g, '$1')
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/\*([^*]+)\*/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/^[-\*\+]\s+/gm, '')
+        .replace(/^\d+\.\s+/gm, '');
+
+    if (currentLanguage === "ru") {
+        clean = clean
+            .replace(/\bRSI\b/gi, "эр эс и")
+            .replace(/\bMACD\b/gi, "мак ди")
+            .replace(/\bSMA\b/gi, "скользящая средняя")
+            .replace(/\bEMA\b/gi, "экспоненциальная скользящая средняя")
+            .replace(/\bBollinger Bands\b/gi, "полосы Боллинджера")
+            .replace(/\bBollinger\b/gi, "Боллинджера")
+            .replace(/\bDeath Cross\b/gi, "крест смерти")
+            .replace(/\bGolden Cross\b/gi, "золотой крест")
+            .replace(/\boversold\b/gi, "перепроданность")
+            .replace(/\boverbought\b/gi, "перекупленность")
+            .replace(/\bbullish\b/gi, "бычий")
+            .replace(/\bbearish\b/gi, "медвежий")
+            .replace(/\bBTC\b/g, "биткоин")
+            .replace(/\bETH\b/g, "эфириум")
+            .replace(/\bSOL\b/g, "солана")
+            .replace(/\bXRP\b/g, "рипл")
+            .replace(/\bDOGE\b/g, "догикоин")
+            .replace(/\bSHIB\b/g, "шиба ину")
+            .replace(/\bPEPE\b/g, "пепе");
+    }
+    return clean;
+}
 
 function speakMessage(text, btn) {
     const listenLabel = currentLanguage === "ru" ? "Прослушать" : "Listen";
@@ -1138,9 +1167,24 @@ function speakMessage(text, btn) {
     const utterance = new SpeechSynthesisUtterance(text);
     const voices = window.speechSynthesis.getVoices();
     const langCode = currentLanguage === "ru" ? "ru-RU" : "en-US";
-    const voice = voices.find(v => v.lang.startsWith(langCode));
-    if (voice) {
-        utterance.voice = voice;
+    
+    // Voice Selection Priority
+    const langVoices = voices.filter(v => v.lang.toLowerCase().startsWith(currentLanguage));
+    let selectedVoice = null;
+    
+    if (langVoices.length > 0) {
+        const priorityKeywords = ["natural", "google", "neural", "microsoft", "desktop", "mobile"];
+        for (const kw of priorityKeywords) {
+            selectedVoice = langVoices.find(v => v.name.toLowerCase().includes(kw));
+            if (selectedVoice) break;
+        }
+        if (!selectedVoice) {
+            selectedVoice = langVoices[0];
+        }
+    }
+    
+    if (selectedVoice) {
+        utterance.voice = selectedVoice;
     }
     utterance.lang = langCode;
 
@@ -1277,16 +1321,7 @@ async function sendMessage() {
         speakBtn.innerHTML = `🔊 <span style="font-size: 0.75rem; font-family: inherit; margin-left: 4px;">${currentLanguage === "ru" ? "Прослушать" : "Listen"}</span>`;
         speakBtn.title = currentLanguage === "ru" ? "Озвучить" : "Speak aloud";
         
-        const cleanText = modelResponseText
-            .replace(/\[green\]\{([^}]+)\}/g, '$1')
-            .replace(/\[red\]\{([^}]+)\}/g, '$1')
-            .replace(/\[green\](.*?)\[\/green\]/gi, '$1')
-            .replace(/\[red\](.*?)\[\/red\]/gi, '$1')
-            .replace(/\[green\]([a-zA-Z0-9_-]+)/g, '$1')
-            .replace(/\[red\]([a-zA-Z0-9_-]+)/g, '$1')
-            .replace(/\*\*([^*]+)\*\*/g, '$1')
-            .replace(/\*([^*]+)\*/g, '$1')
-            .replace(/`([^`]+)`/g, '$1');
+        const cleanText = getCleanTtsText(modelResponseText);
             
         speakBtn.onclick = (e) => {
             e.stopPropagation();
