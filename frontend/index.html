@@ -11,7 +11,7 @@
     <!-- TradingView widget script -->
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <!-- CSS style -->
-    <link rel="stylesheet" href="/static/style.css?v=1.9.0">
+    <link rel="stylesheet" href="/static/style.css?v=2.0.0">
 </head>
 <body class="dark-theme">
     <div id="glow-bg"></div>
@@ -214,6 +214,14 @@
                         <button class="control-btn" id="api-key-submit-btn" onclick="saveApiKey()" style="width: 100%; font-weight: 700; padding: 8px 12px; font-size: 0.82rem;">Apply Key</button>
                     </div>
                     <div id="api-key-status" style="font-size: 0.72rem; margin-top: 6px; display: none;"></div>
+                    
+                    <!-- API Keys switcher for authenticated users -->
+                    <div id="api-keys-manager-sec" style="display: none; margin-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+                        <h5 style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;" id="lbl-saved-keys-title">Saved API Keys</h5>
+                        <div id="api-keys-list-container" style="display: flex; flex-direction: column; gap: 6px; max-height: 120px; overflow-y: auto; padding-right: 4px;">
+                            <!-- Dynamic saved keys -->
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -221,6 +229,26 @@
             <section class="center-panel">
                 <!-- CHART CONTAINER -->
                 <div class="glass-card chart-card">
+                    <!-- TradingView Widget Controls Toolbar -->
+                    <div class="tv-controls-toolbar" style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; align-items: center; padding: 2px 4px;">
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <label for="tv-interval-select" style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Interval:</label>
+                            <select id="tv-interval-select" onchange="changeTradingViewInterval(this.value)" style="background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; padding: 3px 6px; font-family: inherit; font-size: 0.75rem; outline: none; cursor: pointer;">
+                                <option value="60">1h</option>
+                                <option value="240">4h</option>
+                                <option value="D" selected>1D</option>
+                                <option value="W">1W</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <label for="tv-style-select" style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Style:</label>
+                            <select id="tv-style-select" onchange="changeTradingViewStyle(this.value)" style="background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; padding: 3px 6px; font-family: inherit; font-size: 0.75rem; outline: none; cursor: pointer;">
+                                <option value="1" selected>Candles</option>
+                                <option value="2">Line</option>
+                                <option value="8">Heikin Ashi</option>
+                            </select>
+                        </div>
+                    </div>
                     <div id="tv-chart-container"></div>
                 </div>
 
@@ -380,11 +408,14 @@
         <div class="glass-card modal-content" style="max-width: 360px; width: 90%; padding: 24px; position: relative;">
             <button class="close-modal-btn" onclick="closeAuthModal()" style="position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; line-height: 1;">&times;</button>
             
-            <div class="auth-tabs" style="display: flex; border-bottom: var(--card-border); margin-bottom: 20px;">
-                <button id="tab-login-btn" class="auth-tab-btn active" onclick="switchAuthTab('login')" style="flex: 1; padding: 8px; background: none; border: none; color: var(--text-primary); font-weight: 700; font-family: inherit; font-size: 0.95rem; cursor: pointer; border-bottom: 2px solid var(--neon-blue);">Вход</button>
-                <button id="tab-register-btn" class="auth-tab-btn" onclick="switchAuthTab('register')" style="flex: 1; padding: 8px; background: none; border: none; color: var(--text-muted); font-weight: 600; font-family: inherit; font-size: 0.95rem; cursor: pointer; border-bottom: 2px solid transparent;">Регистрация</button>
+            <div id="auth-modal-header-sec">
+                <div class="auth-tabs" style="display: flex; border-bottom: var(--card-border); margin-bottom: 20px;">
+                    <button id="tab-login-btn" class="auth-tab-btn active" onclick="switchAuthTab('login')" style="flex: 1; padding: 8px; background: none; border: none; color: var(--text-primary); font-weight: 700; font-family: inherit; font-size: 0.95rem; cursor: pointer; border-bottom: 2px solid var(--neon-blue);">Вход</button>
+                    <button id="tab-register-btn" class="auth-tab-btn" onclick="switchAuthTab('register')" style="flex: 1; padding: 8px; background: none; border: none; color: var(--text-muted); font-weight: 600; font-family: inherit; font-size: 0.95rem; cursor: pointer; border-bottom: 2px solid transparent;">Регистрация</button>
+                </div>
             </div>
 
+            <!-- Auth form (Login / Register) -->
             <form id="auth-form" onsubmit="handleAuthSubmit(event)">
                 <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
                     <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -399,6 +430,20 @@
                 
                 <button type="submit" class="control-btn" id="auth-submit-btn" style="width: 100%; padding: 10px; font-weight: 700; font-size: 0.9rem; margin-top: 4px; cursor: pointer;">Войти</button>
                 <div id="auth-error-msg" style="color: var(--neon-rose); font-size: 0.78rem; text-align: center; margin-top: 10px; display: none;"></div>
+            </form>
+
+            <!-- Confirmation form -->
+            <form id="confirm-form" onsubmit="handleConfirmSubmit(event)" style="display: none;">
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <p style="font-size: 0.82rem; color: var(--text-secondary);" id="lbl-confirm-desc">Код подтверждения отправлен на вашу почту. Пожалуйста, введите его ниже для завершения регистрации.</p>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px;">
+                    <label for="confirm-code" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; text-align: center;" id="lbl-confirm-code">Код подтверждения (6 цифр)</label>
+                    <input type="text" id="confirm-code" required placeholder="123456" pattern="[0-9]{6}" maxlength="6" style="width: 100%; padding: 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 8px; font-family: inherit; font-size: 1.1rem; text-align: center; letter-spacing: 6px; outline: none;">
+                    <span style="font-size: 0.68rem; color: var(--text-muted); text-align: center; margin-top: 4px;" id="lbl-confirm-demo-tip">Для демо: введите 777777 или код из консоли</span>
+                </div>
+                <button type="submit" class="control-btn" id="confirm-submit-btn" style="width: 100%; padding: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer;">Подтвердить</button>
+                <div id="confirm-error-msg" style="color: var(--neon-rose); font-size: 0.78rem; text-align: center; margin-top: 10px; display: none;"></div>
             </form>
         </div>
     </div>
@@ -480,6 +525,6 @@
     </div>
 
     <!-- JS app script -->
-    <script src="/static/app.js?v=1.9.0"></script>
+    <script src="/static/app.js?v=2.0.0"></script>
 </body>
 </html>

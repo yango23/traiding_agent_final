@@ -11,7 +11,10 @@ from app.tools import fetch_coin_data, fetch_crypto_news, calculate_technical_in
 from app.agent import chat_with_agent, generate_coin_summary, is_query_safe, quota_tracker
 from app.db import (
     init_db, register_user, login_user, logout_user, validate_session, get_user_email,
-    save_chat_message, get_chat_history, clear_chat_history, get_indicator_config, save_indicator_config
+    save_chat_message, get_chat_history, clear_chat_history, get_indicator_config, save_indicator_config,
+    confirm_user_email, get_quiz_progress, save_quiz_progress, get_studied_indicators, add_studied_indicator,
+    get_tradingview_settings, save_tradingview_settings, get_user_api_keys, add_user_api_key,
+    activate_user_api_key, delete_user_api_key
 )
 
 # Initialize SQLite database and tables
@@ -52,6 +55,24 @@ class BacktestRequest(BaseModel):
 class AuthRequest(BaseModel):
     email: str = Field(..., description="User email address")
     password: str = Field(..., description="User password")
+
+class ConfirmRequest(BaseModel):
+    email: str = Field(..., description="User email address")
+    code: str = Field(..., description="6-digit verification code")
+
+class QuizProgressRequest(BaseModel):
+    score: int = Field(..., description="Current quiz score")
+    answered_questions: list = Field(..., description="List of answered question indices")
+
+class StudiedIndicatorRequest(BaseModel):
+    indicator_name: str = Field(..., description="Name of the daily indicator studied")
+
+class TradingViewSettingsRequest(BaseModel):
+    interval: str = Field(..., description="Chart interval (e.g. 1h, 4h, D, W)")
+    style: str = Field(..., description="Chart style type (e.g. 1, 2, 8)")
+
+class ApiKeyAddRequest(BaseModel):
+    api_key: str = Field(..., description="The Gemini API key to save")
 
 class IndicatorConfigRequest(BaseModel):
     rsi_length: int = Field(default=14)
@@ -257,8 +278,8 @@ async def chat_endpoint(request: ChatRequest, authorization: str = Header(None),
 
     # If logged in, fetch history from SQLite and save user message
     if user_id:
-        history = get_chat_history(user_id, request.coin_id)
-        save_chat_message(user_id, request.coin_id, "user", request.query)
+        history = get_chat_history(user_id, request.coin_id, request.lang)
+        save_chat_message(user_id, request.coin_id, "user", request.query, request.lang)
     else:
         history = request.history
 
@@ -287,7 +308,7 @@ async def chat_endpoint(request: ChatRequest, authorization: str = Header(None),
             if user_id:
                 reply_text = "".join(assistant_reply)
                 if reply_text.strip():
-                    save_chat_message(user_id, request.coin_id, "model", reply_text)
+                    save_chat_message(user_id, request.coin_id, "model", reply_text, request.lang)
         except Exception as e:
             err_msg = f"Error generating response: {str(e)}"
             yield f"data: {json.dumps({'error': err_msg})}\n\n"
@@ -302,9 +323,7 @@ async def chat_endpoint(request: ChatRequest, authorization: str = Header(None),
 async def register_endpoint(request: AuthRequest):
     try:
         user_id = register_user(request.email, request.password)
-        # Auto-login after registration
-        token = login_user(request.email, request.password)
-        return {"success": True, "token": token, "email": request.email.strip().lower()}
+        return {"success": True, "email": request.email.strip().lower(), "message": "Verification code sent to email"}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
@@ -355,20 +374,119 @@ async def save_user_indicators_endpoint(config_req: IndicatorConfigRequest, auth
     return {"success": True, "message": "Indicator configuration saved successfully"}
 
 @app.get("/api/user/chat-history/{coin_id}")
-async def get_user_chat_history_endpoint(coin_id: str, authorization: str = Header(None)):
+async def get_user_chat_history_endpoint(coin_id: str, lang: str = "en", authorization: str = Header(None)):
     user_id = _extract_session_user(authorization)
     if not user_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    history = get_chat_history(user_id, coin_id)
+    history = get_chat_history(user_id, coin_id, lang)
     return {"success": True, "history": history}
 
 @app.post("/api/user/chat-history/clear/{coin_id}")
-async def clear_user_chat_history_endpoint(coin_id: str, authorization: str = Header(None)):
+async def clear_user_chat_history_endpoint(coin_id: str, lang: str = "en", authorization: str = Header(None)):
     user_id = _extract_session_user(authorization)
     if not user_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    clear_chat_history(user_id, coin_id)
+    clear_chat_history(user_id, coin_id, lang)
     return {"success": True}
+
+
+# -------------------------------------------------------------------------
+# Verification & Additional User Operations Endpoints
+# -------------------------------------------------------------------------
+@app.post("/api/auth/confirm")
+async def confirm_endpoint(request: ConfirmRequest):
+    try:
+        token = confirm_user_email(request.email, request.code)
+        if not token:
+            raise HTTPException(status_code=400, detail="Invalid verification code or email")
+        return {"success": True, "token": token, "email": request.email.strip().lower(), "message": "Email confirmed successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/user/quiz")
+async def get_user_quiz_endpoint(authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    progress = get_quiz_progress(user_id)
+    return {"success": True, "quiz": progress}
+
+@app.post("/api/user/quiz")
+async def save_user_quiz_endpoint(request: QuizProgressRequest, authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    save_quiz_progress(user_id, request.score, request.answered_questions)
+    return {"success": True, "message": "Quiz progress saved successfully"}
+
+@app.get("/api/user/studied-indicators")
+async def get_studied_indicators_endpoint(authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    indicators = get_studied_indicators(user_id)
+    return {"success": True, "indicators": indicators}
+
+@app.post("/api/user/studied-indicators")
+async def add_studied_indicator_endpoint(request: StudiedIndicatorRequest, authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    add_studied_indicator(user_id, request.indicator_name)
+    return {"success": True, "message": "Indicator marked as studied"}
+
+@app.get("/api/user/tradingview-settings")
+async def get_tradingview_settings_endpoint(authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    settings = get_tradingview_settings(user_id)
+    return {"success": True, "settings": settings}
+
+@app.post("/api/user/tradingview-settings")
+async def save_tradingview_settings_endpoint(request: TradingViewSettingsRequest, authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    save_tradingview_settings(user_id, request.interval, request.style)
+    return {"success": True, "message": "TradingView settings saved successfully"}
+
+@app.get("/api/user/api-keys")
+async def get_api_keys_endpoint(authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    keys = get_user_api_keys(user_id)
+    return {"success": True, "keys": keys}
+
+@app.post("/api/user/api-keys")
+async def add_api_key_endpoint(request: ApiKeyAddRequest, authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    new_key = add_user_api_key(user_id, request.api_key)
+    return {"success": True, "key": new_key}
+
+@app.post("/api/user/api-keys/activate/{key_id}")
+async def activate_api_key_endpoint(key_id: int, authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        activate_user_api_key(user_id, key_id)
+        return {"success": True, "message": "API key activated"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/api/user/api-keys/{key_id}")
+async def delete_api_key_endpoint(key_id: int, authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    delete_user_api_key(user_id, key_id)
+    return {"success": True, "message": "API key deleted"}
 
 
 class ApiKeyRequest(BaseModel):

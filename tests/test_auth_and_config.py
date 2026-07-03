@@ -30,9 +30,26 @@ def test_user_registration_and_login():
     assert reg_response.status_code == 200
     reg_data = reg_response.json()
     assert reg_data["success"] is True
-    assert "token" in reg_data
     assert reg_data["email"] == "test@example.com"
-    token = reg_data["token"]
+
+    # 1.5 Short password registration should fail
+    short_pwd_resp = client.post(
+        "/api/auth/register",
+        json={"email": "short@example.com", "password": "1234"}
+    )
+    assert short_pwd_resp.status_code == 400
+    assert "at least 6 characters" in short_pwd_resp.json()["detail"]
+
+    # 1.7 Confirm email to get token
+    conf_response = client.post(
+        "/api/auth/confirm",
+        json={"email": "test@example.com", "code": "777777"}
+    )
+    assert conf_response.status_code == 200
+    conf_data = conf_response.json()
+    assert conf_data["success"] is True
+    assert "token" in conf_data
+    token = conf_data["token"]
 
     # 2. Duplicate registration should fail
     dup_response = client.post(
@@ -82,12 +99,16 @@ def test_user_registration_and_login():
     assert me_after.status_code == 401
 
 def test_user_indicator_settings():
-    # Register & Login
-    reg = client.post(
+    # Register & Confirm
+    client.post(
         "/api/auth/register",
         json={"email": "test@example.com", "password": "securepassword123"}
     )
-    token = reg.json()["token"]
+    conf = client.post(
+        "/api/auth/confirm",
+        json={"email": "test@example.com", "code": "777777"}
+    )
+    token = conf.json()["token"]
 
     # Save Custom Indicator Config
     config_payload = {
@@ -130,12 +151,16 @@ def test_user_chat_history_sync(mock_chat):
         yield " AI reply chunk 2"
     mock_chat.return_value = mock_generator()
 
-    # Register & Login
-    reg = client.post(
+    # Register & Confirm
+    client.post(
         "/api/auth/register",
         json={"email": "test@example.com", "password": "securepassword123"}
     )
-    token = reg.json()["token"]
+    conf = client.post(
+        "/api/auth/confirm",
+        json={"email": "test@example.com", "code": "777777"}
+    )
+    token = conf.json()["token"]
 
     # Send Chat Message
     chat_resp = client.post(
@@ -183,3 +208,192 @@ def test_user_chat_history_sync(mock_chat):
         headers={"Authorization": f"Bearer {token}"}
     )
     assert len(hist_after.json()["history"]) == 0
+
+def test_quiz_progress_sync():
+    # Register & Confirm
+    client.post(
+        "/api/auth/register",
+        json={"email": "test@example.com", "password": "securepassword123"}
+    )
+    conf = client.post(
+        "/api/auth/confirm",
+        json={"email": "test@example.com", "code": "777777"}
+    )
+    token = conf.json()["token"]
+
+    # 1. Fetch initial quiz progress (should be empty/new)
+    get_resp = client.get(
+        "/api/user/quiz",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert get_resp.status_code == 200
+    assert get_resp.json()["quiz"]["score"] == 0
+    assert get_resp.json()["quiz"]["answered_questions"] == []
+
+    # 2. Save quiz progress
+    save_resp = client.post(
+        "/api/user/quiz",
+        json={"score": 10, "answered_questions": [1, 2, 3]},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert save_resp.status_code == 200
+    assert save_resp.json()["success"] is True
+
+    # 3. Retrieve and assert updated progress
+    get_resp2 = client.get(
+        "/api/user/quiz",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert get_resp2.status_code == 200
+    assert get_resp2.json()["quiz"]["score"] == 10
+    assert get_resp2.json()["quiz"]["answered_questions"] == [1, 2, 3]
+
+def test_studied_indicators():
+    # Register & Confirm
+    client.post(
+        "/api/auth/register",
+        json={"email": "test@example.com", "password": "securepassword123"}
+    )
+    conf = client.post(
+        "/api/auth/confirm",
+        json={"email": "test@example.com", "code": "777777"}
+    )
+    token = conf.json()["token"]
+
+    # 1. Fetch initial studied list (empty)
+    get_resp = client.get(
+        "/api/user/studied-indicators",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert get_resp.status_code == 200
+    assert get_resp.json()["indicators"] == []
+
+    # 2. Add a studied indicator
+    add_resp = client.post(
+        "/api/user/studied-indicators",
+        json={"indicator_name": "rsi"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert add_resp.status_code == 200
+    assert add_resp.json()["success"] is True
+
+    # 3. Assert it is present in list
+    get_resp2 = client.get(
+        "/api/user/studied-indicators",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert get_resp2.json()["indicators"] == ["rsi"]
+
+def test_tradingview_settings():
+    # Register & Confirm
+    client.post(
+        "/api/auth/register",
+        json={"email": "test@example.com", "password": "securepassword123"}
+    )
+    conf = client.post(
+        "/api/auth/confirm",
+        json={"email": "test@example.com", "code": "777777"}
+    )
+    token = conf.json()["token"]
+
+    # 1. Fetch initial settings (empty / defaults)
+    get_resp = client.get(
+        "/api/user/tradingview-settings",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert get_resp.status_code == 200
+    assert get_resp.json()["settings"] == {"interval": "D", "style": "1"}
+
+    # 2. Save settings
+    save_resp = client.post(
+        "/api/user/tradingview-settings",
+        json={"interval": "240", "style": "8"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert save_resp.status_code == 200
+    assert save_resp.json()["success"] is True
+
+    # 3. Retrieve settings
+    get_resp2 = client.get(
+        "/api/user/tradingview-settings",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert get_resp2.status_code == 200
+    assert get_resp2.json()["settings"]["interval"] == "240"
+    assert get_resp2.json()["settings"]["style"] == "8"
+
+def test_api_keys_manager():
+    # Register & Confirm
+    client.post(
+        "/api/auth/register",
+        json={"email": "test@example.com", "password": "securepassword123"}
+    )
+    conf = client.post(
+        "/api/auth/confirm",
+        json={"email": "test@example.com", "code": "777777"}
+    )
+    token = conf.json()["token"]
+
+    # 1. Add key 1
+    add_resp1 = client.post(
+        "/api/user/api-keys",
+        json={"api_key": "key_content_one_123"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert add_resp1.status_code == 200
+    key1_id = add_resp1.json()["key"]["id"]
+    assert add_resp1.json()["key"]["is_active"] == 1 # First key should be active by default
+
+    # 2. Add key 2
+    add_resp2 = client.post(
+        "/api/user/api-keys",
+        json={"api_key": "key_content_two_456"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert add_resp2.status_code == 200
+    key2_id = add_resp2.json()["key"]["id"]
+    assert add_resp2.json()["key"]["is_active"] == 0
+
+    # 3. List keys
+    list_resp = client.get(
+        "/api/user/api-keys",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert list_resp.status_code == 200
+    keys = list_resp.json()["keys"]
+    assert len(keys) == 2
+    assert keys[0]["api_key"] == "key_content_one_123"
+    assert keys[0]["is_active"] == 1
+    assert keys[1]["api_key"] == "key_content_two_456"
+    assert keys[1]["is_active"] == 0
+
+    # 4. Activate key 2
+    act_resp = client.post(
+        f"/api/user/api-keys/activate/{key2_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert act_resp.status_code == 200
+
+    # 5. List keys again, check key 2 is active and key 1 is inactive
+    list_resp2 = client.get(
+        "/api/user/api-keys",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    keys2 = list_resp2.json()["keys"]
+    assert keys2[0]["is_active"] == 0
+    assert keys2[1]["is_active"] == 1
+
+    # 6. Delete key 1
+    del_resp = client.delete(
+        f"/api/user/api-keys/{key1_id}",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert del_resp.status_code == 200
+
+    # 7. Check list has only 1 key
+    list_resp3 = client.get(
+        "/api/user/api-keys",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert len(list_resp3.json()["keys"]) == 1
+    assert list_resp3.json()["keys"][0]["id"] == key2_id

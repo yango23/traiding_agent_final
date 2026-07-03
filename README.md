@@ -96,8 +96,18 @@ The backend leverages custom Python tools to query APIs and feed structured cont
 
 ---
 
+### 6. Full-Featured User Database Persistence (SQLite)
+*   **Secure Email Authentication**: Supports registration with password validation (minimum 6 characters) and a 6-digit confirmation code verification flow (sent to console log; supporting `"777777"` backdoor for demo convenience).
+*   **Bilingual Chat Isolation**: Chat history is stored in SQLite and isolated by `(user_id, coin_id, lang)`, preventing English and Russian conversations from polluting each other.
+*   **Quiz Progress Sync**: User quiz scores and answered question indices are stored in the database, allowing users to pause and resume their learning progress across sessions.
+*   **Daily Indicators Progress**: Studied daily indicator hints are tracked in the database, ensuring their learning checkmarks persist.
+*   **TradingView Layout Toolbar**: Controls above the TradingView chart allow users to dynamically switch chart intervals (`1h`, `4h`, `1D`, `1W`) and styles (`Candles`, `Line`, `Heikin Ashi`), persisting settings to the database.
+*   **Saved API Keys List Switcher**: A secure multi-key switcher located under the API Key panel allows authenticated users to save multiple Gemini API keys, view masked previews, dynamically activate/switch between keys, and delete key entries.
+
+---
+
 ## 🧪 Comprehensive Test Coverage
-*   The project includes a robust test suite of **19 tests** covering agent reasoning, FastAPI endpoints, technical tools, backtester simulations, and regex masking guardrails. All tests pass successfully.
+*   The project includes a robust test suite of **26 tests** covering agent registration, email verification, custom indicators config, bilingual chat history sync, quiz progress tracking, studied indicators logging, TradingView layout saving, and API keys list manager. All tests pass successfully.
 
 ---
 

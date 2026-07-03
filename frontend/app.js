@@ -120,7 +120,7 @@ const LOCALIZATION = {
 };
 
 // Version Check & State Reset on Redeploy
-const APP_VERSION = "1.9.0";
+const APP_VERSION = "2.0.0";
 const savedVersion = localStorage.getItem("app_version");
 if (savedVersion !== APP_VERSION) {
     localStorage.clear();
@@ -792,6 +792,9 @@ function localizeUI() {
 // TradingView Integration
 // -------------------------------------------------------------------------
 
+let tvIntervalSetting = "D";
+let tvStyleSetting = "1";
+
 function renderTradingViewWidget() {
     const symbol = TRADINGVIEW_SYMBOLS[currentCoin] || "BINANCE:BTCUSDT";
     
@@ -802,10 +805,10 @@ function renderTradingViewWidget() {
         "width": "100%",
         "height": "100%",
         "symbol": symbol,
-        "interval": "D",
+        "interval": tvIntervalSetting,
         "timezone": "Etc/UTC",
         "theme": currentTheme,
-        "style": "1",
+        "style": tvStyleSetting,
         "locale": currentLanguage === "ru" ? "ru" : "en",
         "enable_publishing": false,
         "hide_side_toolbar": false,
@@ -2100,21 +2103,40 @@ document.addEventListener("mousemove", (e) => {
 });
 
 // Indicator of the Day helper functions
+let studiedIndicators = [];
+
 function isIndicatorMentioned(ind) {
-    const history = chatHistories[currentCoin] || [];
     const idLower = ind.id.toLowerCase();
+    if (studiedIndicators.includes(idLower)) {
+        return true;
+    }
+
+    const history = chatHistories[currentCoin] || [];
     const nameEnLower = ind.name.en.toLowerCase();
     const nameRuLower = ind.name.ru.toLowerCase();
     
     for (const msg of history) {
         const text = (msg.content || "").toLowerCase();
         if (text.includes(idLower) || text.includes(nameEnLower) || text.includes(nameRuLower)) {
+            markIndicatorAsStudied(idLower);
             return true;
         }
-        if (ind.id === "bollinger" && text.includes("боллинджер")) return true;
-        if (ind.id === "stochastic" && text.includes("стохастик")) return true;
-        if (ind.id === "ichimoku" && text.includes("ишимоку")) return true;
-        if (ind.id === "fibonacci" && text.includes("фибоначч")) return true;
+        if (ind.id === "bollinger" && text.includes("боллинджер")) {
+            markIndicatorAsStudied("bollinger");
+            return true;
+        }
+        if (ind.id === "stochastic" && text.includes("стохастик")) {
+            markIndicatorAsStudied("stochastic");
+            return true;
+        }
+        if (ind.id === "ichimoku" && text.includes("ишимоку")) {
+            markIndicatorAsStudied("ichimoku");
+            return true;
+        }
+        if (ind.id === "fibonacci" && text.includes("фибоначч")) {
+            markIndicatorAsStudied("fibonacci");
+            return true;
+        }
     }
     return false;
 }
@@ -2135,10 +2157,14 @@ function getFreshIndicatorOfTheDay() {
 initTheme();
 applyCoinTheme(currentCoin);
 localizeUI();
-renderTradingViewWidget();
-checkUserSession().then(() => {
-    initChatSession();
-    loadAIContent();
+checkUserSession().then(async () => {
+    await loadTradingViewSettings();
+    renderTradingViewWidget();
+    await loadStudiedIndicators();
+    await initChatSession();
+    await loadAIContent();
+    await syncQuizProgressFromServer();
+    await loadApiKeysList();
 });
 initResizeHandle();
 updateQuotaUI();
@@ -2265,7 +2291,11 @@ function submitQuizAnswer() {
     } else {
         quizScore = Math.max(0, quizScore - 1);
     }
-    localStorage.setItem("quiz_score", quizScore);
+    
+    if (!answeredQuestions.includes(currentQuizQuestionIndex)) {
+        answeredQuestions.push(currentQuizQuestionIndex);
+    }
+    saveQuizProgressOnServer(quizScore, answeredQuestions);
 
     const scoreVal = document.getElementById("quiz-score-val");
     if (scoreVal) scoreVal.textContent = quizScore;
@@ -2377,7 +2407,7 @@ async function runStrategyBacktest() {
     }
 }
 
-function saveApiKey() {
+async function saveApiKey() {
     const keyInput = document.getElementById("api-key-input");
     const statusDiv = document.getElementById("api-key-status");
     const key = keyInput.value.trim();
@@ -2390,6 +2420,12 @@ function saveApiKey() {
 
     try {
         sessionStorage.setItem("custom_api_key", key);
+        
+        const sessionToken = localStorage.getItem("session_token");
+        if (sessionToken) {
+            await addApiKeyToDB(key);
+        }
+        
         localizeUI();
         statusDiv.textContent = currentLanguage === "ru" ? "✅ Ключ успешно применен!" : "✅ Key applied successfully!";
         statusDiv.style.color = "var(--neon-green)";
@@ -2400,8 +2436,8 @@ function saveApiKey() {
         loadAIContent();
         
         // Clear current chat session and re-welcome user to get live interaction
-        if (localStorage.getItem("session_token")) {
-            fetch(`/api/user/chat-history/clear/${currentCoin}`, {
+        if (sessionToken) {
+            fetch(`/api/user/chat-history/clear/${currentCoin}?lang=${currentLanguage}`, {
                 method: "POST",
                 headers: getAuthHeaders()
             }).then(() => {
@@ -2438,6 +2474,11 @@ function openAuthModal() {
     const errorMsg = document.getElementById("auth-error-msg");
     const emailInput = document.getElementById("auth-email");
     const passwordInput = document.getElementById("auth-password");
+    
+    // Reset confirmation states
+    document.getElementById("auth-form").style.display = "block";
+    document.getElementById("auth-modal-header-sec").style.display = "block";
+    document.getElementById("confirm-form").style.display = "none";
     
     if (errorMsg) errorMsg.style.display = "none";
     if (emailInput) emailInput.value = "";
@@ -2489,6 +2530,8 @@ function switchAuthTab(tab) {
     }
 }
 
+let tempRegistrationEmail = "";
+
 async function handleAuthSubmit(event) {
     event.preventDefault();
     const email = document.getElementById("auth-email").value.trim();
@@ -2497,6 +2540,15 @@ async function handleAuthSubmit(event) {
     const submitBtn = document.getElementById("auth-submit-btn");
     
     if (errorMsg) errorMsg.style.display = "none";
+    
+    if (currentAuthTab === "register" && password.length < 6) {
+        if (errorMsg) {
+            errorMsg.textContent = currentLanguage === "ru" ? "Пароль должен быть не менее 6 символов" : "Password must be at least 6 characters";
+            errorMsg.style.display = "block";
+        }
+        return;
+    }
+    
     if (submitBtn) submitBtn.disabled = true;
     
     const url = currentAuthTab === "login" ? "/api/auth/login" : "/api/auth/register";
@@ -2508,14 +2560,28 @@ async function handleAuthSubmit(event) {
         });
         const data = await resp.json();
         if (resp.ok && data.success) {
-            localStorage.setItem("session_token", data.token);
-            closeAuthModal();
-            await checkUserSession();
-            
-            // Reload page states & history
-            loadAIContent();
-            chatHistories[currentCoin] = null;
-            await initChatSession();
+            if (currentAuthTab === "register") {
+                tempRegistrationEmail = email;
+                tempRegistrationToken = data.token;
+                document.getElementById("auth-form").style.display = "none";
+                document.getElementById("auth-modal-header-sec").style.display = "none";
+                const cf = document.getElementById("confirm-form");
+                if (cf) cf.style.display = "block";
+                const cd = document.getElementById("confirm-code");
+                if (cd) {
+                    cd.value = "";
+                    cd.focus();
+                }
+            } else {
+                localStorage.setItem("session_token", data.token);
+                closeAuthModal();
+                await checkUserSession();
+                
+                // Reload page states & history
+                loadAIContent();
+                chatHistories[currentCoin] = null;
+                await initChatSession();
+            }
         } else {
             if (errorMsg) {
                 errorMsg.textContent = data.detail || (currentLanguage === "ru" ? "Ошибка авторизации" : "Authentication failed");
@@ -2555,11 +2621,13 @@ async function checkUserSession() {
     const loginBtn = document.getElementById("auth-login-btn");
     const profileSec = document.getElementById("user-profile-section");
     const emailDisp = document.getElementById("user-email-display");
+    const apiKeysMgr = document.getElementById("api-keys-manager-sec");
     const sessionToken = localStorage.getItem("session_token");
     
     if (!sessionToken) {
         if (loginBtn) loginBtn.style.display = "block";
         if (profileSec) profileSec.style.display = "none";
+        if (apiKeysMgr) apiKeysMgr.style.display = "none";
         return;
     }
     
@@ -2573,6 +2641,7 @@ async function checkUserSession() {
                 if (loginBtn) loginBtn.style.display = "none";
                 if (profileSec) profileSec.style.display = "flex";
                 if (emailDisp) emailDisp.textContent = data.email;
+                if (apiKeysMgr) apiKeysMgr.style.display = "block";
                 return;
             }
         }
@@ -2584,6 +2653,7 @@ async function checkUserSession() {
     localStorage.removeItem("session_token");
     if (loginBtn) loginBtn.style.display = "block";
     if (profileSec) profileSec.style.display = "none";
+    if (apiKeysMgr) apiKeysMgr.style.display = "none";
 }
 
 // Bind auth buttons click listeners
@@ -2692,4 +2762,340 @@ async function handleIndicatorSettingsSubmit(event) {
     
     // Reload dashboard content to recalculate indicators immediately
     loadAIContent();
+}
+
+let tempRegistrationToken = "";
+
+async function handleConfirmSubmit(event) {
+    event.preventDefault();
+    const code = document.getElementById("confirm-code").value.trim();
+    const errorMsg = document.getElementById("confirm-error-msg");
+    const submitBtn = document.getElementById("confirm-submit-btn");
+
+    if (errorMsg) errorMsg.style.display = "none";
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+        const resp = await fetch("/api/auth/confirm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: tempRegistrationEmail, code })
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            localStorage.setItem("session_token", tempRegistrationToken);
+            closeAuthModal();
+            await checkUserSession();
+            
+            // Reload page states & history
+            loadAIContent();
+            chatHistories[currentCoin] = null;
+            await initChatSession();
+        } else {
+            if (errorMsg) {
+                errorMsg.textContent = data.detail || (currentLanguage === "ru" ? "Неверный код" : "Invalid code");
+                errorMsg.style.display = "block";
+            }
+        }
+    } catch (e) {
+        console.error("Confirm submit error", e);
+        if (errorMsg) {
+            errorMsg.textContent = currentLanguage === "ru" ? "Ошибка подключения к серверу" : "Connection error";
+            errorMsg.style.display = "block";
+        }
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
+    }
+}
+
+async function loadTradingViewSettings() {
+    const sessionToken = localStorage.getItem("session_token");
+    if (sessionToken) {
+        try {
+            const resp = await fetch("/api/user/tradingview-settings", {
+                headers: getAuthHeaders()
+            });
+            const data = await resp.json();
+            if (data.success && data.settings) {
+                tvIntervalSetting = data.settings.interval;
+                tvStyleSetting = data.settings.style;
+            }
+        } catch (e) {
+            console.error("Failed to load TradingView settings from server", e);
+        }
+    } else {
+        tvIntervalSetting = localStorage.getItem("guest_tv_interval") || "D";
+        tvStyleSetting = localStorage.getItem("guest_tv_style") || "1";
+    }
+    
+    // Sync selects
+    const intSel = document.getElementById("tv-interval-select");
+    const stySel = document.getElementById("tv-style-select");
+    if (intSel) intSel.value = tvIntervalSetting;
+    if (stySel) stySel.value = tvStyleSetting;
+}
+
+async function saveTradingViewSettingsLocallyOrOnServer() {
+    const sessionToken = localStorage.getItem("session_token");
+    if (sessionToken) {
+        try {
+            await fetch("/api/user/tradingview-settings", {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ interval: tvIntervalSetting, style: tvStyleSetting })
+            });
+        } catch (e) {
+            console.error("Failed to save TradingView settings to server", e);
+        }
+    } else {
+        localStorage.setItem("guest_tv_interval", tvIntervalSetting);
+        localStorage.setItem("guest_tv_style", tvStyleSetting);
+    }
+}
+
+function changeTradingViewInterval(val) {
+    tvIntervalSetting = val;
+    saveTradingViewSettingsLocallyOrOnServer();
+    renderTradingViewWidget();
+}
+
+function changeTradingViewStyle(val) {
+    tvStyleSetting = val;
+    saveTradingViewSettingsLocallyOrOnServer();
+    renderTradingViewWidget();
+}
+
+let answeredQuestions = [];
+
+async function syncQuizProgressFromServer() {
+    const sessionToken = localStorage.getItem("session_token");
+    if (sessionToken) {
+        try {
+            const resp = await fetch("/api/user/quiz", {
+                headers: getAuthHeaders()
+            });
+            const data = await resp.json();
+            if (data.success && data.quiz) {
+                quizScore = data.quiz.score;
+                answeredQuestions = data.quiz.answered_questions || [];
+                currentQuizQuestionIndex = answeredQuestions.length;
+                loadQuizQuestion();
+            }
+        } catch (e) {
+            console.error("Failed to sync quiz progress from server", e);
+        }
+    } else {
+        quizScore = parseInt(localStorage.getItem("quiz_score")) || 0;
+        const saved = localStorage.getItem("guest_answered_questions");
+        if (saved) {
+            try {
+                answeredQuestions = JSON.parse(saved);
+            } catch (e) {
+                console.error("Failed to parse guest answered questions", e);
+            }
+        }
+        currentQuizQuestionIndex = answeredQuestions.length;
+        loadQuizQuestion();
+    }
+}
+
+async function saveQuizProgressOnServer(score, answered) {
+    const sessionToken = localStorage.getItem("session_token");
+    if (sessionToken) {
+        try {
+            await fetch("/api/user/quiz", {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ score, answered_questions: answered })
+            });
+        } catch (e) {
+            console.error("Failed to save quiz progress to server", e);
+        }
+    } else {
+        localStorage.setItem("quiz_score", score);
+        localStorage.setItem("guest_answered_questions", JSON.stringify(answered));
+    }
+}
+
+async function loadStudiedIndicators() {
+    const sessionToken = localStorage.getItem("session_token");
+    if (sessionToken) {
+        try {
+            const resp = await fetch("/api/user/studied-indicators", {
+                headers: getAuthHeaders()
+            });
+            const data = await resp.json();
+            if (data.success && data.indicators) {
+                studiedIndicators = data.indicators.map(i => i.toLowerCase());
+            }
+        } catch (e) {
+            console.error("Failed to load studied indicators from server", e);
+        }
+    } else {
+        const saved = localStorage.getItem("guest_studied_indicators");
+        if (saved) {
+            try {
+                studiedIndicators = JSON.parse(saved);
+            } catch (e) {
+                console.error("Failed to parse guest studied indicators", e);
+            }
+        }
+    }
+}
+
+async function markIndicatorAsStudied(indId) {
+    indId = indId.toLowerCase();
+    if (studiedIndicators.includes(indId)) return;
+    studiedIndicators.push(indId);
+    
+    const sessionToken = localStorage.getItem("session_token");
+    if (sessionToken) {
+        try {
+            await fetch("/api/user/studied-indicators", {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ indicator_name: indId })
+            });
+        } catch (e) {
+            console.error("Failed to save studied indicator to server", e);
+        }
+    } else {
+        localStorage.setItem("guest_studied_indicators", JSON.stringify(studiedIndicators));
+    }
+}
+
+async function loadApiKeysList() {
+    const sessionToken = localStorage.getItem("session_token");
+    const container = document.getElementById("api-keys-list-container");
+    if (!container) return;
+    
+    if (!sessionToken) {
+        container.innerHTML = "";
+        return;
+    }
+    
+    try {
+        const resp = await fetch("/api/user/api-keys", {
+            headers: getAuthHeaders()
+        });
+        const data = await resp.json();
+        if (data.success && data.keys) {
+            container.innerHTML = "";
+            
+            if (data.keys.length === 0) {
+                const emptyItem = document.createElement("div");
+                emptyItem.style.fontSize = "0.72rem";
+                emptyItem.style.color = "var(--text-muted)";
+                emptyItem.style.fontStyle = "italic";
+                emptyItem.textContent = currentLanguage === "ru" ? "Нет сохраненных ключей" : "No saved keys";
+                container.appendChild(emptyItem);
+                
+                sessionStorage.removeItem("custom_api_key");
+                return;
+            }
+            
+            data.keys.forEach(k => {
+                const item = document.createElement("div");
+                item.style.display = "flex";
+                item.style.justifyContent = "space-between";
+                item.style.alignItems = "center";
+                item.style.gap = "6px";
+                item.style.padding = "4px 8px";
+                item.style.background = "var(--input-bg)";
+                item.style.borderRadius = "6px";
+                item.style.border = "1px solid var(--card-border)";
+                
+                const maskedKey = k.api_key.substring(0, 8) + "..." + k.api_key.substring(k.api_key.length - 4);
+                
+                const labelSpan = document.createElement("span");
+                labelSpan.style.fontSize = "0.72rem";
+                labelSpan.style.cursor = "pointer";
+                labelSpan.style.flex = "1";
+                labelSpan.style.fontWeight = k.is_active ? "700" : "400";
+                labelSpan.style.color = k.is_active ? "var(--neon-green)" : "var(--text-primary)";
+                labelSpan.textContent = maskedKey + (k.is_active ? " (Active)" : "");
+                labelSpan.onclick = () => activateApiKeyInDB(k.id, k.api_key);
+                
+                const deleteBtn = document.createElement("button");
+                deleteBtn.style.background = "none";
+                deleteBtn.style.border = "none";
+                deleteBtn.style.color = "var(--neon-rose)";
+                deleteBtn.style.cursor = "pointer";
+                deleteBtn.style.fontSize = "0.72rem";
+                deleteBtn.textContent = "✖";
+                deleteBtn.title = currentLanguage === "ru" ? "Удалить" : "Delete";
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    deleteApiKeyFromDB(k.id);
+                };
+                
+                item.appendChild(labelSpan);
+                item.appendChild(deleteBtn);
+                container.appendChild(item);
+                
+                if (k.is_active) {
+                    sessionStorage.setItem("custom_api_key", k.api_key);
+                }
+            });
+        }
+    } catch (e) {
+        console.error("Failed to load API keys list from server", e);
+    }
+}
+
+async function addApiKeyToDB(api_key) {
+    try {
+        const resp = await fetch("/api/user/api-keys", {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ api_key })
+        });
+        const data = await resp.json();
+        if (data.success && data.key) {
+            await loadApiKeysList();
+        }
+    } catch (e) {
+        console.error("Failed to add API key to DB", e);
+    }
+}
+
+async function activateApiKeyInDB(key_id, api_key) {
+    try {
+        const resp = await fetch(`/api/user/api-keys/activate/${key_id}`, {
+            method: "POST",
+            headers: getAuthHeaders()
+        });
+        const data = await resp.json();
+        if (data.success) {
+            sessionStorage.setItem("custom_api_key", api_key);
+            await loadApiKeysList();
+            
+            loadAIContent();
+            chatHistories[currentCoin] = null;
+            initChatSession();
+        }
+    } catch (e) {
+        console.error("Failed to activate API key", e);
+    }
+}
+
+async function deleteApiKeyFromDB(key_id) {
+    if (!confirm(currentLanguage === "ru" ? "Вы уверены, что хотите удалить этот API ключ?" : "Are you sure you want to delete this API key?")) {
+        return;
+    }
+    try {
+        const resp = await fetch(`/api/user/api-keys/${key_id}`, {
+            method: "DELETE",
+            headers: getAuthHeaders()
+        });
+        const data = await resp.json();
+        if (data.success) {
+            await loadApiKeysList();
+            loadAIContent();
+            chatHistories[currentCoin] = null;
+            initChatSession();
+        }
+    } catch (e) {
+        console.error("Failed to delete API key", e);
+    }
 }
