@@ -302,7 +302,18 @@ async def fetch_binance_klines(symbol: str, limit: int = 250) -> list:
         else:
             raise Exception(f"Binance API returned status code {response.status_code}")
 
-def calculate_metrics_with_pandas(klines_data) -> dict:
+def calculate_metrics_with_pandas(
+    klines_data,
+    rsi_length=14,
+    macd_fast=12,
+    macd_slow=26,
+    macd_signal=9,
+    sma_fast=50,
+    sma_slow=200,
+    bb_length=20,
+    bb_stddev=2.0,
+    **kwargs
+) -> dict:
     import pandas as pd
     # klines format: list of lists
     # index 1: Open, 2: High, 3: Low, 4: Close
@@ -318,36 +329,37 @@ def calculate_metrics_with_pandas(klines_data) -> dict:
         "close": closes
     })
     
-    # 1. SMA 50 and 200
-    sma_50 = df["close"].rolling(window=50).mean().iloc[-1]
-    sma_200 = df["close"].rolling(window=200).mean().iloc[-1]
+    # 1. SMA Fast and Slow
+    sma_50 = df["close"].rolling(window=sma_fast).mean().iloc[-1]
+    sma_200 = df["close"].rolling(window=sma_slow).mean().iloc[-1]
     
-    # 2. RSI (14)
+    # 2. RSI
     delta = df["close"].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    gain = (delta.where(delta > 0, 0)).rolling(window=rsi_length).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=rsi_length).mean()
     rs = gain / loss
     rsi = (100 - (100 / (1 + rs))).iloc[-1]
     if pd.isna(rsi):
         rsi = 50.0 # Neutral fallback
         
     # 3. MACD
-    ema_12 = df["close"].ewm(span=12, adjust=False).mean()
-    ema_26 = df["close"].ewm(span=26, adjust=False).mean()
-    macd_line = (ema_12 - ema_26).iloc[-1]
-    signal_line = (ema_12 - ema_26).ewm(span=9, adjust=False).mean().iloc[-1]
+    ema_fast = df["close"].ewm(span=macd_fast, adjust=False).mean()
+    ema_slow = df["close"].ewm(span=macd_slow, adjust=False).mean()
+    macd_line = (ema_fast - ema_slow).iloc[-1]
+    signal_line = (ema_fast - ema_slow).ewm(span=macd_signal, adjust=False).mean().iloc[-1]
     macd_hist = macd_line - signal_line
     
     # 4. Bollinger Bands
-    sma_20 = df["close"].rolling(window=20).mean()
-    std_20 = df["close"].rolling(window=20).std()
-    bb_upper = (sma_20 + 2 * std_20).iloc[-1]
-    bb_lower = (sma_20 - 2 * std_20).iloc[-1]
+    sma_bb = df["close"].rolling(window=bb_length).mean()
+    std_bb = df["close"].rolling(window=bb_length).std()
+    bb_upper = (sma_bb + bb_stddev * std_bb).iloc[-1]
+    bb_lower = (sma_bb - bb_stddev * std_bb).iloc[-1]
 
-    # 5. Stochastic Oscillator (14, 3)
-    low_14 = df["low"].rolling(window=14).min()
-    high_14 = df["high"].rolling(window=14).max()
-    df["stoch_k"] = (df["close"] - low_14) / (high_14 - low_14) * 100
+    # 5. Stochastic Oscillator (uses rsi_length for consistency)
+    stoch_window = rsi_length
+    low_stoch = df["low"].rolling(window=stoch_window).min()
+    high_stoch = df["high"].rolling(window=stoch_window).max()
+    df["stoch_k"] = (df["close"] - low_stoch) / (high_stoch - low_stoch) * 100
     df["stoch_d"] = df["stoch_k"].rolling(window=3).mean()
     stoch_k = df["stoch_k"].iloc[-1]
     stoch_d = df["stoch_d"].iloc[-1]
@@ -398,11 +410,13 @@ async def fetch_fear_greed() -> tuple[int, int]:
     today = random.randint(35, 70)
     return today, today + random.choice([-5, -3, 0, 3, 5])
 
-async def calculate_technical_indicators(price: float, coin_id: str, lang: str = "ru") -> dict:
+async def calculate_technical_indicators(price: float, coin_id: str, lang: str = "ru", config: dict = None) -> dict:
     """
     Calculates technical indicators dynamically using Binance public API data and pandas.
     Falls back to simulated calculations if API call fails.
     """
+    if config is None:
+        config = {}
     lang = lang.lower().strip()
     coin_id = coin_id.lower().strip()
     
@@ -422,7 +436,7 @@ async def calculate_technical_indicators(price: float, coin_id: str, lang: str =
     patterns = []
     try:
         klines = await fetch_binance_klines(symbol)
-        metrics = calculate_metrics_with_pandas(klines)
+        metrics = calculate_metrics_with_pandas(klines, **config)
         patterns = detect_candlestick_patterns(klines)
         
         rsi = metrics["rsi"]
@@ -463,15 +477,18 @@ async def calculate_technical_indicators(price: float, coin_id: str, lang: str =
     # Fetch real Fear & Greed index
     fg_value, fg_prev_value = await fetch_fear_greed()
     
+    rsi_overbought = config.get("rsi_overbought", 70)
+    rsi_oversold = config.get("rsi_oversold", 30)
+    
     # Format and add educational text depending on language
     if lang != "ru":
         # English
         rsi_desc = (
             "Overbought/oversold indicator. "
-            "Values above 70 indicate potential overbought conditions (price rose too much, pullback possible). "
-            "Values below 30 indicate oversold conditions (price fell significantly, rebound possible)."
-        ) if rsi > 70 or rsi < 30 else (
-            "The indicator is in the neutral zone (between 30 and 70), there are no clear overbought or oversold signals."
+            f"Values above {rsi_overbought} indicate potential overbought conditions (price rose too much, pullback possible). "
+            f"Values below {rsi_oversold} indicate oversold conditions (price fell significantly, rebound possible)."
+        ) if rsi > rsi_overbought or rsi < rsi_oversold else (
+            f"The indicator is in the neutral zone (between {rsi_oversold} and {rsi_overbought}), there are no clear overbought or oversold signals."
         )
         
         macd_desc = (
@@ -498,23 +515,23 @@ async def calculate_technical_indicators(price: float, coin_id: str, lang: str =
             "Extreme fear (<30) indicates panic (good entry opportunities), extreme greed (>75) indicates market overheating."
         )
         
-        rsi_status = "Overbought" if rsi > 70 else ("Oversold" if rsi < 30 else "Neutral")
+        rsi_status = "Overbought" if rsi > rsi_overbought else ("Oversold" if rsi < rsi_oversold else "Neutral")
         macd_status = "Bullish momentum" if macd_hist > 0 else "Bearish momentum"
         sma_status = "Golden Cross" if sma_50 > sma_200 else "Death Cross"
     else:
         # Russian
         rsi_desc = (
             "Индикатор перекупленности/перепроданности. "
-            "Значения выше 70 говорят о возможной перекупленности (цена слишком выросла, возможен откат). "
-            "Значения ниже 30 говорят о перепроданности (цена сильно упала, возможен отскок)."
-        ) if rsi > 70 or rsi < 30 else (
-            "Индикатор находится в нейтральной зоне (между 30 и 70), явных сигналов о перекупленности или перепроданности нет."
+            f"Значения выше {rsi_overbought} говорят о возможной перекупленности (цена слишком выросла, возможен откат). "
+            f"Значения ниже {rsi_oversold} говорят о перепроданности (цена сильно упала, возможен отскок)."
+        ) if rsi > rsi_overbought or rsi < rsi_oversold else (
+            f"Индикатор находится в нейтральной зоне (между {rsi_oversold} и {rsi_overbought}), явных сигналов о перекупленности или перепроданности нет."
         )
         
         macd_desc = (
             "Схождение/расхождение скользящих средних. "
             "Гистограмма выше нуля указывает на преобладание бычьего (восходящего) импульса. "
-            "Гистограмма ниже нуля указывает на преобладание медвежьего (нисходящего) импульса."
+            "Гистограмма ниже нуля указывает на преобладание медвежего (нисходящего) импульса."
         )
         
         sma_desc = (
@@ -535,7 +552,7 @@ async def calculate_technical_indicators(price: float, coin_id: str, lang: str =
             "Крайний страх (<30) указывает на панику (время искать точки входа), крайняя жадность (>75) — на перегрев."
         )
         
-        rsi_status = "Перекуплен" if rsi > 70 else ("Перепродан" if rsi < 30 else "Нейтральный")
+        rsi_status = "Перекуплен" if rsi > rsi_overbought else ("Перепродан" if rsi < rsi_oversold else "Нейтральный")
         macd_status = "Бычий импульс" if macd_hist > 0 else "Медвежий импульс"
         sma_status = "Золотой крест" if sma_50 > sma_200 else "Крест смерти"
 

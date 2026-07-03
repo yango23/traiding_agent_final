@@ -27,7 +27,7 @@ def test_get_summary_endpoint(mock_summary):
     data = response.json()
     assert data["success"] is True
     assert data["summary"] == "Mocked AI Summary for Bitcoin"
-    mock_summary.assert_called_once_with("bitcoin", "ru", False, custom_api_key=None)
+    mock_summary.assert_called_once_with("bitcoin", "ru", False, custom_api_key=None, config=None)
 
 def test_chat_endpoint_safety_refusal():
     # Test that jailbreaks are caught and safety refusal is streamed

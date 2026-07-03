@@ -9,6 +9,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from app.tools import fetch_coin_data, fetch_crypto_news, calculate_technical_indicators, run_backtest_simulation
 from app.agent import chat_with_agent, generate_coin_summary, is_query_safe, quota_tracker
+from app.db import (
+    init_db, register_user, login_user, logout_user, validate_session, get_user_email,
+    save_chat_message, get_chat_history, clear_chat_history, get_indicator_config, save_indicator_config
+)
+
+# Initialize SQLite database and tables
+init_db()
 
 app = FastAPI(
     title="Crypto AI Advisor Dashboard",
@@ -42,6 +49,22 @@ class BacktestRequest(BaseModel):
     coin_id: str = Field(description="The cryptocurrency ID")
     strategy: str = Field(description="The strategy to backtest: sma_crossover, rsi_bounds, bollinger_bands")
 
+class AuthRequest(BaseModel):
+    email: str = Field(..., description="User email address")
+    password: str = Field(..., description="User password")
+
+class IndicatorConfigRequest(BaseModel):
+    rsi_length: int = Field(default=14)
+    rsi_overbought: int = Field(default=70)
+    rsi_oversold: int = Field(default=30)
+    macd_fast: int = Field(default=12)
+    macd_slow: int = Field(default=26)
+    macd_signal: int = Field(default=9)
+    sma_fast: int = Field(default=50)
+    sma_slow: int = Field(default=200)
+    bb_length: int = Field(default=20)
+    bb_stddev: float = Field(default=2.0)
+
 # -------------------------------------------------------------------------
 # Static File Routing
 # -------------------------------------------------------------------------
@@ -55,12 +78,20 @@ FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 VALID_LANGS = frozenset({"ru", "en"})
 
-def _extract_api_key(authorization: str | None) -> str | None:
-    """Extract a valid Bearer token from the Authorization header, or return None."""
-    if authorization and authorization.startswith("Bearer "):
-        key = authorization.split(" ", 1)[1].strip()
+def _extract_api_key(gemini_key_header: str | None) -> str | None:
+    """Extract custom Gemini API key if passed in headers."""
+    if gemini_key_header:
+        key = gemini_key_header.strip()
         if key and key != "undefined":
             return key
+    return None
+
+def _extract_session_user(authorization: str | None) -> int | None:
+    """Extract and validate the session user ID from the Bearer token."""
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+        if token and token != "undefined":
+            return validate_session(token)
     return None
 
 # -------------------------------------------------------------------------
@@ -101,14 +132,16 @@ async def text_to_speech_proxy(text: str = Query(..., max_length=200), lang: str
 
 
 @app.get("/api/market-data/{coin_id}")
-async def get_market_data(coin_id: str, lang: str = "ru", force_refresh: bool = False):
+async def get_market_data(coin_id: str, lang: str = "ru", force_refresh: bool = False, authorization: str = Header(None)):
     """
     Returns full market data, indicators, and news for a specific coin.
     Used by the dashboard to render details under the chart.
     """
+    user_id = _extract_session_user(authorization)
+    config = get_indicator_config(user_id) if user_id else None
     try:
         coin_data = await fetch_coin_data(coin_id, force_refresh=force_refresh)
-        indicators = await calculate_technical_indicators(coin_data["price"], coin_id, lang)
+        indicators = await calculate_technical_indicators(coin_data["price"], coin_id, lang, config)
         news = await fetch_crypto_news(coin_id, lang, force_refresh=force_refresh)
         
         return {
@@ -121,20 +154,23 @@ async def get_market_data(coin_id: str, lang: str = "ru", force_refresh: bool = 
         raise HTTPException(status_code=500, detail=f"Failed to fetch market data: {str(e)}")
 
 @app.post("/api/summary")
-async def get_ai_summary(request: SummaryRequest, authorization: str = Header(None)):
+async def get_ai_summary(request: SummaryRequest, authorization: str = Header(None), x_gemini_api_key: str = Header(None)):
     """
     Generates a structured educational AI summary for the coin.
     """
     if request.lang not in VALID_LANGS:
         raise HTTPException(status_code=400, detail="Invalid language selected")
     
-    custom_key = _extract_api_key(authorization)
+    custom_key = _extract_api_key(x_gemini_api_key)
+    user_id = _extract_session_user(authorization)
+    config = get_indicator_config(user_id) if user_id else None
     try:
         summary_text = await generate_coin_summary(
             request.coin_id, 
             request.lang, 
             request.force_refresh, 
-            custom_api_key=custom_key
+            custom_api_key=custom_key,
+            config=config
         )
         return {"success": True, "summary": summary_text, "simulated": quota_tracker["quota_exhausted"]}
     except Exception as e:
@@ -163,12 +199,13 @@ async def get_quota_status():
     }
 
 @app.post("/api/chat")
-async def chat_endpoint(request: ChatRequest, authorization: str = Header(None)):
+async def chat_endpoint(request: ChatRequest, authorization: str = Header(None), x_gemini_api_key: str = Header(None)):
     """
     Streams the agent's response via Server-Sent Events (SSE).
     Includes query validation for maximum security.
     """
-    custom_key = _extract_api_key(authorization)
+    custom_key = _extract_api_key(x_gemini_api_key)
+    user_id = _extract_session_user(authorization)
 
     # 1. Security: Validate user query for prompt injection or shell commands
     if not is_query_safe(request.query):
@@ -218,29 +255,121 @@ async def chat_endpoint(request: ChatRequest, authorization: str = Header(None))
             yield "data: [DONE]\n\n"
         return StreamingResponse(redirect_message(), media_type="text/event-stream")
 
+    # If logged in, fetch history from SQLite and save user message
+    if user_id:
+        history = get_chat_history(user_id, request.coin_id)
+        save_chat_message(user_id, request.coin_id, "user", request.query)
+    else:
+        history = request.history
+
     # 3. Stream response from Gemini
     quota_tracker["chat_calls"] += 1
     from app.agent import save_quota
     save_quota(quota_tracker)
+    
     async def event_generator():
+        assistant_reply = []
         try:
             async for chunk in chat_with_agent(
                 query=request.query,
-                history=request.history,
+                history=history,
                 coin_id=request.coin_id,
                 lang=request.lang,
                 custom_api_key=custom_key
             ):
+                assistant_reply.append(chunk)
                 # Send chunks as JSON
                 yield f"data: {json.dumps({'text': chunk})}\n\n"
             # Signal stream completion
             yield "data: [DONE]\n\n"
+            
+            # Save assistant reply to SQLite
+            if user_id:
+                reply_text = "".join(assistant_reply)
+                if reply_text.strip():
+                    save_chat_message(user_id, request.coin_id, "model", reply_text)
         except Exception as e:
             err_msg = f"Error generating response: {str(e)}"
             yield f"data: {json.dumps({'error': err_msg})}\n\n"
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+# -------------------------------------------------------------------------
+# User Authentication Endpoints
+# -------------------------------------------------------------------------
+@app.post("/api/auth/register")
+async def register_endpoint(request: AuthRequest):
+    try:
+        user_id = register_user(request.email, request.password)
+        # Auto-login after registration
+        token = login_user(request.email, request.password)
+        return {"success": True, "token": token, "email": request.email.strip().lower()}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/auth/login")
+async def login_endpoint(request: AuthRequest):
+    try:
+        token = login_user(request.email, request.password)
+        return {"success": True, "token": token, "email": request.email.strip().lower()}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/auth/logout")
+async def logout_endpoint(authorization: str = Header(None)):
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.split(" ", 1)[1].strip()
+        logout_user(token)
+    return {"success": True}
+
+@app.get("/api/auth/me")
+async def me_endpoint(authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    email = get_user_email(user_id)
+    return {"success": True, "email": email}
+
+# -------------------------------------------------------------------------
+# User Configuration & History Endpoints
+# -------------------------------------------------------------------------
+@app.get("/api/user/indicators")
+async def get_user_indicators_endpoint(authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    config = get_indicator_config(user_id)
+    return {"success": True, "config": config}
+
+@app.post("/api/user/indicators")
+async def save_user_indicators_endpoint(config_req: IndicatorConfigRequest, authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    save_indicator_config(user_id, config_req.model_dump())
+    return {"success": True, "message": "Indicator configuration saved successfully"}
+
+@app.get("/api/user/chat-history/{coin_id}")
+async def get_user_chat_history_endpoint(coin_id: str, authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    history = get_chat_history(user_id, coin_id)
+    return {"success": True, "history": history}
+
+@app.post("/api/user/chat-history/clear/{coin_id}")
+async def clear_user_chat_history_endpoint(coin_id: str, authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    clear_chat_history(user_id, coin_id)
+    return {"success": True}
+
 
 class ApiKeyRequest(BaseModel):
     api_key: str = Field(description="The new Gemini API Key")

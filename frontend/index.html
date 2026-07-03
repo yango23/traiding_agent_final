@@ -26,6 +26,13 @@
                 </div>
             </div>
             <div class="header-controls">
+                <div id="auth-section" class="auth-header-section" style="display: flex; align-items: center; gap: 8px; margin-right: 6px;">
+                    <button id="auth-login-btn" class="control-btn login-btn" style="font-weight: 700; padding: 6px 14px; font-size: 0.8rem; background: var(--glass-card-bg); border: var(--card-border); border-radius: 8px; cursor: pointer;">Войти</button>
+                    <div id="user-profile-section" style="display: none; align-items: center; gap: 8px;">
+                        <span id="user-email-display" style="font-size: 0.8rem; color: var(--text-muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;"></span>
+                        <button id="auth-logout-btn" class="control-btn logout-btn" style="font-weight: 700; padding: 6px 12px; font-size: 0.8rem; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 8px; color: var(--neon-rose); cursor: pointer;">Выйти</button>
+                    </div>
+                </div>
                 <button id="lang-toggle-btn" class="control-btn" title="Switch Language">EN</button>
                 <button id="theme-toggle-btn" class="control-btn" title="Toggle Theme">🌙</button>
             </div>
@@ -84,7 +91,10 @@
                         </div>
                     </div>
                     <hr class="card-divider">
-                    <h4 class="section-title" id="lbl-indicators-title" style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">Technical Indicators</h4>
+                    <h4 class="section-title" style="font-size: 0.85rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                        <span id="lbl-indicators-title">Technical Indicators</span>
+                        <button id="open-indicator-settings-btn" onclick="openIndicatorSettingsModal()" style="background: none; border: none; cursor: pointer; padding: 2px 6px; font-size: 0.85rem; opacity: 0.6; transition: opacity 0.2s;" title="Configure indicator parameters">⚙️</button>
+                    </h4>
                     <div class="stats-grid indicators-grid" style="gap: 10px;">
                         <div class="stat-item">
                             <span class="stat-label indicator-label clickable" onclick="askAgentAboutIndicator('RSI')" style="cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 500; white-space: nowrap;">
@@ -363,6 +373,110 @@
             </section>
 
         </main>
+    </div>
+
+    <!-- AUTH MODAL -->
+    <div id="auth-modal" class="modal-overlay" style="display: none;">
+        <div class="glass-card modal-content" style="max-width: 360px; width: 90%; padding: 24px; position: relative;">
+            <button class="close-modal-btn" onclick="closeAuthModal()" style="position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; line-height: 1;">&times;</button>
+            
+            <div class="auth-tabs" style="display: flex; border-bottom: var(--card-border); margin-bottom: 20px;">
+                <button id="tab-login-btn" class="auth-tab-btn active" onclick="switchAuthTab('login')" style="flex: 1; padding: 8px; background: none; border: none; color: var(--text-primary); font-weight: 700; font-family: inherit; font-size: 0.95rem; cursor: pointer; border-bottom: 2px solid var(--neon-blue);">Вход</button>
+                <button id="tab-register-btn" class="auth-tab-btn" onclick="switchAuthTab('register')" style="flex: 1; padding: 8px; background: none; border: none; color: var(--text-muted); font-weight: 600; font-family: inherit; font-size: 0.95rem; cursor: pointer; border-bottom: 2px solid transparent;">Регистрация</button>
+            </div>
+
+            <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="auth-email" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;" id="lbl-auth-email">Электронная почта</label>
+                        <input type="email" id="auth-email" required placeholder="name@example.com" style="width: 100%; padding: 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 8px; font-family: inherit; font-size: 0.85rem; outline: none;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="auth-password" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;" id="lbl-auth-password">Пароль</label>
+                        <input type="password" id="auth-password" required placeholder="••••••••" style="width: 100%; padding: 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 8px; font-family: inherit; font-size: 0.85rem; outline: none;">
+                    </div>
+                </div>
+                
+                <button type="submit" class="control-btn" id="auth-submit-btn" style="width: 100%; padding: 10px; font-weight: 700; font-size: 0.9rem; margin-top: 4px; cursor: pointer;">Войти</button>
+                <div id="auth-error-msg" style="color: var(--neon-rose); font-size: 0.78rem; text-align: center; margin-top: 10px; display: none;"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- INDICATOR SETTINGS MODAL -->
+    <div id="indicator-settings-modal" class="modal-overlay" style="display: none;">
+        <div class="glass-card modal-content" style="max-width: 480px; width: 95%; padding: 24px; position: relative;">
+            <button class="close-modal-btn" onclick="closeIndicatorSettingsModal()" style="position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; line-height: 1;">&times;</button>
+            
+            <h3 id="lbl-ind-settings-title" style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">⚙️ <span id="lbl-ind-settings-title-text">Настройка индикаторов</span></h3>
+            
+            <form id="indicator-settings-form" onsubmit="handleIndicatorSettingsSubmit(event)">
+                <div class="settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px;">
+                    <!-- RSI -->
+                    <div style="grid-column: span 2; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px;">
+                        <h4 style="font-size: 0.78rem; font-weight: 700; color: var(--neon-blue); text-transform: uppercase;">Relative Strength Index (RSI)</h4>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="cfg-rsi-length" style="font-size: 0.72rem; color: var(--text-muted);">Length (Период)</label>
+                        <input type="number" id="cfg-rsi-length" min="2" max="50" required style="padding: 6px 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; font-family: inherit; font-size: 0.8rem; outline: none;">
+                    </div>
+                    <div></div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="cfg-rsi-overbought" style="font-size: 0.72rem; color: var(--text-muted);">Overbought (Перекупленность)</label>
+                        <input type="number" id="cfg-rsi-overbought" min="50" max="95" required style="padding: 6px 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; font-family: inherit; font-size: 0.8rem; outline: none;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="cfg-rsi-oversold" style="font-size: 0.72rem; color: var(--text-muted);">Oversold (Перепроданность)</label>
+                        <input type="number" id="cfg-rsi-oversold" min="5" max="50" required style="padding: 6px 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; font-family: inherit; font-size: 0.8rem; outline: none;">
+                    </div>
+
+                    <!-- SMA -->
+                    <div style="grid-column: span 2; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; margin-top: 6px;">
+                        <h4 style="font-size: 0.78rem; font-weight: 700; color: var(--neon-blue); text-transform: uppercase;">Simple Moving Averages (SMA)</h4>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="cfg-sma-fast" style="font-size: 0.72rem; color: var(--text-muted);">SMA Fast (Быстрая)</label>
+                        <input type="number" id="cfg-sma-fast" min="5" max="100" required style="padding: 6px 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; font-family: inherit; font-size: 0.8rem; outline: none;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="cfg-sma-slow" style="font-size: 0.72rem; color: var(--text-muted);">SMA Slow (Медленная)</label>
+                        <input type="number" id="cfg-sma-slow" min="20" max="250" required style="padding: 6px 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; font-family: inherit; font-size: 0.8rem; outline: none;">
+                    </div>
+
+                    <!-- Bollinger Bands -->
+                    <div style="grid-column: span 2; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; margin-top: 6px;">
+                        <h4 style="font-size: 0.78rem; font-weight: 700; color: var(--neon-blue); text-transform: uppercase;">Bollinger Bands (BB)</h4>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="cfg-bb-length" style="font-size: 0.72rem; color: var(--text-muted);">BB Length (Период)</label>
+                        <input type="number" id="cfg-bb-length" min="5" max="100" required style="padding: 6px 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; font-family: inherit; font-size: 0.8rem; outline: none;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="cfg-bb-stddev" style="font-size: 0.72rem; color: var(--text-muted);">Standard Dev (Отклонение)</label>
+                        <input type="number" id="cfg-bb-stddev" step="0.1" min="0.5" max="5.0" required style="padding: 6px 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; font-family: inherit; font-size: 0.8rem; outline: none;">
+                    </div>
+
+                    <!-- MACD -->
+                    <div style="grid-column: span 2; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; margin-top: 6px;">
+                        <h4 style="font-size: 0.78rem; font-weight: 700; color: var(--neon-blue); text-transform: uppercase;">MACD</h4>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="cfg-macd-fast" style="font-size: 0.72rem; color: var(--text-muted);">Fast Period</label>
+                        <input type="number" id="cfg-macd-fast" min="3" max="50" required style="padding: 6px 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; font-family: inherit; font-size: 0.8rem; outline: none;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="cfg-macd-slow" style="font-size: 0.72rem; color: var(--text-muted);">Slow Period</label>
+                        <input type="number" id="cfg-macd-slow" min="10" max="100" required style="padding: 6px 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; font-family: inherit; font-size: 0.8rem; outline: none;">
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label for="cfg-macd-signal" style="font-size: 0.72rem; color: var(--text-muted);">Signal Period</label>
+                        <input type="number" id="cfg-macd-signal" min="2" max="30" required style="padding: 6px 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; font-family: inherit; font-size: 0.8rem; outline: none;">
+                    </div>
+                </div>
+                
+                <button type="submit" class="control-btn" id="cfg-submit-btn" style="width: 100%; padding: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer;">Применить настройки</button>
+            </form>
+        </div>
     </div>
 
     <!-- JS app script -->

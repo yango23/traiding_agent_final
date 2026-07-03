@@ -139,9 +139,17 @@ let lastRawSummary = "";
 // Auth Headers Vault helper
 function getAuthHeaders() {
     const headers = { "Content-Type": "application/json" };
+    
+    // User session token
+    const sessionToken = localStorage.getItem("session_token");
+    if (sessionToken) {
+        headers["Authorization"] = `Bearer ${sessionToken}`;
+    }
+    
+    // Gemini API key
     const customKey = sessionStorage.getItem("custom_api_key");
     if (customKey) {
-        headers["Authorization"] = `Bearer ${customKey}`;
+        headers["X-Gemini-API-Key"] = customKey;
     }
     return headers;
 }
@@ -827,7 +835,9 @@ function renderSummaryError() {
 
 async function loadStatsOnly(forceRefresh = false) {
     try {
-        const response = await fetch(`/api/market-data/${currentCoin}?lang=${currentLanguage}${forceRefresh ? '&force_refresh=true' : ''}`);
+        const response = await fetch(`/api/market-data/${currentCoin}?lang=${currentLanguage}${forceRefresh ? '&force_refresh=true' : ''}`, {
+            headers: getAuthHeaders()
+        });
         const data = await response.json();
         if (data.success) {
             updateStatsUI(data.market_data);
@@ -1072,8 +1082,38 @@ function renderNewsUI(newsList) {
 // Chat Management & Session Retention
 // -------------------------------------------------------------------------
 
-function initChatSession() {
-    // If no history exists for the coin, initialize it with a welcome message
+async function initChatSession() {
+    const sessionToken = localStorage.getItem("session_token");
+    if (sessionToken) {
+        try {
+            const resp = await fetch(`/api/user/chat-history/${currentCoin}`, {
+                headers: getAuthHeaders()
+            });
+            const data = await resp.json();
+            if (data.success && data.history) {
+                if (data.history.length === 0) {
+                    const coinLabel = coinSelector.options[coinSelector.selectedIndex].text;
+                    const welcomeMsg = LOCALIZATION[currentLanguage].welcomeMessage.replace("{coin}", coinLabel);
+                    chatHistories[currentCoin] = [{
+                        role: "model",
+                        content: welcomeMsg
+                    }];
+                } else {
+                    chatHistories[currentCoin] = data.history;
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load chat history from server", e);
+            fallbackToLocalHistory();
+        }
+    } else {
+        fallbackToLocalHistory();
+    }
+    renderChatMessages();
+    renderQuickChips();
+}
+
+function fallbackToLocalHistory() {
     if (!chatHistories[currentCoin]) {
         const coinLabel = coinSelector.options[coinSelector.selectedIndex].text;
         chatHistories[currentCoin] = [{
@@ -1082,8 +1122,6 @@ function initChatSession() {
         }];
         saveHistories();
     }
-    renderChatMessages();
-    renderQuickChips();
 }
 
 function renderChatMessages() {
@@ -1353,7 +1391,9 @@ async function sendMessage() {
     
     // 1. Add user message to history
     chatHistories[currentCoin].push({ role: "user", content: text });
-    saveHistories();
+    if (!localStorage.getItem("session_token")) {
+        saveHistories();
+    }
     renderChatMessages();
 
     // Disable input
@@ -1426,7 +1466,9 @@ async function sendMessage() {
         // Bug fix: don't save empty responses to history (e.g. if stream yields nothing)
         if (modelResponseText.trim()) {
             chatHistories[currentCoin].push({ role: "model", content: modelResponseText });
-            saveHistories();
+            if (!localStorage.getItem("session_token")) {
+                saveHistories();
+            }
             // Add TTS speak button using shared helper
             createAndAttachSpeakButton(modelResponseText, modelMsgEl);
         }
@@ -2094,8 +2136,10 @@ initTheme();
 applyCoinTheme(currentCoin);
 localizeUI();
 renderTradingViewWidget();
-initChatSession();
-loadAIContent();
+checkUserSession().then(() => {
+    initChatSession();
+    loadAIContent();
+});
 initResizeHandle();
 updateQuotaUI();
 loadQuizQuestion();
@@ -2354,9 +2398,24 @@ function saveApiKey() {
         
         // Reload content to use the new key
         loadAIContent();
+        
         // Clear current chat session and re-welcome user to get live interaction
-        chatHistories[currentCoin] = null;
-        initChatSession();
+        if (localStorage.getItem("session_token")) {
+            fetch(`/api/user/chat-history/clear/${currentCoin}`, {
+                method: "POST",
+                headers: getAuthHeaders()
+            }).then(() => {
+                chatHistories[currentCoin] = null;
+                initChatSession();
+            }).catch(e => {
+                console.error("Failed to clear chat history on server", e);
+                chatHistories[currentCoin] = null;
+                initChatSession();
+            });
+        } else {
+            chatHistories[currentCoin] = null;
+            initChatSession();
+        }
         
         // Hide status after 4 seconds
         setTimeout(() => {
@@ -2367,4 +2426,270 @@ function saveApiKey() {
         statusDiv.style.color = "var(--neon-rose)";
         statusDiv.style.display = "block";
     }
+}
+
+// -------------------------------------------------------------------------
+// User Authentication State & Modal Handlers
+// -------------------------------------------------------------------------
+let currentAuthTab = "login";
+
+function openAuthModal() {
+    const modal = document.getElementById("auth-modal");
+    const errorMsg = document.getElementById("auth-error-msg");
+    const emailInput = document.getElementById("auth-email");
+    const passwordInput = document.getElementById("auth-password");
+    
+    if (errorMsg) errorMsg.style.display = "none";
+    if (emailInput) emailInput.value = "";
+    if (passwordInput) passwordInput.value = "";
+    
+    switchAuthTab("login");
+    if (modal) modal.style.display = "flex";
+}
+
+function closeAuthModal() {
+    const modal = document.getElementById("auth-modal");
+    if (modal) modal.style.display = "none";
+}
+
+function switchAuthTab(tab) {
+    currentAuthTab = tab;
+    const tabLogin = document.getElementById("tab-login-btn");
+    const tabRegister = document.getElementById("tab-register-btn");
+    const submitBtn = document.getElementById("auth-submit-btn");
+    
+    if (tab === "login") {
+        if (tabLogin) {
+            tabLogin.classList.add("active");
+            tabLogin.style.color = "var(--text-primary)";
+            tabLogin.style.borderBottom = "2px solid var(--neon-blue)";
+        }
+        if (tabRegister) {
+            tabRegister.classList.remove("active");
+            tabRegister.style.color = "var(--text-muted)";
+            tabRegister.style.borderBottom = "2px solid transparent";
+        }
+        if (submitBtn) {
+            submitBtn.textContent = currentLanguage === "ru" ? "Войти" : "Login";
+        }
+    } else {
+        if (tabRegister) {
+            tabRegister.classList.add("active");
+            tabRegister.style.color = "var(--text-primary)";
+            tabRegister.style.borderBottom = "2px solid var(--neon-blue)";
+        }
+        if (tabLogin) {
+            tabLogin.classList.remove("active");
+            tabLogin.style.color = "var(--text-muted)";
+            tabLogin.style.borderBottom = "2px solid transparent";
+        }
+        if (submitBtn) {
+            submitBtn.textContent = currentLanguage === "ru" ? "Зарегистрироваться" : "Register";
+        }
+    }
+}
+
+async function handleAuthSubmit(event) {
+    event.preventDefault();
+    const email = document.getElementById("auth-email").value.trim();
+    const password = document.getElementById("auth-password").value;
+    const errorMsg = document.getElementById("auth-error-msg");
+    const submitBtn = document.getElementById("auth-submit-btn");
+    
+    if (errorMsg) errorMsg.style.display = "none";
+    if (submitBtn) submitBtn.disabled = true;
+    
+    const url = currentAuthTab === "login" ? "/api/auth/login" : "/api/auth/register";
+    try {
+        const resp = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await resp.json();
+        if (resp.ok && data.success) {
+            localStorage.setItem("session_token", data.token);
+            closeAuthModal();
+            await checkUserSession();
+            
+            // Reload page states & history
+            loadAIContent();
+            chatHistories[currentCoin] = null;
+            await initChatSession();
+        } else {
+            if (errorMsg) {
+                errorMsg.textContent = data.detail || (currentLanguage === "ru" ? "Ошибка авторизации" : "Authentication failed");
+                errorMsg.style.display = "block";
+            }
+        }
+    } catch (e) {
+        console.error("Auth submit error", e);
+        if (errorMsg) {
+            errorMsg.textContent = currentLanguage === "ru" ? "Ошибка подключения к серверу" : "Connection error";
+            errorMsg.style.display = "block";
+        }
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
+    }
+}
+
+async function logoutUser() {
+    try {
+        await fetch("/api/auth/logout", {
+            method: "POST",
+            headers: getAuthHeaders()
+        });
+    } catch (e) {
+        console.error("Logout request failed", e);
+    }
+    localStorage.removeItem("session_token");
+    checkUserSession();
+    
+    // Clear and reload
+    loadAIContent();
+    chatHistories[currentCoin] = null;
+    await initChatSession();
+}
+
+async function checkUserSession() {
+    const loginBtn = document.getElementById("auth-login-btn");
+    const profileSec = document.getElementById("user-profile-section");
+    const emailDisp = document.getElementById("user-email-display");
+    const sessionToken = localStorage.getItem("session_token");
+    
+    if (!sessionToken) {
+        if (loginBtn) loginBtn.style.display = "block";
+        if (profileSec) profileSec.style.display = "none";
+        return;
+    }
+    
+    try {
+        const resp = await fetch("/api/auth/me", {
+            headers: getAuthHeaders()
+        });
+        if (resp.ok) {
+            const data = await resp.json();
+            if (data.success) {
+                if (loginBtn) loginBtn.style.display = "none";
+                if (profileSec) profileSec.style.display = "flex";
+                if (emailDisp) emailDisp.textContent = data.email;
+                return;
+            }
+        }
+    } catch (e) {
+        console.error("Failed to validate user session", e);
+    }
+    
+    // Session is invalid/expired
+    localStorage.removeItem("session_token");
+    if (loginBtn) loginBtn.style.display = "block";
+    if (profileSec) profileSec.style.display = "none";
+}
+
+// Bind auth buttons click listeners
+const authLoginBtn = document.getElementById("auth-login-btn");
+const authLogoutBtn = document.getElementById("auth-logout-btn");
+if (authLoginBtn) authLoginBtn.onclick = openAuthModal;
+if (authLogoutBtn) authLogoutBtn.onclick = logoutUser;
+
+// -------------------------------------------------------------------------
+// Custom Indicator Settings Modal Handlers
+// -------------------------------------------------------------------------
+function openIndicatorSettingsModal() {
+    const modal = document.getElementById("indicator-settings-modal");
+    
+    // Load current configuration and populate form fields
+    loadIndicatorConfigIntoForm().then(() => {
+        if (modal) modal.style.display = "flex";
+    });
+}
+
+function closeIndicatorSettingsModal() {
+    const modal = document.getElementById("indicator-settings-modal");
+    if (modal) modal.style.display = "none";
+}
+
+async function loadIndicatorConfigIntoForm() {
+    let config = {
+        rsi_length: 14, rsi_overbought: 70, rsi_oversold: 30,
+        macd_fast: 12, macd_slow: 26, macd_signal: 9,
+        sma_fast: 50, sma_slow: 200, bb_length: 20, bb_stddev: 2.0
+    };
+    
+    const sessionToken = localStorage.getItem("session_token");
+    if (sessionToken) {
+        try {
+            const resp = await fetch("/api/user/indicators", {
+                headers: getAuthHeaders()
+            });
+            const data = await resp.json();
+            if (data.success && data.config) {
+                config = data.config;
+            }
+        } catch (e) {
+            console.error("Failed to load user indicator configs from server", e);
+        }
+    } else {
+        // Load from localStorage for guest
+        const saved = localStorage.getItem("guest_indicator_config");
+        if (saved) {
+            try {
+                config = JSON.parse(saved);
+            } catch (e) {
+                console.error("Failed to parse guest indicator configs", e);
+            }
+        }
+    }
+    
+    // Populate fields
+    document.getElementById("cfg-rsi-length").value = config.rsi_length || 14;
+    document.getElementById("cfg-rsi-overbought").value = config.rsi_overbought || 70;
+    document.getElementById("cfg-rsi-oversold").value = config.rsi_oversold || 30;
+    document.getElementById("cfg-sma-fast").value = config.sma_fast || 50;
+    document.getElementById("cfg-sma-slow").value = config.sma_slow || 200;
+    document.getElementById("cfg-bb-length").value = config.bb_length || 20;
+    document.getElementById("cfg-bb-stddev").value = config.bb_stddev || 2.0;
+    document.getElementById("cfg-macd-fast").value = config.macd_fast || 12;
+    document.getElementById("cfg-macd-slow").value = config.macd_slow || 26;
+    document.getElementById("cfg-macd-signal").value = config.macd_signal || 9;
+}
+
+async function handleIndicatorSettingsSubmit(event) {
+    event.preventDefault();
+    const config = {
+        rsi_length: parseInt(document.getElementById("cfg-rsi-length").value),
+        rsi_overbought: parseInt(document.getElementById("cfg-rsi-overbought").value),
+        rsi_oversold: parseInt(document.getElementById("cfg-rsi-oversold").value),
+        sma_fast: parseInt(document.getElementById("cfg-sma-fast").value),
+        sma_slow: parseInt(document.getElementById("cfg-sma-slow").value),
+        bb_length: parseInt(document.getElementById("cfg-bb-length").value),
+        bb_stddev: parseFloat(document.getElementById("cfg-bb-stddev").value),
+        macd_fast: parseInt(document.getElementById("cfg-macd-fast").value),
+        macd_slow: parseInt(document.getElementById("cfg-macd-slow").value),
+        macd_signal: parseInt(document.getElementById("cfg-macd-signal").value)
+    };
+    
+    const submitBtn = document.getElementById("cfg-submit-btn");
+    if (submitBtn) submitBtn.disabled = true;
+    
+    const sessionToken = localStorage.getItem("session_token");
+    if (sessionToken) {
+        try {
+            await fetch("/api/user/indicators", {
+                method: "POST",
+                headers: getAuthHeaders(),
+                body: JSON.stringify(config)
+            });
+        } catch (e) {
+            console.error("Failed to save custom indicator configs to server", e);
+        }
+    } else {
+        localStorage.setItem("guest_indicator_config", JSON.stringify(config));
+    }
+    
+    if (submitBtn) submitBtn.disabled = false;
+    closeIndicatorSettingsModal();
+    
+    // Reload dashboard content to recalculate indicators immediately
+    loadAIContent();
 }

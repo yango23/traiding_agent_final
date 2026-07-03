@@ -25,4 +25,5 @@ dist/
 build/
 *.log
 quota_tracker.json
+*.db
 

@@ -524,14 +524,24 @@ async def generate_coin_summary(
     coin_id: str, 
     lang: str = "ru", 
     force_refresh: bool = False, 
-    custom_api_key: str = None
+    custom_api_key: str = None,
+    config: dict = None
 ) -> str:
     """
     Generates a fresh, context-aware AI summary for the chosen coin.
     Uses a single highly-structured prompt to save quota and reduce latency.
     """
+    has_custom_config = False
+    if config:
+        defaults = {
+            "rsi_length": 14, "rsi_overbought": 70, "rsi_oversold": 30,
+            "macd_fast": 12, "macd_slow": 26, "macd_signal": 9,
+            "sma_fast": 50, "sma_slow": 200, "bb_length": 20, "bb_stddev": 2.0
+        }
+        has_custom_config = any(config.get(k) != defaults[k] for k in defaults if k in config)
+
     cache_key = get_summary_cache_key(coin_id, lang)
-    if not force_refresh and cache_key in summary_daily_cache:
+    if not has_custom_config and not force_refresh and cache_key in summary_daily_cache:
         print(f"Serving cached AI summary for {coin_id} ({lang})")
         return summary_daily_cache[cache_key]
 
@@ -543,7 +553,7 @@ async def generate_coin_summary(
         client = get_gemini_client(custom_api_key)
         coin_data = await fetch_coin_data(coin_id, force_refresh=force_refresh)
         news = await fetch_crypto_news(coin_id, lang, force_refresh=force_refresh)
-        indicators = await calculate_technical_indicators(coin_data["price"], coin_id, lang)
+        indicators = await calculate_technical_indicators(coin_data["price"], coin_id, lang, config)
         
         news_titles = "\n".join([f"- {item['title']} ({item['source']})" for item in news])
         
