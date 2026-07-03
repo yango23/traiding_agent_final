@@ -10,6 +10,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- TradingView widget script -->
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- CSS style -->
     <link rel="stylesheet" href="/static/style.css?v=2.0.0">
 </head>
@@ -430,6 +432,12 @@
                 
                 <button type="submit" class="control-btn" id="auth-submit-btn" style="width: 100%; padding: 10px; font-weight: 700; font-size: 0.9rem; margin-top: 4px; cursor: pointer;">Войти</button>
                 <div id="auth-error-msg" style="color: var(--neon-rose); font-size: 0.78rem; text-align: center; margin-top: 10px; display: none;"></div>
+                
+                <!-- Google Sign-In Button Container -->
+                <div id="google-auth-container" style="margin-top: 18px; display: flex; flex-direction: column; align-items: center; gap: 10px; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px;">
+                    <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;" id="lbl-google-or">или</div>
+                    <div id="g-signin-button" style="width: 100%; display: flex; justify-content: center;"></div>
+                </div>
             </form>
 
             <!-- Confirmation form -->

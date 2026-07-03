@@ -397,3 +397,29 @@ def test_api_keys_manager():
     )
     assert len(list_resp3.json()["keys"]) == 1
     assert list_resp3.json()["keys"][0]["id"] == key2_id
+
+def test_google_auth():
+    # 1. Fetch Google auth config
+    conf_resp = client.get("/api/auth/google/config")
+    assert conf_resp.status_code == 200
+    assert "client_id" in conf_resp.json()
+    
+    # 2. Authenticate using a mock Google token
+    auth_resp = client.post(
+        "/api/auth/google",
+        json={"credential": "mock_google_token_new_google_user@example.com"}
+    )
+    assert auth_resp.status_code == 200
+    data = auth_resp.json()
+    assert data["success"] is True
+    assert "token" in data
+    assert data["email"] == "new_google_user@example.com"
+    token = data["token"]
+    
+    # 3. Check access to /api/auth/me with the token
+    me_resp = client.get(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert me_resp.status_code == 200
+    assert me_resp.json()["email"] == "new_google_user@example.com"

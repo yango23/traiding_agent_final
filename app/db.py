@@ -568,3 +568,35 @@ def delete_user_api_key(user_id: int, key_id: int):
             
     conn.commit()
     conn.close()
+
+def login_or_register_google_user(email: str) -> str:
+    """Logs in or registers a Google user, returning a secure session token."""
+    email = email.strip().lower()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT id FROM users WHERE email = ?;", (email,))
+    user = cursor.fetchone()
+    
+    if user:
+        user_id = user["id"]
+        # Ensure Google users are marked confirmed
+        cursor.execute("UPDATE users SET is_confirmed = 1 WHERE id = ?;", (user_id,))
+    else:
+        cursor.execute(
+            "INSERT INTO users (email, password_hash, salt, is_confirmed) VALUES (?, '', '', 1);",
+            (email,)
+        )
+        user_id = cursor.lastrowid
+        
+    # Generate session token (valid for 30 days)
+    token = secrets.token_hex(32)
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat()
+    cursor.execute(
+        "INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?);",
+        (user_id, token, expires_at)
+    )
+    
+    conn.commit()
+    conn.close()
+    return token

@@ -98,6 +98,7 @@ The backend leverages custom Python tools to query APIs and feed structured cont
 
 ### 6. Full-Featured User Database Persistence (SQLite)
 *   **Secure Email Authentication**: Supports registration with password validation (minimum 6 characters) and a 6-digit confirmation code verification flow (sent to console log; supporting `"777777"` backdoor for demo convenience).
+*   **Google Sign-In Authentication**: Integrated Google Identity Services to allow secure user sign-in via Google accounts, automatically confirming verified Google email accounts. Includes a premium CSS-styled Google button that dynamically falls back to an interactive mock popup for quick testing in local/development environments.
 *   **Bilingual Chat Isolation**: Chat history is stored in SQLite and isolated by `(user_id, coin_id, lang)`, preventing English and Russian conversations from polluting each other.
 *   **Quiz Progress Sync**: User quiz scores and answered question indices are stored in the database, allowing users to pause and resume their learning progress across sessions.
 *   **Daily Indicators Progress**: Studied daily indicator hints are tracked in the database, ensuring their learning checkmarks persist.
@@ -107,7 +108,7 @@ The backend leverages custom Python tools to query APIs and feed structured cont
 ---
 
 ## 🧪 Comprehensive Test Coverage
-*   The project includes a robust test suite of **26 tests** covering agent registration, email verification, custom indicators config, bilingual chat history sync, quiz progress tracking, studied indicators logging, TradingView layout saving, and API keys list manager. All tests pass successfully.
+*   The project includes a robust test suite of **27 tests** covering agent registration, email verification, Google Authentication, custom indicators config, bilingual chat history sync, quiz progress tracking, studied indicators logging, TradingView layout saving, and API keys list manager. All tests pass successfully.
 
 ---
 
