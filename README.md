@@ -1,12 +1,12 @@
-# Crypto AI Advisor & Educational Dashboard
+# 🌐 Crypto AI Advisor & Educational Dashboard
 
 A premium web application designed for cryptocurrency beginners. It features a modern TradingView-integrated educational dashboard, real-time prices, indicators, fundamental news, and a highly secured AI agent built to teach trading concepts without financial risk.
 
 ---
 
-## 🚀 What has been Implemented (Key Project Features)
+## 🚀 Key Dashboard Features
 
-This application has been developed with advanced UI design (Glassmorphic Dark/Light aesthetics) and a secured conversational AI interface. Key implemented features include:
+This application has been developed with advanced UI design (Glassmorphic Dark/Light aesthetics) and a secured conversational AI interface.
 
 ### 1. Market Sentiment Dial Gauge (Trend Indicator)
 *   **Gauge Visuals**: A beautiful, realistic semi-circular dial gauge displaying market sentiment (from *Strong Sell* to *Strong Buy*) with custom SVG gradation scale ticks.
@@ -33,13 +33,13 @@ This application has been developed with advanced UI design (Glassmorphic Dark/L
 
 ---
 
-## 📈 Advanced Features (Newly Added)
+## 📈 Advanced Features
 
 To elevate this project into a robust educational tool, we implemented several advanced components:
 
 ### 1. Strategy Backtest Tab
 *   **Backtest Strategies**: Users can select one of three strategy models under the chart: **SMA Crossover** (SMA-12/50), **RSI Bound** (buying at <30, selling at >70), or **Bollinger Bands** (buying at lower band, selling at upper band).
-*   **Historical Simulation**: The POST `/api/backtest` endpoint simulates trades on daily klines over the past 250 days utilizing pandas. It computes **Net Profit %**, **Win Rate %**, **Total Trades**, and **Max Drawdown %**.
+*   **Historical Simulation**: The `POST /api/backtest` endpoint simulates trades on daily klines over the past 250 days utilizing pandas. It computes **Net Profit %**, **Win Rate %**, **Total Trades**, and **Max Drawdown %**.
 *   **Interactive Equity Chart**: Displays monthly balance progression as a custom, CSS-styled column chart. Hovering over each monthly bar shows a tooltip indicating the exact equity balance.
 
 ### 2. Candlestick Pattern Scanner
@@ -49,25 +49,20 @@ To elevate this project into a robust educational tool, we implemented several a
 ### 3. Educational TA Quiz Database (12 Questions)
 *   A dedicated **Technical Analysis Quiz** card located in the left sidebar (swapped positions with the API key vault for better visibility).
 *   Expanded pool of **12 comprehensive technical analysis questions** in both English and Russian, covering candle patterns, EMA vs SMA speed differences, H&S necklines, RSI divergences, and more.
-*   Provides automated grading, visual choices feedback (green for correct, red for incorrect), detailed educational explanations, and local storage level progression (*Novice*, *Advanced*, *Pro*).
+*   Provides automated grading, visual choices feedback (green for correct, red for incorrect), detailed educational explanations, and database-backed level progression (*Novice*, *Advanced*, *Pro*).
 *   **Click-to-Query Questions**: The quiz question text is clickable. Clicking it inserts the question into the chatbot and queries the AI agent, causing the advisor to explain the concepts in the chat.
 
-### 6. Dynamic Indicator of the Day Hint Chip
+### 4. Dynamic Indicator of the Day Hint Chip
 *   Replaced the static RSI/MACD setup chip with a dynamic **Indicator of the Day** prompt chip: `Изучить индикатор дня: {Name}` / `Study indicator of the day: {Name}`.
 *   Pulls from a curated database of **12 popular indicators** (RSI, MACD, Bollinger Bands, Stochastic, EMA, Ichimoku, Fibonacci, VWAP, ATR, ADX, Parabolic SAR, Supertrend).
 *   **Smart History Filtering**: Scans the active chat history (`chatHistories[currentCoin]`) to detect if an indicator has already been discussed in this session. If it has, the chip automatically cycles and recommends the next un-discussed indicator.
 *   **Reactive Update**: The chip list refreshes immediately when sending or receiving messages, keeping the suggested indicators relevant.
 
-### 4. Advanced Text-to-Speech (TTS) with CORS Proxy
+### 5. Advanced Text-to-Speech (TTS) with CORS Proxy
 *   **Google Translate Neural TTS**: Assistant messages feature an interactive `🔊 Прослушать` / `🔊 Listen` pill button positioned cleanly under the message body. It routes text to our server-side `/api/tts` proxy, retrieving high-quality neural voice recordings from Google Translate and bypassing CORS restrictions.
 *   **Sentence-based Queued Stream**: Automatically chunks text into lengths under 160 characters and plays segments sequentially using HTML5 `Audio()` players, ensuring a smooth, uninterrupted reading flow.
 *   **Phonetic Russian Localization**: Financial terms and English tickers (like *RSI*, *MACD*, *SMA*, *Death Cross*, *oversold*, *BTC*, *ETH*) are programmatically translated into Russian phonetic sounds (e.g. *«эр эс и»*, *«мак ди»*, *«скользящая средняя»*, *«биткоин»*, *«перепроданность»*) before speech synthesis, eliminating robotic accents.
 *   **Browser-Native Fallback**: Keeps a native `window.speechSynthesis` queue fallback if the server proxy is offline or blocked by browser autoplay constraints.
-
-### 5. Session-based API Key Vault & Privacy Tooltip
-*   **API Key Help Tooltip**: Added a tooltip question mark `?` next to the *Gemini API Key* header, explaining that users can enter their own API key to bypass daily quota limitations and exit demo mode. It explicitly details that the key is stored solely in browser `sessionStorage` (highly private; never stored on the server or used by the author).
-*   **Dynamic Visual Status**: The input placeholder dynamically updates to `•••••••• (Active)` / `•••••••• (Активен)` when a key is active in the session.
-*   **Local Multi-user Isolation**: Keys are passed per-request using the `Authorization: Bearer <key>` header, keeping user sessions isolated.
 
 ---
 
@@ -78,7 +73,7 @@ This project strictly adheres to AI security and safety concepts covered in the 
 ### 1. Safety and Guardrails (Prompt Shield & Domain Confinement)
 *   **Prompt Shield (Injection Protection)**: A robust validator node intercepts all messages, checking for prompt overrides, jailbreaks, and dangerous system commands (e.g., `ignore previous rules`, `sudo`, `rm -rf`). Malicious requests are blocked at the FastAPI gateway.
 *   **Domain Confinement**: The system instructions restrict the model to discussing the actively selected coin (e.g., Bitcoin in a BTC chat). If the user asks about other coins, the agent refuses and requests them to use the left dropdown selector.
-*   **Session Isolation**: Chat histories are stored and cached independently for each coin in `LocalStorage`. This prevents history pollution and keeps the LLM aligned with the active coin's context.
+*   **Session Isolation**: Chat histories are stored and cached independently for each coin in the SQLite database or `LocalStorage`. This prevents history pollution and keeps the LLM aligned with the active coin's context.
 *   **Financial Guardrails**: The system instructions explicitly forbid the AI from providing direct financial, buying, or selling signals. The agent acts exclusively as an educational mentor.
 
 ### 2. Tool Integration (RAG)
@@ -94,9 +89,7 @@ The backend leverages custom Python tools to query APIs and feed structured cont
 *   **Git Secret Hook**: Integrates a local Git `pre-commit` hook that runs `git_secret_scanner.py`. The scanner blocks any commit containing Google API Studio keys, GCP Project IDs, or other private identifiers.
 *   **Exclusions in Hooks**: Staged hooks explicitly ignore scanning the `tests/` directory to allow hardcoded mock GCP Project IDs and API keys inside unit tests.
 
----
-
-### 6. Full-Featured User Database Persistence (SQLite)
+### 5. Full-Featured User Database Persistence (SQLite)
 *   **Secure Email Authentication**: Supports registration with password validation (minimum 6 characters) and a 6-digit confirmation code verification flow (sent to console log; supporting `"777777"` backdoor for demo convenience).
 *   **Google Sign-In Authentication**: Integrated Google Identity Services to allow secure user sign-in via Google accounts, automatically confirming verified Google email accounts. Includes a premium CSS-styled Google button that dynamically falls back to an interactive mock popup for quick testing in local/development environments.
 *   **Bilingual Chat Isolation**: Chat history is stored in SQLite and isolated by `(user_id, coin_id, lang)`, preventing English and Russian conversations from polluting each other.
@@ -120,6 +113,7 @@ Configure a `.env` file in the root folder of the project (this file is ignored 
 GEMINI_API_KEY=YOUR_GEMINI_API_KEY
 FORCE_DEMO_MODE=True
 GOOGLE_GENAI_USE_VERTEXAI=False
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 ```
 
 ### 2. Startup
