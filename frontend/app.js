@@ -1089,7 +1089,7 @@ async function initChatSession() {
     const sessionToken = localStorage.getItem("session_token");
     if (sessionToken) {
         try {
-            const resp = await fetch(`/api/user/chat-history/${currentCoin}`, {
+            const resp = await fetch(`/api/user/chat-history/${currentCoin}?lang=${currentLanguage}`, {
                 headers: getAuthHeaders()
             });
             const data = await resp.json();

@@ -149,7 +149,7 @@ def test_user_chat_history_sync(mock_chat):
     async def mock_generator(*args, **kwargs):
         yield "AI reply chunk 1"
         yield " AI reply chunk 2"
-    mock_chat.return_value = mock_generator()
+    mock_chat.side_effect = mock_generator
 
     # Register & Confirm
     client.post(
@@ -162,7 +162,7 @@ def test_user_chat_history_sync(mock_chat):
     )
     token = conf.json()["token"]
 
-    # Send Chat Message
+    # Send English Chat Message
     chat_resp = client.post(
         "/api/chat",
         json={
@@ -179,35 +179,69 @@ def test_user_chat_history_sync(mock_chat):
     lines = [line for line in chat_resp.iter_lines() if line]
     assert len(lines) >= 3
 
-    # Check chat history endpoint
-    hist_resp = client.get(
-        "/api/user/chat-history/bitcoin",
+    # Check English chat history endpoint
+    hist_resp_en = client.get(
+        "/api/user/chat-history/bitcoin?lang=en",
         headers={"Authorization": f"Bearer {token}"}
     )
-    assert hist_resp.status_code == 200
-    hist_data = hist_resp.json()
-    assert hist_data["success"] is True
-    
-    # We expect 2 messages: user's query and model's reply
-    assert len(hist_data["history"]) == 2
-    assert hist_data["history"][0]["role"] == "user"
-    assert hist_data["history"][0]["content"] == "Hello AI"
-    assert hist_data["history"][1]["role"] == "model"
-    assert hist_data["history"][1]["content"] == "AI reply chunk 1 AI reply chunk 2"
+    assert hist_resp_en.status_code == 200
+    hist_data_en = hist_resp_en.json()
+    assert hist_data_en["success"] is True
+    assert len(hist_data_en["history"]) == 2
+    assert hist_data_en["history"][0]["role"] == "user"
+    assert hist_data_en["history"][0]["content"] == "Hello AI"
 
-    # Clear chat history
+    # Check Russian chat history endpoint (should be empty for Russian)
+    hist_resp_ru = client.get(
+        "/api/user/chat-history/bitcoin?lang=ru",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert len(hist_resp_ru.json()["history"]) == 0
+
+    # Send Russian Chat Message
+    chat_resp_ru = client.post(
+        "/api/chat",
+        json={
+            "query": "Привет ИИ",
+            "history": [],
+            "coin_id": "bitcoin",
+            "lang": "ru"
+        },
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert chat_resp_ru.status_code == 200
+    lines_ru = [line for line in chat_resp_ru.iter_lines() if line]
+    assert len(lines_ru) >= 3
+
+    # Check Russian history now (should have 2 messages)
+    hist_resp_ru2 = client.get(
+        "/api/user/chat-history/bitcoin?lang=ru",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    hist_data_ru = hist_resp_ru2.json()
+    assert len(hist_data_ru["history"]) == 2
+    assert hist_data_ru["history"][0]["content"] == "Привет ИИ"
+
+    # Clear English chat history
     clear_resp = client.post(
-        "/api/user/chat-history/clear/bitcoin",
+        "/api/user/chat-history/clear/bitcoin?lang=en",
         headers={"Authorization": f"Bearer {token}"}
     )
     assert clear_resp.status_code == 200
 
-    # Retrieve again, should be empty
-    hist_after = client.get(
-        "/api/user/chat-history/bitcoin",
+    # Retrieve English again, should be empty
+    hist_after_en = client.get(
+        "/api/user/chat-history/bitcoin?lang=en",
         headers={"Authorization": f"Bearer {token}"}
     )
-    assert len(hist_after.json()["history"]) == 0
+    assert len(hist_after_en.json()["history"]) == 0
+
+    # Russian history should still be preserved
+    hist_after_ru = client.get(
+        "/api/user/chat-history/bitcoin?lang=ru",
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert len(hist_after_ru.json()["history"]) == 2
 
 def test_quiz_progress_sync():
     # Register & Confirm
