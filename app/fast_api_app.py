@@ -196,7 +196,8 @@ async def get_ai_summary(request: SummaryRequest, authorization: str = Header(No
             custom_api_key=custom_key,
             config=config
         )
-        return {"success": True, "summary": summary_text, "simulated": quota_tracker["quota_exhausted"]}
+        is_simulated = False if custom_key else quota_tracker["quota_exhausted"]
+        return {"success": True, "summary": summary_text, "simulated": is_simulated}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate summary: {str(e)}")
 

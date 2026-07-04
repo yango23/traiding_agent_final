@@ -501,7 +501,7 @@ def get_user_api_keys(user_id: int) -> list[dict]:
     return [{"id": r["id"], "api_key": r["key_value"], "label": r["label"], "is_active": r["is_active"]} for r in rows]
 
 def add_user_api_key(user_id: int, key_value: str) -> dict:
-    """Adds a new API key to the database, auto-creating a descriptive label."""
+    """Adds a new API key to the database, auto-creating a descriptive label, and makes it active."""
     key_value = key_value.strip()
     if len(key_value) > 8:
         label = f"API Key (...{key_value[-6:]})"
@@ -511,25 +511,26 @@ def add_user_api_key(user_id: int, key_value: str) -> dict:
     conn = get_db_connection()
     cursor = conn.cursor()
     # Check if key already exists for user
-    cursor.execute("SELECT id, label, is_active FROM api_keys WHERE user_id = ? AND key_value = ?;", (user_id, key_value))
+    cursor.execute("SELECT id, label FROM api_keys WHERE user_id = ? AND key_value = ?;", (user_id, key_value))
     existing = cursor.fetchone()
     if existing:
+        cursor.execute("UPDATE api_keys SET is_active = 0 WHERE user_id = ?;", (user_id,))
+        cursor.execute("UPDATE api_keys SET is_active = 1 WHERE id = ?;", (existing["id"],))
+        conn.commit()
         conn.close()
-        return {"id": existing["id"], "api_key": key_value, "label": existing["label"], "is_active": existing["is_active"]}
+        return {"id": existing["id"], "api_key": key_value, "label": existing["label"], "is_active": 1}
         
-    # If this is the first key, make it active
-    cursor.execute("SELECT COUNT(*) FROM api_keys WHERE user_id = ?;", (user_id,))
-    cnt = cursor.fetchone()[0]
-    is_active = 1 if cnt == 0 else 0
+    # Deactivate all other keys
+    cursor.execute("UPDATE api_keys SET is_active = 0 WHERE user_id = ?;", (user_id,))
     
     cursor.execute(
-        "INSERT INTO api_keys (user_id, key_value, label, is_active) VALUES (?, ?, ?, ?);",
-        (user_id, key_value, label, is_active)
+        "INSERT INTO api_keys (user_id, key_value, label, is_active) VALUES (?, ?, ?, 1);",
+        (user_id, key_value, label)
     )
     new_id = cursor.lastrowid
     conn.commit()
     conn.close()
-    return {"id": new_id, "api_key": key_value, "label": label, "is_active": is_active}
+    return {"id": new_id, "api_key": key_value, "label": label, "is_active": 1}
 
 def activate_user_api_key(user_id: int, key_id: int):
     """Activates the specified API key and deactivates all others for the user."""

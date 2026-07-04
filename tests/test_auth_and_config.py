@@ -378,7 +378,7 @@ def test_api_keys_manager():
     key1_id = add_resp1.json()["key"]["id"]
     assert add_resp1.json()["key"]["is_active"] == 1 # First key should be active by default
 
-    # 2. Add key 2
+    # 2. Add key 2 (should become active by default and deactivate key 1)
     add_resp2 = client.post(
         "/api/user/api-keys",
         json={"api_key": "key_content_two_456"},
@@ -386,7 +386,7 @@ def test_api_keys_manager():
     )
     assert add_resp2.status_code == 200
     key2_id = add_resp2.json()["key"]["id"]
-    assert add_resp2.json()["key"]["is_active"] == 0
+    assert add_resp2.json()["key"]["is_active"] == 1
 
     # 3. List keys
     list_resp = client.get(
@@ -397,25 +397,25 @@ def test_api_keys_manager():
     keys = list_resp.json()["keys"]
     assert len(keys) == 2
     assert keys[0]["api_key"] == "key_content_one_123"
-    assert keys[0]["is_active"] == 1
+    assert keys[0]["is_active"] == 0
     assert keys[1]["api_key"] == "key_content_two_456"
-    assert keys[1]["is_active"] == 0
+    assert keys[1]["is_active"] == 1
 
-    # 4. Activate key 2
+    # 4. Activate key 1 back
     act_resp = client.post(
-        f"/api/user/api-keys/activate/{key2_id}",
+        f"/api/user/api-keys/activate/{key1_id}",
         headers={"Authorization": f"Bearer {token}"}
     )
     assert act_resp.status_code == 200
 
-    # 5. List keys again, check key 2 is active and key 1 is inactive
+    # 5. List keys again, check key 1 is active and key 2 is inactive
     list_resp2 = client.get(
         "/api/user/api-keys",
         headers={"Authorization": f"Bearer {token}"}
     )
     keys2 = list_resp2.json()["keys"]
-    assert keys2[0]["is_active"] == 0
-    assert keys2[1]["is_active"] == 1
+    assert keys2[0]["is_active"] == 1
+    assert keys2[1]["is_active"] == 0
 
     # 6. Delete key 1
     del_resp = client.delete(

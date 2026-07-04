@@ -978,7 +978,9 @@ async function updateQuotaUI() {
         const limit = q.free_tier_limit || 20;
         const sUsed = q.summary_calls || 0;
         const cUsed = q.chat_calls    || 0;
-        const exhausted = q.quota_exhausted || false;
+        
+        const customKeyActive = !!sessionStorage.getItem("custom_api_key");
+        const exhausted = customKeyActive ? false : (q.quota_exhausted || false);
 
         // --- counts ---
         const sEl = document.getElementById("quota-s");
@@ -1003,9 +1005,22 @@ async function updateQuotaUI() {
         const badge = document.getElementById("quota-exhausted-badge");
         const badgeText = document.getElementById("quota-exhausted-text");
         if (badge) {
-            badge.style.display = exhausted ? "inline" : "none";
-            if (badgeText) {
-                badgeText.textContent = currentLanguage === "ru" ? "Квота исчерпана" : "Quota exhausted";
+            if (customKeyActive) {
+                badge.style.display = "inline";
+                badge.style.background = "rgba(16, 185, 129, 0.15)";
+                badge.style.borderColor = "rgba(16, 185, 129, 0.3)";
+                badge.style.color = "var(--neon-green)";
+                if (badgeText) {
+                    badgeText.textContent = currentLanguage === "ru" ? "Свой API Ключ" : "Custom API Key";
+                }
+            } else {
+                badge.style.display = exhausted ? "inline" : "none";
+                badge.style.background = ""; // Reset inline override
+                badge.style.borderColor = "";
+                badge.style.color = "";
+                if (badgeText) {
+                    badgeText.textContent = currentLanguage === "ru" ? "Квота исчерпана" : "Quota exhausted";
+                }
             }
         }
 
