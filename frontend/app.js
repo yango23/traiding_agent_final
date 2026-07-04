@@ -1627,6 +1627,53 @@ function formatMarkdown(text) {
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
+
+    // 1.5 Join consecutive blockquote lines starting with &gt;
+    let lines = formatted.split('\n');
+    let insideBlockquote = false;
+    let bqType = null; // 'note', 'warning', 'caution', 'tip', or 'normal'
+    let bqLines = [];
+    let newLines = [];
+    
+    for (let line of lines) {
+        let trimmed = line.trim();
+        if (trimmed.startsWith('&gt;')) {
+            let content = trimmed.substring(4).trim();
+            if (content.startsWith('[!NOTE]')) {
+                bqType = 'note';
+                content = content.replace('[!NOTE]', '').trim();
+            } else if (content.startsWith('[!WARNING]')) {
+                bqType = 'warning';
+                content = content.replace('[!WARNING]', '').trim();
+            } else if (content.startsWith('[!CAUTION]')) {
+                bqType = 'caution';
+                content = content.replace('[!CAUTION]', '').trim();
+            } else if (content.startsWith('[!TIP]')) {
+                bqType = 'tip';
+                content = content.replace('[!TIP]', '').trim();
+            } else if (!insideBlockquote) {
+                bqType = 'normal';
+            }
+            bqLines.push(content);
+            insideBlockquote = true;
+        } else {
+            if (insideBlockquote) {
+                let fullContent = bqLines.join(' ');
+                let wrapperClass = bqType === 'normal' ? '' : ` class="callout-${bqType}"`;
+                newLines.push(`<blockquote${wrapperClass}>${fullContent}</blockquote>`);
+                bqLines = [];
+                insideBlockquote = false;
+                bqType = null;
+            }
+            newLines.push(line);
+        }
+    }
+    if (insideBlockquote) {
+        let fullContent = bqLines.join(' ');
+        let wrapperClass = bqType === 'normal' ? '' : ` class="callout-${bqType}"`;
+        newLines.push(`<blockquote${wrapperClass}>${fullContent}</blockquote>`);
+    }
+    formatted = newLines.join('\n');
         
     // 2. Parse green/red highlights using curly braces or BBCode tags BEFORE preprocessing terms
     formatted = formatted
@@ -1653,7 +1700,7 @@ function formatMarkdown(text) {
     });
 
     // 6. Convert markdown list items (- or *) into proper HTML lists
-    let lines = formatted.split('\n');
+    lines = formatted.split('\n');
     let inList = false;
     for (let i = 0; i < lines.length; i++) {
         let line = lines[i].trim();
@@ -1683,7 +1730,7 @@ function formatMarkdown(text) {
     for (let block of blocks) {
         block = block.trim();
         if (!block) continue;
-        if (block.startsWith('<ul') || block.startsWith('<div class="summary-section-header"')) {
+        if (block.startsWith('<ul') || block.startsWith('<div class="summary-section-header"') || block.startsWith('<blockquote')) {
             processedBlocks.push(block);
         } else {
             block = block.replace(/\n/g, '<br>');
@@ -1777,10 +1824,15 @@ function setIndicatorStatusColor(elementId, status) {
     
     if (isRose) {
         el.style.color = "var(--neon-rose)";
+        el.classList.add("text-neon-red");
+        el.classList.remove("text-neon-green");
     } else if (isGreen) {
         el.style.color = "var(--neon-green)";
+        el.classList.add("text-neon-green");
+        el.classList.remove("text-neon-red");
     } else {
         el.style.color = "var(--text-primary)";
+        el.classList.remove("text-neon-red", "text-neon-green");
     }
 }
 

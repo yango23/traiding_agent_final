@@ -28,7 +28,7 @@
     --arrow-hover: rgba(255, 255, 255, 0.45);
     --arrow-active: rgba(255, 255, 255, 0.65);
     --input-bg: rgba(6, 9, 16, 0.8);
-    --header-bg: rgba(5, 7, 12, 0.85);
+    --header-bg: rgba(5, 7, 12, 0.25);
     --msg-user-bg: rgba(var(--accent-rgb), 0.15);
     --msg-model-bg: rgba(16, 23, 38, 0.6);
 }
@@ -60,7 +60,7 @@ body.light-theme {
     --arrow-hover: rgba(15, 23, 42, 0.45);
     --arrow-active: rgba(15, 23, 42, 0.65);
     --input-bg: rgba(255, 255, 255, 0.9);
-    --header-bg: rgba(255, 255, 255, 0.85);
+    --header-bg: rgba(255, 255, 255, 0.25);
     --msg-user-bg: rgba(var(--accent-rgb), 0.08);
     --msg-model-bg: rgba(241, 245, 249, 0.8);
 }
@@ -85,13 +85,13 @@ body {
 body::before {
     content: "";
     position: absolute;
-    top: 0;
+    top: -42px;
     left: 0;
     right: 0;
-    height: 560px;
+    height: 602px;
     background-image: url('/static/logo_detailed.jpg');
     background-size: cover;
-    background-position: center -42px;
+    background-position: center top;
     background-repeat: no-repeat;
     z-index: -1;
     pointer-events: none;
@@ -1392,4 +1392,72 @@ body.light-theme #refresh-stats-btn:hover {
 .custom-notification.rose {
     border-color: var(--neon-rose);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), var(--neon-rose-glow);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(var(--accent-rgb), 0.15);
+    border-radius: 3px;
+    transition: background 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(var(--accent-rgb), 0.4);
+}
+
+/* Markdown Alert Callouts (GitHub Notations) */
+.markdown-body blockquote {
+    margin: 12px 0;
+    padding: 10px 14px;
+    border-left: 4px solid var(--accent-color);
+    background: rgba(var(--accent-rgb), 0.05);
+    border-radius: 0 8px 8px 0;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: var(--text-secondary);
+}
+
+.markdown-body blockquote p {
+    margin: 0;
+}
+
+/* Callout variations */
+.markdown-body blockquote.callout-note {
+    border-left-color: #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
+}
+.markdown-body blockquote.callout-warning {
+    border-left-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.05);
+}
+.markdown-body blockquote.callout-caution {
+    border-left-color: #ef4444;
+    background: rgba(239, 68, 68, 0.05);
+}
+.markdown-body blockquote.callout-tip {
+    border-left-color: #10b981;
+    background: rgba(16, 185, 129, 0.05);
+}
+
+/* Sentiment Gauge animated needle and glow effects */
+.gauge-container svg path {
+    transition: stroke 0.5s ease;
+}
+.needle {
+    transform-origin: 50% 50%;
+    transition: transform 1.2s cubic-bezier(0.25, 1, 0.5, 1);
+    filter: drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.5));
+}
+
+.text-neon-green {
+    color: var(--neon-green) !important;
+}
+.text-neon-red {
+    color: var(--neon-rose) !important;
 }
