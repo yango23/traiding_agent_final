@@ -648,6 +648,8 @@ async def generate_coin_summary(
             quota_tracker["quota_exhausted"] = True
             save_quota(quota_tracker)
         print(f"API Error in generate_coin_summary, falling back to simulated: {e}")
+        if custom_api_key:
+            raise e
         return get_simulated_summary(coin_id, lang)
 
 async def chat_with_agent(
@@ -791,6 +793,8 @@ async def chat_with_agent(
             yield warning_msg
     except Exception as e:
         print(f"API Error in chat_with_agent, falling back to simulated: {e}")
+        if custom_api_key:
+            raise e
         if is_quota_error(e) and not custom_api_key:
             quota_tracker["quota_exhausted"] = True
             save_quota(quota_tracker)

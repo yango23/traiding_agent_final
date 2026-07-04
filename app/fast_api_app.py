@@ -199,6 +199,26 @@ async def get_ai_summary(request: SummaryRequest, authorization: str = Header(No
         is_simulated = False if custom_key else quota_tracker["quota_exhausted"]
         return {"success": True, "summary": summary_text, "simulated": is_simulated}
     except Exception as e:
+        if custom_key:
+            print(f"User custom key summary failed: {e}. Falling back to simulated summary.")
+            try:
+                sim_text = await generate_coin_summary(
+                    request.coin_id,
+                    request.lang,
+                    request.force_refresh,
+                    custom_api_key=None,
+                    config=config
+                )
+                error_notice = (
+                    f"\n\n> [!WARNING]\n> **Ошибка личного API-ключа:** {str(e)}. "
+                    "Использован смоделированный анализ."
+                    if request.lang == "ru" else
+                    f"\n\n> [!WARNING]\n> **Custom API Key Error:** {str(e)}. "
+                    "Fell back to simulated analysis."
+                )
+                return {"success": True, "summary": sim_text + error_notice, "simulated": True}
+            except Exception as inner_e:
+                raise HTTPException(status_code=500, detail=f"Failed to generate simulated summary: {str(inner_e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate summary: {str(e)}")
 
 @app.get("/api/quota-status")
@@ -303,20 +323,51 @@ async def chat_endpoint(request: ChatRequest, authorization: str = Header(None),
                 custom_api_key=custom_key
             ):
                 assistant_reply.append(chunk)
-                # Send chunks as JSON
                 yield f"data: {json.dumps({'text': chunk})}\n\n"
-            # Signal stream completion
             yield "data: [DONE]\n\n"
             
-            # Save assistant reply to SQLite
             if user_id:
                 reply_text = "".join(assistant_reply)
                 if reply_text.strip():
                     save_chat_message(user_id, request.coin_id, "model", reply_text, request.lang)
         except Exception as e:
-            err_msg = f"Error generating response: {str(e)}"
-            yield f"data: {json.dumps({'error': err_msg})}\n\n"
-            yield "data: [DONE]\n\n"
+            if custom_key:
+                print(f"User custom key chat failed: {e}. Falling back to simulated response.")
+                try:
+                    # Stream simulated response
+                    async for chunk in chat_with_agent(
+                        query=request.query,
+                        history=history,
+                        coin_id=request.coin_id,
+                        lang=request.lang,
+                        custom_api_key=None
+                    ):
+                        assistant_reply.append(chunk)
+                        yield f"data: {json.dumps({'text': chunk})}\n\n"
+                    
+                    error_notice = (
+                        f"\n\n> [!WARNING]\n> **Ошибка личного API-ключа в чате:** {str(e)}. "
+                        "Использован смоделированный ответ."
+                        if request.lang == "ru" else
+                        f"\n\n> [!WARNING]\n> **Custom API Key Error in chat:** {str(e)}. "
+                        "Fell back to simulated response."
+                    )
+                    assistant_reply.append(error_notice)
+                    yield f"data: {json.dumps({'text': error_notice})}\n\n"
+                    yield "data: [DONE]\n\n"
+                    
+                    if user_id:
+                        reply_text = "".join(assistant_reply)
+                        if reply_text.strip():
+                            save_chat_message(user_id, request.coin_id, "model", reply_text, request.lang)
+                except Exception as inner_e:
+                    err_msg = f"Error generating simulated response: {str(inner_e)}"
+                    yield f"data: {json.dumps({'error': err_msg})}\n\n"
+                    yield "data: [DONE]\n\n"
+            else:
+                err_msg = f"Error generating response: {str(e)}"
+                yield f"data: {json.dumps({'error': err_msg})}\n\n"
+                yield "data: [DONE]\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
