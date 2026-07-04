@@ -138,8 +138,10 @@ body {
     gap: 12px;
 }
 
-.logo-icon {
-    font-size: 26px;
+.logo-img:hover {
+    transform: scale(1.06);
+    box-shadow: 0 0 15px rgba(0, 168, 255, 0.55) !important;
+    border-color: rgba(0, 168, 255, 0.4) !important;
 }
 
 .logo-text h1 {
