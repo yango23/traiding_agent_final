@@ -12,6 +12,8 @@
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- CSS style -->
     <link rel="stylesheet" href="/static/style.css?v=2.5.0">
 </head>
@@ -30,9 +32,18 @@
                 </a>
             </div>
             <div class="header-controls">
+                <!-- Alerts Bell -->
+                <div id="alerts-bell-container" style="display: none; align-items: center; justify-content: center; position: relative; margin-right: 6px;">
+                    <button id="alerts-bell-btn" class="control-btn" style="position: relative; background: var(--glass-card-bg); border: var(--card-border); border-radius: 8px; font-size: 1.1rem; cursor: pointer; padding: 6px 10px;" title="Оповещения / Price Alerts">
+                        🔔
+                        <span id="alerts-count-badge" style="display: none; position: absolute; top: -6px; right: -6px; background: var(--neon-rose); color: white; border-radius: 50%; font-size: 0.65rem; width: 16px; height: 16px; align-items: center; justify-content: center; font-weight: 700; box-shadow: var(--neon-rose-glow);">0</span>
+                    </button>
+                </div>
                 <div id="auth-section" class="auth-header-section" style="display: flex; align-items: center; gap: 8px; margin-right: 6px;">
                     <button id="auth-login-btn" class="control-btn login-btn" style="font-weight: 700; padding: 6px 14px; font-size: 0.8rem; background: var(--glass-card-bg); border: var(--card-border); border-radius: 8px; cursor: pointer;">Войти</button>
                     <div id="user-profile-section" style="display: none; align-items: center; gap: 8px;">
+                        <!-- Badges Shelf -->
+                        <div id="user-badges-shelf" style="display: flex; gap: 4px; align-items: center; margin-right: 4px;"></div>
                         <span id="user-email-display" style="font-size: 0.8rem; color: var(--text-muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;"></span>
                         <button id="auth-logout-btn" class="control-btn logout-btn" style="font-weight: 700; padding: 6px 12px; font-size: 0.8rem; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 8px; color: var(--neon-rose); cursor: pointer;">Выйти</button>
                     </div>
@@ -263,6 +274,7 @@
                             <button class="tab-btn active" id="tab-summary-btn" onclick="switchTab('summary')">📝 AI Summary</button>
                             <button class="tab-btn" id="tab-news-btn" onclick="switchTab('news')">📰 News</button>
                             <button class="tab-btn" id="tab-backtester-btn" onclick="switchTab('backtester')">📈 Backtester</button>
+                            <button class="tab-btn" id="tab-pine-btn" onclick="switchTab('pine')">🛠️ Pine Script</button>
                         </div>
                         <div style="display: flex; gap: 6px; align-items: center;">
                             <button class="control-btn" id="refresh-data-btn" onclick="refreshDashboardData()" style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; padding: 6px 12px; height: fit-content; border: 1px solid var(--card-border); background: var(--input-bg); border-radius: 8px; cursor: pointer; color: var(--text-primary); transition: all 0.2s ease;">
@@ -334,11 +346,44 @@
                                     </div>
                                 </div>
                                 <h5 style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px;" id="lbl-bt-curve">Equity Growth Curve</h5>
-                                <div id="backtest-chart" class="backtest-chart-container" style="display: flex; align-items: flex-end; justify-content: space-between; height: 100px; padding: 10px 4px; border-bottom: 1px dashed var(--card-border); gap: 4px; margin-bottom: 6px;">
-                                    <!-- Equity bars injected here -->
+                                <div style="width: 100%; height: 130px; margin-top: 10px; margin-bottom: 10px;">
+                                    <canvas id="backtest-equity-canvas"></canvas>
                                 </div>
-                                <div id="backtest-chart-labels" style="display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); padding: 0 4px;">
-                                    <!-- Date labels -->
+                                <div id="backtest-chart" style="display: none;"></div>
+                                <div id="backtest-chart-labels" style="display: none;"></div>
+                            </div>
+                        </div>
+
+                        <!-- PINE SCRIPT GENERATOR TAB -->
+                        <div class="tab-content" id="tab-pine-content">
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <div>
+                                    <label for="pine-prompt-input" style="display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px;" id="lbl-pine-prompt">Что должен делать скрипт?</label>
+                                    <textarea id="pine-prompt-input" placeholder="Например: Пересечение скользящих средних EMA 9 и EMA 21 с сигналами на покупку/продажу..." style="width: 100%; height: 60px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 8px; padding: 8px; font-family: inherit; font-size: 0.8rem; outline: none; resize: none;"></textarea>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div class="custom-select-wrapper" style="width: 200px;">
+                                        <select id="pine-template-selector" onchange="applyPineTemplate(this.value)">
+                                            <option value="" disabled selected id="lbl-pine-select-tpl">Выбрать готовый шаблон...</option>
+                                            <option value="ema_cross">EMA Cross Strategy</option>
+                                            <option value="rsi_divergence">RSI Divergence Indicator</option>
+                                            <option value="macd_histogram">MACD Histogram Alert</option>
+                                        </select>
+                                    </div>
+                                    <button class="control-btn" id="generate-pine-btn" onclick="generateTradingViewPineScript()" style="font-weight: 700; padding: 8px 16px; font-size: 0.82rem; height: 36px;">Создать Скрипт</button>
+                                </div>
+                                
+                                <div id="pine-loading" style="display: none; text-align: center; padding: 20px;">
+                                    <div class="spinner" style="margin: 0 auto 10px;"></div>
+                                    <span id="lbl-loading-pine">Генерация скрипта...</span>
+                                </div>
+                                
+                                <div id="pine-results" style="display: none; flex-direction: column; gap: 8px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <h5 style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);" id="lbl-pine-result-title">Pine Script v5 Код</h5>
+                                        <button class="control-btn" onclick="copyPineScript()" style="font-size: 0.72rem; padding: 4px 10px; font-weight: 600;">Копировать</button>
+                                    </div>
+                                    <pre style="background: rgba(0,0,0,0.2); border: var(--card-border); border-radius: 8px; padding: 10px; font-family: monospace; font-size: 0.75rem; overflow-x: auto; max-height: 180px; color: #a9b1d6; white-space: pre-wrap;" id="pine-code-block"></pre>
                                 </div>
                             </div>
                         </div>
@@ -385,6 +430,12 @@
                             <span id="quota-exhausted-badge" style="display:none; color:var(--neon-rose); font-weight:600; font-size:0.68rem;">⛔ <span id="quota-exhausted-text">Quota exhausted</span></span>
                             <span id="quota-reset-label" style="font-size:0.68rem; color:var(--text-muted);">🔄 Resets in <strong id="quota-reset-time">--h --m</strong></span>
                         </div>
+                    </div>
+                    <!-- Chat Search input -->
+                    <div class="chat-search-container" style="padding: 6px 12px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.1);">
+                        <span style="font-size: 0.9rem; opacity: 0.7;">🔍</span>
+                        <input type="text" id="chat-search-input" placeholder="Поиск по истории / Search chat..." style="flex: 1; background: transparent; border: none; outline: none; font-size: 0.8rem; color: var(--text-main);" autocomplete="off">
+                        <button id="chat-search-clear-btn" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer; display: none; font-weight: bold; font-size: 0.9rem;">×</button>
                     </div>
                     <div class="chat-messages" id="chat-messages-container">
                         <!-- Dynamic chat messages -->
@@ -531,6 +582,48 @@
                 
                 <button type="submit" class="control-btn" id="cfg-submit-btn" style="width: 100%; padding: 10px; font-weight: 700; font-size: 0.9rem; cursor: pointer;">Применить настройки</button>
             </form>
+        </div>
+    </div>
+
+    <!-- ALERTS MODAL -->
+    <div id="alerts-modal" class="modal-overlay" style="display: none;">
+        <div class="glass-card modal-content" style="max-width: 440px; width: 95%; padding: 24px; position: relative;">
+            <button class="close-modal-btn" onclick="closeAlertsModal()" style="position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; line-height: 1;">&times;</button>
+            
+            <h3 id="lbl-alerts-title" style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">🔔 <span id="lbl-alerts-title-text">Ценовые оповещения</span></h3>
+            
+            <!-- Create Alert Form -->
+            <form id="create-alert-form" onsubmit="handleCreateAlert(event)" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 0.72rem; color: var(--text-muted);" id="lbl-alert-metric">Параметр</label>
+                        <select id="alert-metric" style="padding: 6px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; outline: none; font-size: 0.75rem; font-family: inherit;">
+                            <option value="price" selected>Price</option>
+                            <option value="rsi">RSI</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 0.72rem; color: var(--text-muted);" id="lbl-alert-cond">Условие</label>
+                        <select id="alert-cond" style="padding: 6px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; outline: none; font-size: 0.75rem; font-family: inherit;">
+                            <option value=">" selected>&gt;</option>
+                            <option value="<">&lt;</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <label style="font-size: 0.72rem; color: var(--text-muted);" id="lbl-alert-val">Значение</label>
+                        <input type="number" step="any" id="alert-val" required style="padding: 6px 10px; background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; outline: none; font-size: 0.75rem; font-family: inherit;">
+                    </div>
+                </div>
+                <button type="submit" class="control-btn" style="font-weight: 700; padding: 8px; font-size: 0.8rem; cursor: pointer;" id="lbl-btn-add-alert">Создать оповещение</button>
+            </form>
+            
+            <!-- Alerts List -->
+            <div style="max-height: 200px; overflow-y: auto;">
+                <h4 style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;" id="lbl-active-alerts">Активные оповещения</h4>
+                <div id="alerts-list-container" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Alerts render here -->
+                </div>
+            </div>
         </div>
     </div>
 

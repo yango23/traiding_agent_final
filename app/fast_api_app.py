@@ -77,6 +77,20 @@ class ApiKeyAddRequest(BaseModel):
 class GoogleAuthRequest(BaseModel):
     credential: str = Field(..., description="The Google ID Token credential")
 
+class PineGeneratorRequest(BaseModel):
+    prompt: str = Field(..., description="Prompt describing the Pine Script strategy/indicator")
+    coin_id: str = Field(..., description="Cryptocurrency ID")
+    lang: str = Field(default="ru", description="Selected language (ru or en)")
+
+class AlertCreateRequest(BaseModel):
+    coin_id: str = Field(..., description="Cryptocurrency ID")
+    metric: str = Field(..., description="Metric type (price or rsi)")
+    condition: str = Field(..., description="Trigger condition (>, <, >=, <=)")
+    value: float = Field(..., description="Trigger value threshold")
+
+class BadgeUnlockRequest(BaseModel):
+    badge_name: str = Field(..., description="Name of the badge to unlock")
+
 class IndicatorConfigRequest(BaseModel):
     rsi_length: int = Field(default=14)
     rsi_overbought: int = Field(default=70)
@@ -168,11 +182,21 @@ async def get_market_data(coin_id: str, lang: str = "ru", force_refresh: bool = 
         indicators = await calculate_technical_indicators(coin_data["price"], coin_id, lang, config)
         news = await fetch_crypto_news(coin_id, lang, force_refresh=force_refresh)
         
+        triggered = []
+        if user_id:
+            try:
+                from app.db import trigger_user_alerts
+                rsi_val = float(indicators["rsi"]["value"]) if (indicators.get("rsi") and indicators["rsi"].get("value") != "-") else 50.0
+                triggered = trigger_user_alerts(user_id, coin_data["price"], rsi_val)
+            except Exception as ae:
+                print(f"Failed to check/trigger alerts: {ae}")
+
         return {
             "success": True,
             "market_data": coin_data,
             "indicators": indicators,
-            "news": news
+            "news": news,
+            "triggered_alerts": triggered
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch market data: {str(e)}")
@@ -618,6 +642,90 @@ async def backtest_endpoint(request: BacktestRequest):
         return res
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Backtest simulation failed: {str(e)}")
+
+# -------------------------------------------------------------------------
+# Pine Script Generator Endpoint
+# -------------------------------------------------------------------------
+@app.post("/api/pine-generator")
+async def generate_pine_endpoint(request: PineGeneratorRequest, x_gemini_api_key: str = Header(None)):
+    custom_key = _extract_api_key(x_gemini_api_key)
+    try:
+        from app.agent import generate_pine_script
+        code = await generate_pine_script(
+            request.prompt,
+            request.coin_id,
+            request.lang,
+            custom_api_key=custom_key
+        )
+        return {"success": True, "code": code}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# -------------------------------------------------------------------------
+# User Alerts Endpoints
+# -------------------------------------------------------------------------
+@app.get("/api/user/alerts")
+async def get_alerts_endpoint(authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        from app.db import get_user_alerts
+        alerts = get_user_alerts(user_id)
+        return {"success": True, "alerts": alerts}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/user/alerts")
+async def create_alert_endpoint(request: AlertCreateRequest, authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        from app.db import add_user_alert
+        alert = add_user_alert(user_id, request.coin_id, request.metric, request.condition, request.value)
+        return {"success": True, "alert": alert}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/user/alerts/{alert_id}")
+async def delete_alert_endpoint(alert_id: int, authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        from app.db import delete_user_alert
+        delete_user_alert(user_id, alert_id)
+        return {"success": True, "message": "Alert deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# -------------------------------------------------------------------------
+# User Badges Endpoints
+# -------------------------------------------------------------------------
+@app.get("/api/user/badges")
+async def get_badges_endpoint(authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        from app.db import get_user_badges
+        badges = get_user_badges(user_id)
+        return {"success": True, "badges": badges}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/user/badges/unlock")
+async def unlock_badge_endpoint(request: BadgeUnlockRequest, authorization: str = Header(None)):
+    user_id = _extract_session_user(authorization)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        from app.db import add_user_badge
+        add_user_badge(user_id, request.badge_name)
+        return {"success": True, "message": "Badge unlocked successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # -------------------------------------------------------------------------
 # Static File Fallbacks

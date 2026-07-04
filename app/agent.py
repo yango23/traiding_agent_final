@@ -841,3 +841,111 @@ def set_custom_api_key(key: str):
     quota_tracker["summary_calls"] = 0
     quota_tracker["chat_calls"] = 0
     save_quota(quota_tracker)
+
+async def generate_pine_script(
+    prompt: str,
+    coin_id: str,
+    lang: str = "ru",
+    custom_api_key: str = None
+) -> str:
+    """
+    Generates a valid TradingView Pine Script v5 indicator/strategy using Gemini.
+    """
+    if not custom_api_key and (quota_tracker["quota_exhausted"] or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true"):
+        quota_tracker["quota_exhausted"] = True
+        
+        # Mock simulated Pine Script response
+        if lang == "ru":
+            return """```pinescript
+//@version=5
+indicator("Пересечение скользящих средних (Демо)", overlay=true)
+
+// Настройки
+fast_len = input.int(9, title="Быстрая МА")
+slow_len = input.int(21, title="Медленная МА")
+
+// Расчет
+fast_ma = ta.ema(close, fast_len)
+slow_ma = ta.ema(close, slow_len)
+
+// Отрисовка
+plot(fast_ma, color=color.blue, title="Быстрая EMA")
+plot(slow_ma, color=color.orange, title="Медленная EMA")
+
+// Сигналы пересечения
+buy_signal = ta.crossover(fast_ma, slow_ma)
+sell_signal = ta.crossunder(fast_ma, slow_ma)
+
+plotshape(buy_signal, title="Сигнал на Покупку", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.small)
+plotshape(sell_signal, title="Сигнал на Продажу", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small)
+
+// Примечание: Это симуляция Pine Script. Подключите собственный API-ключ для генерации пользовательских скриптов.
+```"""
+        else:
+            return """```pinescript
+//@version=5
+indicator("Moving Average Crossover (Simulated)", overlay=true)
+
+// Settings
+fast_len = input.int(9, title="Fast MA")
+slow_len = input.int(21, title="Slow MA")
+
+// Calculations
+fast_ma = ta.ema(close, fast_len)
+slow_ma = ta.ema(close, slow_len)
+
+// Plotting
+plot(fast_ma, color=color.blue, title="Fast EMA")
+plot(slow_ma, color=color.orange, title="Slow EMA")
+
+// Cross Signals
+buy_signal = ta.crossover(fast_ma, slow_ma)
+sell_signal = ta.crossunder(fast_ma, slow_ma)
+
+plotshape(buy_signal, title="Buy Signal", style=shape.triangleup, location=location.belowbar, color=color.green, size=size.small)
+plotshape(sell_signal, title="Sell Signal", style=shape.triangledown, location=location.abovebar, color=color.red, size=size.small)
+
+// Note: This is a simulated script. Enter your custom API Key to generate custom indicators.
+```"""
+
+    try:
+        client = get_gemini_client(custom_api_key)
+        coin_name = COIN_NAMES.get(coin_id.lower().strip(), coin_id.capitalize())
+        
+        sys_instruction = (
+            "Вы — ИИ-программист TradingView Pine Script v5. Ваша задача — написать чистый, рабочий и компилируемый "
+            "код индикатора или стратегии на языке Pine Script v5. Отвечайте ТОЛЬКО кодом, оформленным в стандартный блок "
+            "кода markdown. Внутри кода обязательно используйте понятные комментарии на русском языке. Не пишите "
+            "никакого сопроводительного текста вне блока кода."
+            if lang == "ru" else
+            "You are a TradingView Pine Script v5 developer. Your task is to write clean, working, and compilable "
+            "Pine Script v5 code. Respond ONLY with the markdown code block containing the script. Use clear "
+            "comments inside the script. Do not write any conversational text outside the code block."
+        )
+        
+        user_prompt = (
+            f"Создай скрипт для {coin_name} на основе следующего описания: {prompt}."
+            if lang == "ru" else
+            f"Generate a Pine Script for {coin_name} based on this description: {prompt}."
+        )
+        
+        response = await client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=user_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=sys_instruction,
+                temperature=0.2,
+            )
+        )
+        
+        script = response.text
+        return SafetyGuard.mask_sensitive_data(script)
+    except Exception as e:
+        print(f"API Error in generate_pine_script: {e}")
+        if custom_api_key:
+            raise e
+        # Fallback to simulated
+        quota_tracker["quota_exhausted"] = True
+        save_quota(quota_tracker)
+        # Call again without key to trigger simulated response
+        return await generate_pine_script(prompt, coin_id, lang, custom_api_key=None)

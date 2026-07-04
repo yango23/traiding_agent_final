@@ -846,6 +846,9 @@ async function loadStatsOnly(forceRefresh = false) {
             updateStatsUI(data.market_data);
             updateIndicatorsUI(data.indicators);
             renderNewsUI(data.news);
+            if (typeof checkTriggeredAlerts === "function") {
+                checkTriggeredAlerts(data.triggered_alerts);
+            }
         }
     } catch (e) {
         console.error("Failed to load market data", e);
@@ -1519,6 +1522,8 @@ function switchTab(tabId) {
     document.getElementById("tab-news-btn").classList.remove("active");
     const btBtn = document.getElementById("tab-backtester-btn");
     if (btBtn) btBtn.classList.remove("active");
+    const pineBtn = document.getElementById("tab-pine-btn");
+    if (pineBtn) pineBtn.classList.remove("active");
     
     document.getElementById(`tab-${tabId}-btn`).classList.add("active");
     
@@ -1527,6 +1532,8 @@ function switchTab(tabId) {
     document.getElementById("tab-news-content").classList.remove("active");
     const btContent = document.getElementById("tab-backtester-content");
     if (btContent) btContent.classList.remove("active");
+    const pineContent = document.getElementById("tab-pine-content");
+    if (pineContent) pineContent.classList.remove("active");
     
     document.getElementById(`tab-${tabId}-content`).classList.add("active");
 
@@ -2312,6 +2319,10 @@ function submitQuizAnswer() {
     }
     saveQuizProgressOnServer(quizScore, answeredQuestions);
 
+    if (quizScore >= 10) {
+        unlockBadge(currentLanguage === "ru" ? "Квиз-Мастер" : "Quiz Master");
+    }
+
     const scoreVal = document.getElementById("quiz-score-val");
     if (scoreVal) scoreVal.textContent = quizScore;
 
@@ -2362,51 +2373,68 @@ async function runStrategyBacktest() {
             document.getElementById("val-bt-trades").textContent = data.total_trades;
             document.getElementById("val-bt-drawdown").textContent = `${data.max_drawdown.toFixed(2)}%`;
 
-            const chartContainer = document.getElementById("backtest-chart");
-            const labelsContainer = document.getElementById("backtest-chart-labels");
-            
-            if (chartContainer && labelsContainer) {
-                chartContainer.innerHTML = "";
-                labelsContainer.innerHTML = "";
+            // Render Chart.js line graph
+            const canvas = document.getElementById("backtest-equity-canvas");
+            if (canvas) {
+                const ctx = canvas.getContext("2d");
+                if (window.backtestChartInstance) {
+                    window.backtestChartInstance.destroy();
+                }
                 
                 const curve = data.equity_curve || [];
-                if (curve.length > 0) {
-                    const values = curve.map(c => c.value);
-                    const minVal = Math.min(...values);
-                    const maxVal = Math.max(...values);
-                    const valRange = maxVal - minVal || 1.0;
-
-                    curve.forEach(pt => {
-                        const barCol = document.createElement("div");
-                        barCol.className = "backtest-chart-col";
-                        barCol.style.flex = "1";
-                        barCol.style.height = "100%";
-                        barCol.style.display = "flex";
-                        barCol.style.flexDirection = "column";
-                        barCol.style.justifyContent = "flex-end";
-                        barCol.style.alignItems = "center";
-                        barCol.style.position = "relative";
-
-                        const pct = ((pt.value - minVal) / valRange) * 80 + 10;
-                        
-                        const bar = document.createElement("div");
-                        bar.style.width = "70%";
-                        bar.style.height = `${pct}%`;
-                        bar.style.borderRadius = "3px 3px 0 0";
-                        bar.style.background = pt.value >= 1000 ? "rgba(16, 185, 129, 0.65)" : "rgba(244, 63, 94, 0.65)";
-                        bar.style.transition = "height 0.4s ease";
-                        bar.title = `$${pt.value.toFixed(2)}`;
-
-                        barCol.appendChild(bar);
-                        chartContainer.appendChild(barCol);
-
-                        const lbl = document.createElement("span");
-                        lbl.style.flex = "1";
-                        lbl.style.textAlign = "center";
-                        lbl.textContent = pt.label;
-                        labelsContainer.appendChild(lbl);
-                    });
-                }
+                const labels = curve.map(c => c.label);
+                const values = curve.map(c => c.value);
+                
+                const finalVal = values[values.length - 1] || 1000;
+                const lineColor = finalVal >= 1000 ? "#10B981" : "#F43F5E";
+                const glowColor = finalVal >= 1000 ? "rgba(16, 185, 129, 0.15)" : "rgba(244, 63, 94, 0.15)";
+                
+                window.backtestChartInstance = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: currentLanguage === "ru" ? "Баланс ($)" : "Balance ($)",
+                            data: values,
+                            borderColor: lineColor,
+                            borderWidth: 2,
+                            backgroundColor: glowColor,
+                            fill: true,
+                            tension: 0.35,
+                            pointRadius: 3,
+                            pointBackgroundColor: lineColor,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: "rgba(15, 23, 42, 0.9)",
+                                borderColor: "rgba(255, 255, 255, 0.08)",
+                                borderWidth: 1,
+                                titleColor: "#94A3B8",
+                                bodyColor: "#F8FAFC",
+                                callbacks: {
+                                    label: function(context) {
+                                        return ` $${context.parsed.y.toFixed(2)}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: "#94A3B8", font: { size: 9 } }
+                            },
+                            y: {
+                                grid: { color: "rgba(255, 255, 255, 0.04)" },
+                                ticks: { color: "#94A3B8", font: { size: 9 } }
+                            }
+                        }
+                    }
+                });
             }
 
             if (results) results.style.display = "block";
@@ -2638,12 +2666,16 @@ async function checkUserSession() {
     const profileSec = document.getElementById("user-profile-section");
     const emailDisp = document.getElementById("user-email-display");
     const apiKeysMgr = document.getElementById("api-keys-manager-sec");
+    const alertsBell = document.getElementById("alerts-bell-container");
+    const badgesShelf = document.getElementById("user-badges-shelf");
     const sessionToken = localStorage.getItem("session_token");
     
     if (!sessionToken) {
         if (loginBtn) loginBtn.style.display = "block";
         if (profileSec) profileSec.style.display = "none";
         if (apiKeysMgr) apiKeysMgr.style.display = "none";
+        if (alertsBell) alertsBell.style.display = "none";
+        if (badgesShelf) badgesShelf.innerHTML = "";
         return;
     }
     
@@ -2658,6 +2690,11 @@ async function checkUserSession() {
                 if (profileSec) profileSec.style.display = "flex";
                 if (emailDisp) emailDisp.textContent = data.email;
                 if (apiKeysMgr) apiKeysMgr.style.display = "block";
+                if (alertsBell) alertsBell.style.display = "flex";
+                
+                // Load user achievements & alerts count
+                loadUserBadges();
+                updateAlertsCount();
                 return;
             }
         }
@@ -2670,6 +2707,8 @@ async function checkUserSession() {
     if (loginBtn) loginBtn.style.display = "block";
     if (profileSec) profileSec.style.display = "none";
     if (apiKeysMgr) apiKeysMgr.style.display = "none";
+    if (alertsBell) alertsBell.style.display = "none";
+    if (badgesShelf) badgesShelf.innerHTML = "";
 }
 
 // Bind auth buttons click listeners
@@ -3249,3 +3288,359 @@ async function sendGoogleCredential(credential) {
         }
     }
 }
+
+// -------------------------------------------------------------------------
+// Pine Script v5 Generator UI Handlers
+// -------------------------------------------------------------------------
+function applyPineTemplate(val) {
+    const promptInput = document.getElementById("pine-prompt-input");
+    if (!promptInput) return;
+    
+    let text = "";
+    if (val === "ema_cross") {
+        text = currentLanguage === "ru" 
+            ? "Стратегия пересечения скользящих средних EMA 9 и EMA 21 с сигналами на графике и сделками (Buy/Sell)."
+            : "Exponential Moving Average crossover strategy using EMA 9 and EMA 21 with on-chart buy/sell signals.";
+    } else if (val === "rsi_divergence") {
+        text = currentLanguage === "ru"
+            ? "Индикатор дивергенции RSI (Relative Strength Index) для поиска зон перекупленности и перепроданности."
+            : "RSI divergence indicator showing bullish and bearish divergences with plot shapes.";
+    } else if (val === "macd_histogram") {
+        text = currentLanguage === "ru"
+            ? "Индикатор гистограммы MACD с изменением цвета столбцов при смене тренда и алертами."
+            : "MACD histogram crossover indicator with dynamic color changes and alert conditions.";
+    }
+    promptInput.value = text;
+}
+
+async function generateTradingViewPineScript() {
+    const promptInput = document.getElementById("pine-prompt-input");
+    const prompt = promptInput.value.trim();
+    if (!prompt) {
+        alert(currentLanguage === "ru" ? "Пожалуйста, введите описание стратегии." : "Please enter a description for the strategy.");
+        return;
+    }
+    
+    const loading = document.getElementById("pine-loading");
+    const results = document.getElementById("pine-results");
+    const genBtn = document.getElementById("generate-pine-btn");
+    
+    if (genBtn) genBtn.disabled = true;
+    if (loading) loading.style.display = "block";
+    if (results) results.style.display = "none";
+    
+    try {
+        const response = await fetch("/api/pine-generator", {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                prompt: prompt,
+                coin_id: currentCoin,
+                lang: currentLanguage
+            })
+        });
+        const data = await response.json();
+        if (data.success && data.code) {
+            const codeBlock = document.getElementById("pine-code-block");
+            let code = data.code;
+            if (code.startsWith("```pinescript")) {
+                code = code.replace("```pinescript", "").replace("```", "");
+            } else if (code.startsWith("```")) {
+                code = code.replace("```", "").replace("```", "");
+            }
+            codeBlock.textContent = code.trim();
+            if (results) results.style.display = "flex";
+        } else {
+            alert(currentLanguage === "ru" ? "Ошибка генерации скрипта." : "Failed to generate Pine Script.");
+        }
+    } catch (e) {
+        console.error("Pine generation error", e);
+        alert(currentLanguage === "ru" ? "Ошибка подключения при генерации." : "Connection error during generation.");
+    } finally {
+        if (loading) loading.style.display = "none";
+        if (genBtn) genBtn.disabled = false;
+    }
+}
+
+function copyPineScript() {
+    const codeBlock = document.getElementById("pine-code-block");
+    if (!codeBlock) return;
+    navigator.clipboard.writeText(codeBlock.textContent).then(() => {
+        alert(currentLanguage === "ru" ? "Код скопирован!" : "Pine Script code copied to clipboard!");
+    }).catch(err => {
+        console.error("Copy failed", err);
+    });
+}
+
+// -------------------------------------------------------------------------
+// User Alerts UI Handlers
+// -------------------------------------------------------------------------
+async function loadUserAlerts() {
+    const container = document.getElementById("alerts-list-container");
+    if (!container) return;
+    
+    container.innerHTML = `<div style="text-align:center;font-size:0.75rem;color:var(--text-muted);">Loading alerts...</div>`;
+    
+    try {
+        const response = await fetch("/api/user/alerts", {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (data.success && data.alerts) {
+            container.innerHTML = "";
+            if (data.alerts.length === 0) {
+                container.innerHTML = `<div style="text-align:center;font-size:0.75rem;color:var(--text-muted);">Нет активных оповещений / No active alerts</div>`;
+                return;
+            }
+            data.alerts.forEach(al => {
+                const item = document.createElement("div");
+                item.className = `alert-item ${al.is_triggered ? 'triggered' : ''}`;
+                item.innerHTML = `
+                    <div>
+                        <strong style="text-transform: uppercase;">${al.coin_id}</strong>: 
+                        <span>${al.metric} ${al.condition} ${al.value}</span>
+                        ${al.is_triggered ? ' <span style="color:var(--neon-rose);font-weight:700;">(Triggered)</span>' : ''}
+                    </div>
+                    <button class="delete-alert-btn" onclick="deleteAlert(${al.id})">&times;</button>
+                `;
+                container.appendChild(item);
+            });
+        }
+    } catch (e) {
+        console.error("Failed to load alerts", e);
+        container.innerHTML = `<div style="text-align:center;font-size:0.75rem;color:var(--neon-rose);">Failed to load alerts</div>`;
+    }
+}
+
+async function handleCreateAlert(event) {
+    event.preventDefault();
+    const metric = document.getElementById("alert-metric").value;
+    const condition = document.getElementById("alert-cond").value;
+    const value = parseFloat(document.getElementById("alert-val").value);
+    
+    try {
+        const response = await fetch("/api/user/alerts", {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({
+                coin_id: currentCoin,
+                metric: metric,
+                condition: condition,
+                value: value
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            document.getElementById("alert-val").value = "";
+            loadUserAlerts();
+            updateAlertsCount();
+        }
+    } catch (e) {
+        console.error("Failed to create alert", e);
+    }
+}
+
+async function deleteAlert(alertId) {
+    try {
+        const response = await fetch(`/api/user/alerts/${alertId}`, {
+            method: "DELETE",
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (data.success) {
+            loadUserAlerts();
+            updateAlertsCount();
+        }
+    } catch (e) {
+        console.error("Failed to delete alert", e);
+    }
+}
+
+async function updateAlertsCount() {
+    const badge = document.getElementById("alerts-count-badge");
+    if (!badge) return;
+    
+    try {
+        const response = await fetch("/api/user/alerts", {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (data.success && data.alerts) {
+            const activeAlerts = data.alerts.filter(al => !al.is_triggered);
+            if (activeAlerts.length > 0) {
+                badge.textContent = activeAlerts.length;
+                badge.style.display = "flex";
+            } else {
+                badge.style.display = "none";
+            }
+        }
+    } catch (e) {
+        badge.style.display = "none";
+    }
+}
+
+function openAlertsModal() {
+    const modal = document.getElementById("alerts-modal");
+    if (modal) {
+        modal.style.display = "flex";
+        loadUserAlerts();
+    }
+}
+
+function closeAlertsModal() {
+    const modal = document.getElementById("alerts-modal");
+    if (modal) modal.style.display = "none";
+}
+
+function showCustomNotification(title, text, isRose = false) {
+    const popup = document.createElement("div");
+    popup.className = `custom-notification ${isRose ? 'rose' : ''}`;
+    popup.innerHTML = `
+        <div style="font-weight:700; font-size:0.88rem; margin-bottom:4px; display:flex; align-items:center; gap:6px;">
+            ${isRose ? '🚨' : '🔔'} <span>${title}</span>
+        </div>
+        <div style="font-size:0.78rem; opacity:0.85;">${text}</div>
+    `;
+    document.body.appendChild(popup);
+    
+    try {
+        const context = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = context.createOscillator();
+        const gainNode = context.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(context.destination);
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(600, context.currentTime);
+        gainNode.gain.setValueAtTime(0.08, context.currentTime);
+        oscillator.start();
+        oscillator.stop(context.currentTime + 0.15);
+    } catch (se) {}
+    
+    setTimeout(() => {
+        popup.style.animation = "slideUp 0.3s ease reverse forwards";
+        setTimeout(() => popup.remove(), 300);
+    }, 4500);
+}
+
+function checkTriggeredAlerts(triggered) {
+    if (!triggered || triggered.length === 0) return;
+    triggered.forEach(al => {
+        const title = currentLanguage === "ru" ? "Сработало оповещение!" : "Alert Triggered!";
+        const text = currentLanguage === "ru"
+            ? `Индикатор или цена ${al.coin_id.toUpperCase()} достиг значения: ${al.metric} ${al.condition} ${al.value} (текущее: ${al.triggered_value.toFixed(2)})`
+            : `${al.coin_id.toUpperCase()} ${al.metric} reached trigger condition: ${al.condition} ${al.value} (current: ${al.triggered_value.toFixed(2)})`;
+        showCustomNotification(title, text, true);
+    });
+    updateAlertsCount();
+}
+
+// -------------------------------------------------------------------------
+// User Achievements Badges UI Handlers
+// -------------------------------------------------------------------------
+async function loadUserBadges() {
+    const shelf = document.getElementById("user-badges-shelf");
+    if (!shelf) return;
+    shelf.innerHTML = "";
+    
+    const token = localStorage.getItem("session_token");
+    if (!token) return;
+    
+    try {
+        const response = await fetch("/api/user/badges", {
+            headers: getAuthHeaders()
+        });
+        const data = await response.json();
+        if (data.success && data.badges) {
+            data.badges.forEach(bg => {
+                const badge = document.createElement("span");
+                badge.className = "badge-icon";
+                
+                let icon = "🏅";
+                let desc = bg;
+                if (bg.includes("Quiz") || bg.includes("Квиз")) {
+                    icon = "🎓";
+                    desc = currentLanguage === "ru" ? "Квиз-Мастер: 100% результат в тесте" : "Quiz Master: 100% score on the TA quiz";
+                }
+                
+                badge.textContent = icon;
+                badge.title = desc;
+                shelf.appendChild(badge);
+            });
+        }
+    } catch (e) {
+        console.error("Failed to load badges", e);
+    }
+}
+
+async function unlockBadge(badgeName) {
+    const token = localStorage.getItem("session_token");
+    if (!token) return;
+    
+    try {
+        const response = await fetch("/api/user/badges/unlock", {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ badge_name: badgeName })
+        });
+        const data = await response.json();
+        if (data.success) {
+            const title = currentLanguage === "ru" ? "🏆 Достижение разблокировано!" : "🏆 Achievement Unlocked!";
+            const text = currentLanguage === "ru" 
+                ? `Вы получили новый бейдж: "${badgeName}"`
+                : `You received a new badge: "${badgeName}"`;
+            showCustomNotification(title, text, false);
+            loadUserBadges();
+        }
+    } catch (e) {
+        console.error("Failed to unlock badge", e);
+    }
+}
+
+// -------------------------------------------------------------------------
+// Chat Search History Filter UI Handlers
+// -------------------------------------------------------------------------
+function handleChatSearch() {
+    const query = document.getElementById("chat-search-input").value.toLowerCase().trim();
+    const clearBtn = document.getElementById("chat-search-clear-btn");
+    
+    if (query) {
+        clearBtn.style.display = "block";
+    } else {
+        clearBtn.style.display = "none";
+    }
+    
+    const messages = document.querySelectorAll("#chat-messages-container .chat-msg");
+    messages.forEach(msg => {
+        const text = msg.textContent.toLowerCase();
+        if (text.includes(query)) {
+            msg.classList.remove("hidden-msg");
+        } else {
+            msg.classList.add("hidden-msg");
+        }
+    });
+}
+
+function clearChatSearch() {
+    const input = document.getElementById("chat-search-input");
+    input.value = "";
+    handleChatSearch();
+}
+
+// Bind DOM event listeners
+document.addEventListener("DOMContentLoaded", () => {
+    // Alerts Bell click listener
+    const alertsBellBtn = document.getElementById("alerts-bell-btn");
+    if (alertsBellBtn) {
+        alertsBellBtn.onclick = openAlertsModal;
+    }
+    
+    // Chat Search input listeners
+    const chatSearchInput = document.getElementById("chat-search-input");
+    if (chatSearchInput) {
+        chatSearchInput.oninput = handleChatSearch;
+    }
+    const chatSearchClearBtn = document.getElementById("chat-search-clear-btn");
+    if (chatSearchClearBtn) {
+        chatSearchClearBtn.onclick = clearChatSearch;
+    }
+});

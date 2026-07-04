@@ -116,6 +116,32 @@ def init_db():
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
     );
     """)
+
+    # Badges table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS badges (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        badge_name TEXT NOT NULL,
+        unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    """)
+
+    # Alerts table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS alerts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        coin_id TEXT NOT NULL,
+        metric TEXT NOT NULL,
+        condition TEXT NOT NULL,
+        value REAL NOT NULL,
+        is_triggered INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+    """)
     
     # Run migrations for existing DB instances:
     try:
@@ -601,3 +627,132 @@ def login_or_register_google_user(email: str) -> str:
     conn.commit()
     conn.close()
     return token
+
+# -------------------------------------------------------------------------
+# Badges Operations
+# -------------------------------------------------------------------------
+def get_user_badges(user_id: int) -> list[str]:
+    """Returns the list of unlocked badge names for the user."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT badge_name FROM badges WHERE user_id = ? ORDER BY id ASC;", (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [r["badge_name"] for r in rows]
+
+def add_user_badge(user_id: int, badge_name: str):
+    """Unlocks a new badge for the user if they don't already have it."""
+    badge_name = badge_name.strip()
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM badges WHERE user_id = ? AND badge_name = ?;", (user_id, badge_name))
+    if cursor.fetchone():
+        conn.close()
+        return
+    cursor.execute("INSERT INTO badges (user_id, badge_name) VALUES (?, ?);", (user_id, badge_name))
+    conn.commit()
+    conn.close()
+
+# -------------------------------------------------------------------------
+# Alerts Operations
+# -------------------------------------------------------------------------
+def get_user_alerts(user_id: int) -> list[dict]:
+    """Returns the list of alerts configured by the user."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, coin_id, metric, condition, value, is_triggered, created_at FROM alerts WHERE user_id = ? ORDER BY id DESC;",
+        (user_id,)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [{
+        "id": r["id"],
+        "coin_id": r["coin_id"],
+        "metric": r["metric"],
+        "condition": r["condition"],
+        "value": r["value"],
+        "is_triggered": r["is_triggered"],
+        "created_at": r["created_at"]
+    } for r in rows]
+
+def add_user_alert(user_id: int, coin_id: str, metric: str, condition: str, value: float) -> dict:
+    """Adds a new price/indicator alert for the user."""
+    coin_id = coin_id.lower().strip()
+    metric = metric.lower().strip()
+    condition = condition.strip()
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO alerts (user_id, coin_id, metric, condition, value, is_triggered) VALUES (?, ?, ?, ?, ?, 0);",
+        (user_id, coin_id, metric, condition, value)
+    )
+    new_id = cursor.lastrowid
+    conn.commit()
+    
+    cursor.execute("SELECT created_at FROM alerts WHERE id = ?;", (new_id,))
+    created_at = cursor.fetchone()["created_at"]
+    conn.close()
+    
+    return {
+        "id": new_id,
+        "coin_id": coin_id,
+        "metric": metric,
+        "condition": condition,
+        "value": value,
+        "is_triggered": 0,
+        "created_at": created_at
+    }
+
+def delete_user_alert(user_id: int, alert_id: int):
+    """Deletes an alert for the user."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM alerts WHERE id = ? AND user_id = ?;", (alert_id, user_id))
+    conn.commit()
+    conn.close()
+
+def trigger_user_alerts(user_id: int, current_price: float, current_rsi: float) -> list[dict]:
+    """
+    Checks active alerts for the user, triggers matching ones, and returns the newly triggered alert details.
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, coin_id, metric, condition, value FROM alerts WHERE user_id = ? AND is_triggered = 0;",
+        (user_id,)
+    )
+    alerts = cursor.fetchall()
+    
+    triggered_alerts = []
+    for a in alerts:
+        val_to_check = current_price if a["metric"] == "price" else current_rsi
+        cond = a["condition"]
+        target = a["value"]
+        
+        triggered = False
+        if cond == ">" and val_to_check > target:
+            triggered = True
+        elif cond == "<" and val_to_check < target:
+            triggered = True
+        elif cond == ">=" and val_to_check >= target:
+            triggered = True
+        elif cond == "<=" and val_to_check <= target:
+            triggered = True
+            
+        if triggered:
+            cursor.execute("UPDATE alerts SET is_triggered = 1 WHERE id = ?;", (a["id"],))
+            triggered_alerts.append({
+                "id": a["id"],
+                "coin_id": a["coin_id"],
+                "metric": a["metric"],
+                "condition": cond,
+                "value": target,
+                "triggered_value": val_to_check
+            })
+            
+    if triggered_alerts:
+        conn.commit()
+    conn.close()
+    return triggered_alerts

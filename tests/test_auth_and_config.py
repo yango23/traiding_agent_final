@@ -16,7 +16,10 @@ def clean_db_fixture():
     cursor.execute("DELETE FROM sessions")
     cursor.execute("DELETE FROM indicator_configs")
     cursor.execute("DELETE FROM chat_history")
-    cursor.execute("DELETE FROM users WHERE email = 'test@example.com' OR email = 'duplicate@example.com'")
+    cursor.execute("DELETE FROM api_keys")
+    cursor.execute("DELETE FROM badges")
+    cursor.execute("DELETE FROM alerts")
+    cursor.execute("DELETE FROM users WHERE email = 'test@example.com' OR email = 'duplicate@example.com' OR email = 'new_google_user@example.com'")
     conn.commit()
     conn.close()
     yield
@@ -457,3 +460,97 @@ def test_google_auth():
     )
     assert me_resp.status_code == 200
     assert me_resp.json()["email"] == "new_google_user@example.com"
+
+def test_user_badges_flow():
+    # Register and confirm user to get auth token
+    client.post("/api/auth/register", json={"email": "test@example.com", "password": "securepassword123"})
+    conf = client.post("/api/auth/confirm", json={"email": "test@example.com", "code": "777777"})
+    token = conf.json()["token"]
+
+    # 1. Get badges (should be empty initially)
+    get_resp = client.get("/api/user/badges", headers={"Authorization": f"Bearer {token}"})
+    assert get_resp.status_code == 200
+    assert get_resp.json()["success"] is True
+    assert get_resp.json()["badges"] == []
+
+    # 2. Unlock badge
+    unlock_resp = client.post(
+        "/api/user/badges/unlock",
+        json={"badge_name": "Quiz Master"},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert unlock_resp.status_code == 200
+    assert unlock_resp.json()["success"] is True
+
+    # 3. Get badges again (should contain "Quiz Master")
+    get_resp2 = client.get("/api/user/badges", headers={"Authorization": f"Bearer {token}"})
+    assert get_resp2.status_code == 200
+    assert get_resp2.json()["badges"] == ["Quiz Master"]
+
+
+def test_user_alerts_flow():
+    # Register and confirm user to get auth token
+    client.post("/api/auth/register", json={"email": "test@example.com", "password": "securepassword123"})
+    conf = client.post("/api/auth/confirm", json={"email": "test@example.com", "code": "777777"})
+    token = conf.json()["token"]
+
+    # 1. Get alerts (should be empty)
+    get_resp = client.get("/api/user/alerts", headers={"Authorization": f"Bearer {token}"})
+    assert get_resp.status_code == 200
+    assert get_resp.json()["alerts"] == []
+
+    # 2. Create alert
+    create_resp = client.post(
+        "/api/user/alerts",
+        json={"coin_id": "bitcoin", "metric": "price", "condition": ">", "value": 60000.0},
+        headers={"Authorization": f"Bearer {token}"}
+    )
+    assert create_resp.status_code == 200
+    assert create_resp.json()["success"] is True
+    alert_id = create_resp.json()["alert"]["id"]
+
+    # 3. Get alerts (should contain new alert)
+    get_resp2 = client.get("/api/user/alerts", headers={"Authorization": f"Bearer {token}"})
+    assert len(get_resp2.json()["alerts"]) == 1
+    assert get_resp2.json()["alerts"][0]["value"] == 60000.0
+
+    # 4. Trigger alert via market data call
+    with patch("app.fast_api_app.fetch_coin_data", new_callable=AsyncMock) as mock_fetch:
+        mock_fetch.return_value = {
+            "id": "bitcoin",
+            "name": "Bitcoin",
+            "symbol": "btc",
+            "price": 65000.0,
+            "change_24h": 2.5,
+            "high_24h": 66000.0,
+            "low_24h": 64000.0,
+            "volume_24h": 1500000.0,
+            "last_updated": "2026-07-04T00:00:00Z"
+        }
+        
+        md_resp = client.get("/api/market-data/bitcoin", headers={"Authorization": f"Bearer {token}"})
+        assert md_resp.status_code == 200
+        data = md_resp.json()
+        assert "triggered_alerts" in data
+        assert len(data["triggered_alerts"]) == 1
+        assert data["triggered_alerts"][0]["id"] == alert_id
+        assert data["triggered_alerts"][0]["triggered_value"] == 65000.0
+
+    # 5. Delete alert
+    del_resp = client.delete(f"/api/user/alerts/{alert_id}", headers={"Authorization": f"Bearer {token}"})
+    assert del_resp.status_code == 200
+    
+    # 6. Verify alerts are empty again
+    get_resp3 = client.get("/api/user/alerts", headers={"Authorization": f"Bearer {token}"})
+    assert len(get_resp3.json()["alerts"]) == 0
+
+
+def test_pine_script_generator():
+    # Test generation endpoint
+    resp = client.post(
+        "/api/pine-generator",
+        json={"prompt": "crossover strategy", "coin_id": "bitcoin", "lang": "en"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["success"] is True
+    assert "indicator(" in resp.json()["code"] or "strategy(" in resp.json()["code"]
