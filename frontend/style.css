@@ -77,8 +77,27 @@ body {
     background: var(--bg-gradient);
     color: var(--text-primary);
     min-height: 100vh;
+    position: relative;
     overflow-x: hidden;
     transition: background 0.4s ease, color 0.4s ease;
+}
+
+body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 520px;
+    background-image: url('/static/logo_detailed.jpg');
+    background-size: cover;
+    background-position: center top;
+    background-repeat: no-repeat;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.22;
+    -webkit-mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%);
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0) 100%);
 }
 
 #glow-bg {
