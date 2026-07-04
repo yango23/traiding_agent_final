@@ -88,10 +88,10 @@ body::before {
     top: 0;
     left: 0;
     right: 0;
-    height: 520px;
+    height: 560px;
     background-image: url('/static/logo_detailed.jpg');
     background-size: cover;
-    background-position: center top;
+    background-position: center -42px;
     background-repeat: no-repeat;
     z-index: -1;
     pointer-events: none;
