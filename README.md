@@ -31,34 +31,48 @@ This application has been developed with advanced UI design (Glassmorphic Dark/L
 ### 5. Resizable Educational Chat Panel
 *   An interactive drag handle (`.resize-handle`) allows users to freely adjust the chat width. It highlights with a glowing blue effect when dragged or hovered, providing a premium desktop-like interface.
 
+### 6. Interactive Chat Search
+*   A search bar located above the message log allows users to type queries and dynamically filter and highlight matching chat cards in real time, fading out non-matching messages.
+
 ---
 
 ## 📈 Advanced Features
 
 To elevate this project into a robust educational tool, we implemented several advanced components:
 
-### 1. Strategy Backtest Tab
+### 1. Visual Strategy Backtester (Chart.js)
 *   **Backtest Strategies**: Users can select one of three strategy models under the chart: **SMA Crossover** (SMA-12/50), **RSI Bound** (buying at <30, selling at >70), or **Bollinger Bands** (buying at lower band, selling at upper band).
 *   **Historical Simulation**: The `POST /api/backtest` endpoint simulates trades on daily klines over the past 250 days utilizing pandas. It computes **Net Profit %**, **Win Rate %**, **Total Trades**, and **Max Drawdown %**.
-*   **Interactive Equity Chart**: Displays monthly balance progression as a custom, CSS-styled column chart. Hovering over each monthly bar shows a tooltip indicating the exact equity balance.
+*   **Chart.js Equity Curve Graph**: Replaced the static HTML columns with an interactive neon line graph plotting historical capital balance progression over time. The graph line and tooltip are dynamically colored green for final profit or rose for loss.
 
-### 2. Candlestick Pattern Scanner
+### 2. Pine Script v5 Generator & Editor
+*   **LLM Scripting Sandbox**: Added a new tab inside the main card containing a strategy prompt textarea and template selector buttons (EMA Cross, RSI Divergence, MACD Histogram).
+*   **Gemini Generator Code block**: The LLM compiles TradingView-ready Pine Script v5 code on the fly. Code is rendered cleanly inside a dedicated visual editor box with a one-click copy button.
+
+### 3. Real-Time Price & Indicator Alerts
+*   **Rules Configuration**: Logged-in users can open a dropdown modal from a glowing bell icon in the header and set rules (e.g. BTC price > 60000 or RSI < 30).
+*   **Notification Engine**: Active alerts are verified asynchronously on every dashboard data refresh. Triggered conditions trigger synthesizer sound prompts and slide-up notifications.
+
+### 4. Quiz Achievements & Badges Shelf
+*   **Gamified TA Badges**: An SQLite `badges` table saves user rewards. Reaching a perfect TA quiz score (10+ points) unlocks the **Quiz Master** (Квиз-Мастер) badge (displayed as a graduate cap icon `🎓` in the user profile shelf).
+
+### 5. Candlestick Pattern Scanner
 *   Programmatically detects classic candlestick formations (such as **Doji**, **Hammer**, **Shooting Star**, and **Bullish/Bearish Engulfing**) on daily Binance charts.
 *   Detected active patterns are integrated into the technical indicators list and passed to the coordinator agent to improve analysis context.
 
-### 3. Educational TA Quiz Database (12 Questions)
+### 6. Educational TA Quiz Database (12 Questions)
 *   A dedicated **Technical Analysis Quiz** card located in the left sidebar (swapped positions with the API key vault for better visibility).
 *   Expanded pool of **12 comprehensive technical analysis questions** in both English and Russian, covering candle patterns, EMA vs SMA speed differences, H&S necklines, RSI divergences, and more.
 *   Provides automated grading, visual choices feedback (green for correct, red for incorrect), detailed educational explanations, and database-backed level progression (*Novice*, *Advanced*, *Pro*).
 *   **Click-to-Query Questions**: The quiz question text is clickable. Clicking it inserts the question into the chatbot and queries the AI agent, causing the advisor to explain the concepts in the chat.
 
-### 4. Dynamic Indicator of the Day Hint Chip
+### 7. Dynamic Indicator of the Day Hint Chip
 *   Replaced the static RSI/MACD setup chip with a dynamic **Indicator of the Day** prompt chip: `Изучить индикатор дня: {Name}` / `Study indicator of the day: {Name}`.
 *   Pulls from a curated database of **12 popular indicators** (RSI, MACD, Bollinger Bands, Stochastic, EMA, Ichimoku, Fibonacci, VWAP, ATR, ADX, Parabolic SAR, Supertrend).
 *   **Smart History Filtering**: Scans the active chat history (`chatHistories[currentCoin]`) to detect if an indicator has already been discussed in this session. If it has, the chip automatically cycles and recommends the next un-discussed indicator.
 *   **Reactive Update**: The chip list refreshes immediately when sending or receiving messages, keeping the suggested indicators relevant.
 
-### 5. Advanced Text-to-Speech (TTS) with CORS Proxy
+### 8. Advanced Text-to-Speech (TTS) with CORS Proxy
 *   **Google Translate Neural TTS**: Assistant messages feature an interactive `🔊 Прослушать` / `🔊 Listen` pill button positioned cleanly under the message body. It routes text to our server-side `/api/tts` proxy, retrieving high-quality neural voice recordings from Google Translate and bypassing CORS restrictions.
 *   **Sentence-based Queued Stream**: Automatically chunks text into lengths under 160 characters and plays segments sequentially using HTML5 `Audio()` players, ensuring a smooth, uninterrupted reading flow.
 *   **Phonetic Russian Localization**: Financial terms and English tickers (like *RSI*, *MACD*, *SMA*, *Death Cross*, *oversold*, *BTC*, *ETH*) are programmatically translated into Russian phonetic sounds (e.g. *«эр эс и»*, *«мак ди»*, *«скользящая средняя»*, *«биткоин»*, *«перепроданность»*) before speech synthesis, eliminating robotic accents.
@@ -85,11 +99,15 @@ The backend leverages custom Python tools to query APIs and feed structured cont
 ### 3. Caching Layer Optimization
 *   **Rate-Limit Protection**: Added an asynchronous cache with a 60-second TTL (Time-To-Live) for market data and a 5-minute TTL for news. This ensures fast load times and prevents the application from being rate-limited by public APIs.
 
-### 4. Credential Leak Prevention
+### 4. Database Isolation for Automated Tests
+*   **Test Database redirection**: Supported setting `DATABASE_URL` as an environment variable in `app/db.py`.
+*   **Conftest Configuration**: Created `tests/conftest.py` that configures `DATABASE_URL = "test_crypto_advisor.db"` during testing. This keeps development and test data isolated and prevents test runs from wiping live user configurations, sessions, and histories in `crypto_advisor.db`.
+
+### 5. Credential Leak Prevention
 *   **Git Secret Hook**: Integrates a local Git `pre-commit` hook that runs `git_secret_scanner.py`. The scanner blocks any commit containing Google API Studio keys, GCP Project IDs, or other private identifiers.
 *   **Exclusions in Hooks**: Staged hooks explicitly ignore scanning the `tests/` directory to allow hardcoded mock GCP Project IDs and API keys inside unit tests.
 
-### 5. Full-Featured User Database Persistence (SQLite)
+### 6. Full-Featured User Database Persistence (SQLite)
 *   **Secure Email Authentication**: Supports registration with password validation (minimum 6 characters) and a 6-digit confirmation code verification flow (sent to console log; supporting `"777777"` backdoor for demo convenience).
 *   **Google Sign-In Authentication**: Integrated Google Identity Services to allow secure user sign-in via Google accounts, automatically confirming verified Google email accounts. Includes a premium CSS-styled Google button that dynamically falls back to an interactive mock popup for quick testing in local/development environments.
 *   **Bilingual Chat Isolation**: Chat history is stored in SQLite and isolated by `(user_id, coin_id, lang)`, preventing English and Russian conversations from polluting each other.
@@ -101,7 +119,7 @@ The backend leverages custom Python tools to query APIs and feed structured cont
 ---
 
 ## 🧪 Comprehensive Test Coverage
-*   The project includes a robust test suite of **27 tests** covering agent registration, email verification, Google Authentication, custom indicators config, bilingual chat history sync, quiz progress tracking, studied indicators logging, TradingView layout saving, and API keys list manager. All tests pass successfully.
+*   The project includes a robust test suite of **30 tests** covering user registration/auth, Google Sign-In, indicators custom config, bilingual history persistence, TA quiz score achievements, studied indicator hints, alerts triggers, Pine Script generator, and API keys vault manager. All tests pass successfully.
 
 ---
 
