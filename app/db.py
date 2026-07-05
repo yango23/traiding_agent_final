@@ -4,7 +4,7 @@ import hashlib
 import secrets
 from datetime import datetime, timezone, timedelta
 
-DB_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "crypto_advisor.db")
+DB_FILE = os.getenv("DATABASE_URL", os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "crypto_advisor.db"))
 
 def get_db_connection():
     """Returns a connection to the SQLite database with timeout to avoid locking issues."""
