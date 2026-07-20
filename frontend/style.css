@@ -404,22 +404,24 @@ body.light-theme .card-divider {
 }
 
 .chart-card {
-    flex: 1.4;
+    flex: 1.8;
     padding: 0; /* Let TradingView take full size */
     overflow: hidden;
-    min-height: 440px;
+    min-height: 480px;
 }
 
 #tv-chart-container {
     width: 100%;
     height: 100%;
-    min-height: 440px;
+    min-height: 480px;
     border-radius: 16px;
+    overflow: hidden;
 }
 #tv-chart-container iframe {
     width: 100% !important;
     height: 100% !important;
-    min-height: 440px !important;
+    min-height: 480px !important;
+    display: block !important;
 }
 
 .tabs-card {
@@ -724,12 +726,19 @@ body.light-theme .card-divider {
 /* Input Area */
 .chat-input-area {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     background: var(--input-bg);
     border: var(--card-border);
-    border-radius: 10px;
-    padding: 4px 6px;
-    align-items: center;
+    border-radius: 14px;
+    padding: 6px 10px;
+    align-items: flex-end;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.chat-input-area:focus-within {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.2);
 }
 
 .chat-input-area input,
@@ -738,34 +747,42 @@ body.light-theme .card-divider {
     background: transparent;
     border: none;
     color: var(--text-primary);
-    padding: 8px;
+    padding: 6px 4px;
     outline: none;
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     resize: none;
-    min-height: 36px;
+    min-height: 38px;
     max-height: 120px;
-    line-height: 1.4;
+    line-height: 1.45;
 }
 
 .send-btn {
-    background: var(--neon-blue);
-    color: white;
+    background: linear-gradient(135deg, var(--accent-color), rgba(var(--accent-rgb), 0.85));
+    color: #ffffff;
     border: none;
-    border-radius: 8px;
-    width: 32px;
-    height: 32px;
+    border-radius: 10px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: var(--neon-glow-blue);
+    flex-shrink: 0;
+    align-self: flex-end;
+    margin-bottom: 2px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.3);
 }
 
 .send-btn:hover {
-    transform: scale(1.05);
-    background: #2563EB;
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 18px rgba(var(--accent-rgb), 0.45);
+    filter: brightness(1.15);
+}
+
+.send-btn:active {
+    transform: scale(0.95);
 }
 
 /* =========================================================================

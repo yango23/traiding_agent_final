@@ -815,6 +815,8 @@ function renderTradingViewWidget() {
         "allow_symbol_change": true,
         "details": true,
         "calendar": true,
+        "hotlist": true,
+        "withdateranges": true,
         "studies": [
             "STD;Volume"
         ],
