@@ -802,17 +802,22 @@ function renderTradingViewWidget() {
     document.getElementById("tv-chart-container").innerHTML = "";
     
     tvWidgetInstance = new TradingView.widget({
-        "width": "100%",
-        "height": "100%",
+        "autosize": true,
         "symbol": symbol,
         "interval": tvIntervalSetting,
         "timezone": "Etc/UTC",
         "theme": currentTheme,
         "style": tvStyleSetting,
         "locale": currentLanguage === "ru" ? "ru" : "en",
+        "toolbar_bg": currentTheme === "dark" ? "#0f172a" : "#ffffff",
         "enable_publishing": false,
         "hide_side_toolbar": false,
-        "allow_symbol_change": false,
+        "allow_symbol_change": true,
+        "details": true,
+        "calendar": true,
+        "studies": [
+            "STD;Volume"
+        ],
         "container_id": "tv-chart-container"
     });
 }
@@ -2067,7 +2072,13 @@ coinSelector.onchange = (e) => {
 langToggleBtn.onclick = toggleLanguage;
 themeToggleBtn.onclick = toggleTheme;
 chatInput.onkeydown = (e) => {
-    if (e.key === "Enter") sendMessage();
+    if (e.key === "Enter") {
+        if (e.ctrlKey || e.shiftKey) {
+            return; // Allow newline
+        }
+        e.preventDefault();
+        sendMessage();
+    }
 };
 chatSendBtn.onclick = sendMessage;
 

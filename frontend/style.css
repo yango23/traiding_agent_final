@@ -404,16 +404,22 @@ body.light-theme .card-divider {
 }
 
 .chart-card {
-    flex: 1.3;
+    flex: 1.4;
     padding: 0; /* Let TradingView take full size */
     overflow: hidden;
-    min-height: 350px;
+    min-height: 440px;
 }
 
 #tv-chart-container {
     width: 100%;
     height: 100%;
+    min-height: 440px;
     border-radius: 16px;
+}
+#tv-chart-container iframe {
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 440px !important;
 }
 
 .tabs-card {
@@ -726,7 +732,8 @@ body.light-theme .card-divider {
     align-items: center;
 }
 
-.chat-input-area input {
+.chat-input-area input,
+.chat-input-area textarea {
     flex: 1;
     background: transparent;
     border: none;
@@ -735,6 +742,10 @@ body.light-theme .card-divider {
     outline: none;
     font-family: inherit;
     font-size: 0.85rem;
+    resize: none;
+    min-height: 36px;
+    max-height: 120px;
+    line-height: 1.4;
 }
 
 .send-btn {
