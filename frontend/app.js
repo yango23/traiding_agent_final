@@ -16,7 +16,7 @@ const TRADINGVIEW_SYMBOLS = {
 // UI Localization Dictionaries
 const LOCALIZATION = {
     ru: {
-        subtitle: "Учебный ИИ-помощник & Дашборд по техническому анализу",
+        subtitle: "Учебный дашборд по техническому анализу",
         lblSelectCoin: "Выберите актив",
         lblHigh24h: "24ч Макс",
         lblLow24h: "24ч Мин",
@@ -33,10 +33,10 @@ const LOCALIZATION = {
         welcomeMessage: "Привет! Я твой ИИ-преподаватель по техническому и фундаментальному анализу {coin}. Чем могу помочь тебе сегодня? Я могу рассказать про индикаторы (RSI, MACD), объяснить текущие новости или показать основы построения стратегий.",
         chips: [
             "Создать торговую стратегию для {coin}",
-            "Какая монета сейчас наиболее интересна для покупки?",
-            "Как минимизировать риски потерь новичку?",
+            "Сделай анализ всех последних новостей, относящихся к активу",
             "indicator_of_the_day"
         ],
+        lblToggleDrawer: "Чат",
         lblIndicatorsTitle: "Технические индикаторы",
         lblSmaLabel: "Скользящие (SMA)",
         lblFgLabel: "Страх / Жадность",
@@ -67,7 +67,7 @@ const LOCALIZATION = {
         tipApiKey: "Вы можете указать свой собственный API-ключ Gemini для сброса ограничений суточной квоты или выхода из демонстрационного режима. Все ключи хранятся исключительно в сессионном хранилище вашего браузера и никогда не передаются автору и не используются в сторонних целях."
     },
     en: {
-        subtitle: "Educational AI Assistant & Dashboard",
+        subtitle: "Educational Dashboard & Technical Analysis",
         lblSelectCoin: "Select Crypto Asset",
         lblHigh24h: "24h High",
         lblLow24h: "24h Low",
@@ -84,10 +84,10 @@ const LOCALIZATION = {
         welcomeMessage: "Hello! I am your AI educator for technical and fundamental analysis on {coin}. How can I help you today? I can explain indicators (RSI, MACD), explain recent news, or show the basics of strategy building.",
         chips: [
             "Create a trading strategy for {coin}",
-            "Which coin looks most interesting to buy right now?",
-            "How can a beginner minimize trading losses?",
+            "Analyze all recent news related to the active asset",
             "indicator_of_the_day"
         ],
+        lblToggleDrawer: "Chat",
         lblIndicatorsTitle: "Technical Indicators",
         lblSmaLabel: "Moving Averages",
         lblFgLabel: "Fear & Greed",
@@ -675,6 +675,7 @@ function toggleTheme() {
 function toggleLanguage() {
     currentLanguage = currentLanguage === "ru" ? "en" : "ru";
     localStorage.setItem("lang", currentLanguage);
+    document.documentElement.lang = currentLanguage;
     langToggleBtn.textContent = currentLanguage.toUpperCase();
     
     localizeUI();
@@ -738,6 +739,11 @@ function localizeUI() {
     const refBtnLabel = document.getElementById("lbl-refresh-btn");
     if (refBtnLabel) {
         refBtnLabel.textContent = t.lblRefreshBtn;
+    }
+
+    const toggleDrawerBtn = document.getElementById("lbl-toggle-drawer");
+    if (toggleDrawerBtn) {
+        toggleDrawerBtn.textContent = t.lblToggleDrawer;
     }
     
     const refStatsBtn = document.getElementById("refresh-stats-btn");
@@ -2335,6 +2341,7 @@ function getFreshIndicatorOfTheDay() {
 }
 
 // Initial Bootstrap
+document.documentElement.lang = currentLanguage;
 initTheme();
 applyCoinTheme(currentCoin);
 localizeUI();
