@@ -1921,9 +1921,9 @@ function initVerticalChartResize() {
 
     if (!handle || !chartCard || !centerPanel) return;
 
-    handle.addEventListener("mousedown", (e) => {
+    const startDrag = (clientY) => {
         isResizing = true;
-        startY = e.clientY;
+        startY = clientY;
         startHeight = chartCard.getBoundingClientRect().height;
         handle.classList.add("dragging");
         document.body.style.cursor = "row-resize";
@@ -1931,20 +1931,19 @@ function initVerticalChartResize() {
         if (chartContainer) {
             chartContainer.style.pointerEvents = "none";
         }
-    });
+    };
 
-    document.addEventListener("mousemove", (e) => {
+    const doDrag = (clientY) => {
         if (!isResizing) return;
-        const dy = e.clientY - startY;
+        const dy = clientY - startY;
         const panelHeight = centerPanel.getBoundingClientRect().height;
-        // Clamp chart height between 180px and (panelHeight - 120px)
         const newHeight = Math.max(180, Math.min(panelHeight - 120, startHeight + dy));
         
         chartCard.style.height = `${newHeight}px`;
         chartCard.style.flex = "none";
-    });
+    };
 
-    document.addEventListener("mouseup", () => {
+    const stopDrag = () => {
         if (isResizing) {
             isResizing = false;
             handle.classList.remove("dragging");
@@ -1956,6 +1955,29 @@ function initVerticalChartResize() {
             if (typeof renderTradingViewWidget === "function") {
                 renderTradingViewWidget();
             }
+        }
+    };
+
+    handle.addEventListener("mousedown", (e) => startDrag(e.clientY));
+    document.addEventListener("mousemove", (e) => doDrag(e.clientY));
+    document.addEventListener("mouseup", stopDrag);
+
+    // Touch support for tablet/mobile
+    handle.addEventListener("touchstart", (e) => {
+        if (e.touches && e.touches[0]) startDrag(e.touches[0].clientY);
+    }, { passive: true });
+    document.addEventListener("touchmove", (e) => {
+        if (e.touches && e.touches[0]) doDrag(e.touches[0].clientY);
+    }, { passive: true });
+    document.addEventListener("touchend", stopDrag);
+
+    // Keep chart within visible bounds on window resize
+    window.addEventListener("resize", () => {
+        if (!chartCard || !centerPanel) return;
+        const panelHeight = centerPanel.getBoundingClientRect().height;
+        const currentChartHeight = chartCard.getBoundingClientRect().height;
+        if (currentChartHeight > panelHeight - 120 && panelHeight > 300) {
+            chartCard.style.height = `${Math.max(180, panelHeight - 140)}px`;
         }
     });
 }
