@@ -241,9 +241,9 @@
             </section>
 
             <!-- CENTER PANEL: TradingView Chart & Tabs (Summary/News) -->
-            <section class="center-panel" style="overflow-y: auto !important; padding-right: 4px;">
+            <section class="center-panel">
                 <!-- CHART CONTAINER -->
-                <div class="glass-card chart-card" style="height: 550px !important; min-height: 550px !important; flex: none; padding: 0; overflow: hidden; border-radius: 16px;">
+                <div class="glass-card chart-card" id="chart-card-container">
                     <!-- TradingView Widget Controls Toolbar -->
                     <div class="tv-controls-toolbar" style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 4px; align-items: center; padding: 4px 8px;">
                         <div style="display: flex; align-items: center; gap: 4px;">
@@ -264,11 +264,14 @@
                             </select>
                         </div>
                     </div>
-                    <div id="tv-chart-container" style="width: 100%; height: calc(100% - 32px); min-height: 510px;"></div>
+                    <div id="tv-chart-container" style="width: 100%; height: calc(100% - 32px);"></div>
                 </div>
 
+                <!-- Vertical Resize Splitter Handle -->
+                <div class="resize-handle-v" id="chart-resize-handle" title="Drag up/down to resize chart height"></div>
+
                 <!-- TABS CONTAINER -->
-                <div class="glass-card tabs-card">
+                <div class="glass-card tabs-card" id="tabs-card-container">
                     <div class="tab-headers" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 12px;">
                         <div style="display: flex; gap: 4px; flex-wrap: wrap;">
                             <button class="tab-btn active" id="tab-summary-btn" onclick="switchTab('summary')" style="padding: 5px 9px !important; font-size: 0.76rem !important; border-radius: 8px; font-weight: 600;">📝 AI Summary</button>

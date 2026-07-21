@@ -1907,6 +1907,53 @@ function initResizeHandle() {
 }
 
 // -------------------------------------------------------------------------
+// Vertical Resize Handle (Flexible TradingView Chart Height)
+// -------------------------------------------------------------------------
+
+function initVerticalChartResize() {
+    const handle = document.getElementById("chart-resize-handle");
+    const chartCard = document.getElementById("chart-card-container");
+    const centerPanel = document.querySelector(".center-panel");
+    let isResizing = false;
+    let startY = 0;
+    let startHeight = 0;
+
+    if (!handle || !chartCard || !centerPanel) return;
+
+    handle.addEventListener("mousedown", (e) => {
+        isResizing = true;
+        startY = e.clientY;
+        startHeight = chartCard.getBoundingClientRect().height;
+        handle.classList.add("dragging");
+        document.body.style.cursor = "row-resize";
+        document.body.style.userSelect = "none";
+    });
+
+    document.addEventListener("mousemove", (e) => {
+        if (!isResizing) return;
+        const dy = e.clientY - startY;
+        const panelHeight = centerPanel.getBoundingClientRect().height;
+        // Clamp chart height between 200px and (panelHeight - 130px)
+        const newHeight = Math.max(200, Math.min(panelHeight - 130, startHeight + dy));
+        
+        chartCard.style.height = `${newHeight}px`;
+        chartCard.style.flex = "none";
+    });
+
+    document.addEventListener("mouseup", () => {
+        if (isResizing) {
+            isResizing = false;
+            handle.classList.remove("dragging");
+            document.body.style.cursor = "";
+            document.body.style.userSelect = "";
+            if (typeof renderTradingViewWidget === "function") {
+                renderTradingViewWidget();
+            }
+        }
+    });
+}
+
+// -------------------------------------------------------------------------
 // Market Sentiment Gauge Logic
 // -------------------------------------------------------------------------
 
@@ -2254,6 +2301,7 @@ checkUserSession().then(async () => {
     await loadApiKeysList();
 });
 initResizeHandle();
+initVerticalChartResize();
 updateQuotaUI();
 loadQuizQuestion();
 // Refresh quota indicator every 60 seconds
