@@ -15,7 +15,7 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- CSS style -->
-    <link rel="stylesheet" href="/static/style.css?v=3.6.0&t=1721580000">
+    <link rel="stylesheet" href="/static/style.css?v=3.7.0&t=1721582000">
 </head>
 <body class="dark-theme">
     <div id="glow-bg"></div>
@@ -243,9 +243,9 @@
             <!-- CENTER PANEL: TradingView Chart & Tabs (Summary/News) -->
             <section class="center-panel">
                 <!-- CHART CONTAINER -->
-                <div class="glass-card chart-card" id="chart-card-container">
-                    <!-- TradingView Widget Controls Toolbar -->
-                    <div class="tv-controls-toolbar" style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 4px; align-items: center; padding: 4px 8px;">
+                <div class="glass-card chart-card" id="chart-card-container" style="position: relative;">
+                    <!-- TradingView Widget Controls Toolbar Overlay -->
+                    <div class="tv-controls-toolbar" style="position: absolute; top: 6px; right: 12px; z-index: 10; display: flex; align-items: center; gap: 8px; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; padding: 3px 8px;">
                         <div style="display: flex; align-items: center; gap: 4px;">
                             <label for="tv-interval-select" style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Interval:</label>
                             <select id="tv-interval-select" onchange="changeTradingViewInterval(this.value)" style="background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; padding: 3px 6px; font-family: inherit; font-size: 0.75rem; outline: none; cursor: pointer;">
@@ -264,7 +264,7 @@
                             </select>
                         </div>
                     </div>
-                    <div id="tv-chart-container" style="width: 100%; height: calc(100% - 32px);"></div>
+                    <div id="tv-chart-container" style="width: 100%; height: 100%; position: absolute; top: 0; left: 0; border-radius: 16px; overflow: hidden;"></div>
                 </div>
 
                 <!-- Vertical Resize Splitter Handle -->
@@ -631,6 +631,6 @@
     </div>
 
     <!-- JS app script -->
-    <script src="/static/app.js?v=2.5.0"></script>
+    <script src="/static/app.js?v=3.7.0&t=1721582000"></script>
 </body>
 </html>

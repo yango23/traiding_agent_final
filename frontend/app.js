@@ -1913,6 +1913,7 @@ function initResizeHandle() {
 function initVerticalChartResize() {
     const handle = document.getElementById("chart-resize-handle");
     const chartCard = document.getElementById("chart-card-container");
+    const chartContainer = document.getElementById("tv-chart-container");
     const centerPanel = document.querySelector(".center-panel");
     let isResizing = false;
     let startY = 0;
@@ -1927,14 +1928,17 @@ function initVerticalChartResize() {
         handle.classList.add("dragging");
         document.body.style.cursor = "row-resize";
         document.body.style.userSelect = "none";
+        if (chartContainer) {
+            chartContainer.style.pointerEvents = "none";
+        }
     });
 
     document.addEventListener("mousemove", (e) => {
         if (!isResizing) return;
         const dy = e.clientY - startY;
         const panelHeight = centerPanel.getBoundingClientRect().height;
-        // Clamp chart height between 200px and (panelHeight - 130px)
-        const newHeight = Math.max(200, Math.min(panelHeight - 130, startHeight + dy));
+        // Clamp chart height between 180px and (panelHeight - 120px)
+        const newHeight = Math.max(180, Math.min(panelHeight - 120, startHeight + dy));
         
         chartCard.style.height = `${newHeight}px`;
         chartCard.style.flex = "none";
@@ -1946,6 +1950,9 @@ function initVerticalChartResize() {
             handle.classList.remove("dragging");
             document.body.style.cursor = "";
             document.body.style.userSelect = "";
+            if (chartContainer) {
+                chartContainer.style.pointerEvents = "auto";
+            }
             if (typeof renderTradingViewWidget === "function") {
                 renderTradingViewWidget();
             }
