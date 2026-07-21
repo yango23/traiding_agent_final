@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto AI Advisor & Educational Dashboard</title>
+    <title>Trading AI Advisor & Educational Dashboard</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,9 +24,9 @@
         <header class="app-header">
             <div class="header-logo">
                 <a href="/" onclick="window.location.reload(); return false;" class="logo-link" style="display: flex; align-items: center; text-decoration: none; color: inherit; gap: 12px;">
-                    <img src="/static/logo.png?v=2.2.0" alt="Crypto AI Advisor Logo" class="logo-img" style="height: 38px; width: 38px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); object-fit: cover; transition: transform 0.2s ease, box-shadow 0.2s ease;">
+                    <img src="/static/logo.png?v=2.2.0" alt="Trading AI Advisor Logo" class="logo-img" style="height: 38px; width: 38px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); object-fit: cover; transition: transform 0.2s ease, box-shadow 0.2s ease;">
                     <div class="logo-text">
-                        <h1>Crypto <span class="neon-text">AI Advisor</span></h1>
+                        <h1>Trading <span class="neon-text">AI Advisor</span></h1>
                         <span class="sub-logo" id="header-subtitle">Educational AI Assistant & Dashboard</span>
                     </div>
                 </a>
@@ -269,19 +269,19 @@
 
                 <!-- TABS CONTAINER -->
                 <div class="glass-card tabs-card">
-                    <div class="tab-headers" style="display: flex; justify-content: space-between; align-items: center;">
-                        <div style="display: flex; gap: 4px;">
+                    <div class="tab-headers">
+                        <div style="display: flex; gap: 4px; flex-wrap: wrap;">
                             <button class="tab-btn active" id="tab-summary-btn" onclick="switchTab('summary')">📝 AI Summary</button>
                             <button class="tab-btn" id="tab-news-btn" onclick="switchTab('news')">📰 News</button>
                             <button class="tab-btn" id="tab-backtester-btn" onclick="switchTab('backtester')">📈 Backtester</button>
                             <button class="tab-btn" id="tab-pine-btn" onclick="switchTab('pine')">🛠️ Pine Script</button>
                         </div>
-                        <div style="display: flex; gap: 6px; align-items: center;">
-                            <button class="control-btn" id="refresh-data-btn" onclick="refreshDashboardData()" style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; padding: 6px 12px; height: fit-content; border: 1px solid var(--card-border); background: var(--input-bg); border-radius: 8px; cursor: pointer; color: var(--text-primary); transition: all 0.2s ease;">
-                                <span class="refresh-icon" style="display: inline-block;">🔄</span> <span id="lbl-refresh-btn">Refresh Data</span>
+                        <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+                            <button class="tab-btn" id="refresh-data-btn" onclick="refreshDashboardData()" style="border: 1px solid var(--card-border);">
+                                <span class="refresh-icon" style="display: inline-block;">🔄</span> <span id="lbl-refresh-btn">Refresh</span>
                             </button>
-                            <button class="control-btn" id="export-report-btn" onclick="exportReport()" style="display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; padding: 6px 12px; height: fit-content; border: 1px solid var(--card-border); background: var(--input-bg); border-radius: 8px; margin-right: 6px; cursor: pointer; color: var(--text-primary); transition: all 0.2s ease;">
-                                📥 <span id="lbl-export-btn">Export Report</span>
+                            <button class="tab-btn" id="export-report-btn" onclick="exportReport()" style="border: 1px solid var(--card-border);">
+                                📥 <span id="lbl-export-btn">Export</span>
                             </button>
                         </div>
                     </div>

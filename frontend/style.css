@@ -400,27 +400,30 @@ body.light-theme .card-divider {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    overflow: hidden;
+    overflow-y: auto;
+    padding-right: 2px;
 }
 
 .chart-card {
-    flex: 1.8;
+    height: 530px;
+    min-height: 530px;
+    flex: none;
     padding: 0; /* Let TradingView take full size */
     overflow: hidden;
-    min-height: 480px;
+    border-radius: 16px;
 }
 
 #tv-chart-container {
     width: 100%;
     height: 100%;
-    min-height: 480px;
+    min-height: 530px;
     border-radius: 16px;
     overflow: hidden;
 }
 #tv-chart-container iframe {
     width: 100% !important;
     height: 100% !important;
-    min-height: 480px !important;
+    min-height: 530px !important;
     display: block !important;
 }
 
@@ -434,7 +437,10 @@ body.light-theme .card-divider {
 
 .tab-headers {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
     border-bottom: var(--card-border);
     padding-bottom: 8px;
     margin-bottom: 12px;
@@ -442,27 +448,32 @@ body.light-theme .card-divider {
 
 .tab-btn {
     background: transparent;
-    border: none;
+    border: 1px solid transparent;
     color: var(--text-secondary);
-    padding: 8px 16px;
+    padding: 5px 10px;
     font-family: inherit;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.78rem;
     cursor: pointer;
     border-radius: 8px;
     transition: all 0.2s ease;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .tab-btn:hover {
     color: var(--text-primary);
     background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
 .tab-btn.active {
     color: var(--text-primary);
     background: var(--input-bg);
     box-shadow: var(--neon-glow-blue);
-    border: 1px solid rgba(59, 130, 246, 0.2);
+    border: 1px solid rgba(59, 130, 246, 0.25);
 }
 
 .tab-content-container {
@@ -700,66 +711,94 @@ body.light-theme .card-divider {
 /* Chat suggested chips */
 .chat-chips {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-start;
     gap: 6px;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
+    width: 100%;
 }
 
 .chip {
     background: var(--input-bg);
     border: var(--card-border);
     color: var(--text-secondary);
-    padding: 6px 10px;
-    border-radius: 14px;
-    font-size: 0.75rem;
+    padding: 7px 12px;
+    border-radius: 12px;
+    font-size: 0.78rem;
     cursor: pointer;
     transition: all 0.2s ease;
     font-weight: 500;
+    text-align: left;
+    max-width: 100%;
+    align-self: flex-start;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
 }
 
 .chip:hover {
-    border-color: var(--neon-blue);
+    border-color: var(--accent-color);
     color: var(--text-primary);
-    transform: translateY(-1px);
+    background: rgba(var(--accent-rgb), 0.12);
+    transform: translateX(3px);
 }
 
 /* Input Area */
 .chat-input-area {
     display: flex;
     gap: 10px;
-    background: var(--input-bg);
+    background: rgba(15, 23, 42, 0.8) !important;
     border: var(--card-border);
     border-radius: 14px;
     padding: 6px 10px;
     align-items: flex-end;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
     transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .chat-input-area:focus-within {
-    border-color: var(--accent-color);
-    box-shadow: 0 0 16px rgba(var(--accent-rgb), 0.2);
+    border-color: #a855f7 !important;
+    box-shadow: 0 0 16px rgba(168, 85, 247, 0.3) !important;
 }
 
 .chat-input-area input,
 .chat-input-area textarea {
     flex: 1;
-    background: transparent;
-    border: none;
-    color: var(--text-primary);
+    background: transparent !important;
+    border: none !important;
+    color: #f8fafc !important;
     padding: 6px 4px;
-    outline: none;
+    outline: none !important;
     font-family: inherit;
     font-size: 0.88rem;
     resize: none;
     min-height: 38px;
     max-height: 120px;
     line-height: 1.45;
+    box-shadow: none !important;
+}
+
+.chat-input-area textarea::placeholder {
+    color: #94a3b8 !important;
+    opacity: 0.85;
+}
+
+/* Light Theme Input styling */
+body.light-theme .chat-input-area {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05) !important;
+}
+
+body.light-theme .chat-input-area textarea {
+    color: #0f172a !important;
+}
+
+body.light-theme .chat-input-area textarea::placeholder {
+    color: #64748b !important;
 }
 
 .send-btn {
-    background: linear-gradient(135deg, var(--accent-color), rgba(var(--accent-rgb), 0.85));
-    color: #ffffff;
+    background: linear-gradient(135deg, #a855f7, #7c3aed) !important;
+    color: #ffffff !important;
     border: none;
     border-radius: 10px;
     width: 36px;
@@ -772,13 +811,17 @@ body.light-theme .card-divider {
     align-self: flex-end;
     margin-bottom: 2px;
     transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-    box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.3);
+    box-shadow: 0 4px 14px rgba(168, 85, 247, 0.45) !important;
 }
 
 .send-btn:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 6px 18px rgba(var(--accent-rgb), 0.45);
+    transform: translateY(-2px) scale(1.06);
+    box-shadow: 0 6px 20px rgba(168, 85, 247, 0.65) !important;
     filter: brightness(1.15);
+}
+
+.send-btn:active {
+    transform: scale(0.95);
 }
 
 .send-btn:active {

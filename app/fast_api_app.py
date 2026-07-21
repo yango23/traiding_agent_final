@@ -21,8 +21,8 @@ from app.db import (
 init_db()
 
 app = FastAPI(
-    title="Crypto AI Advisor Dashboard",
-    description="Educational AI Cryptocurrency Assistant and Market Dashboard"
+    title="Trading AI Advisor Dashboard",
+    description="Educational AI assistant for market technical analysis & paper trading strategies"
 )
 
 # Enable CORS for local testing
