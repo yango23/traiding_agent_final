@@ -15,7 +15,7 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- CSS style -->
-    <link rel="stylesheet" href="/static/style.css?v=2.5.0">
+    <link rel="stylesheet" href="/static/style.css?v=3.6.0&t=1721580000">
 </head>
 <body class="dark-theme">
     <div id="glow-bg"></div>
@@ -241,11 +241,11 @@
             </section>
 
             <!-- CENTER PANEL: TradingView Chart & Tabs (Summary/News) -->
-            <section class="center-panel">
+            <section class="center-panel" style="overflow-y: auto !important; padding-right: 4px;">
                 <!-- CHART CONTAINER -->
-                <div class="glass-card chart-card">
+                <div class="glass-card chart-card" style="height: 550px !important; min-height: 550px !important; flex: none; padding: 0; overflow: hidden; border-radius: 16px;">
                     <!-- TradingView Widget Controls Toolbar -->
-                    <div class="tv-controls-toolbar" style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px; align-items: center; padding: 2px 4px;">
+                    <div class="tv-controls-toolbar" style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 4px; align-items: center; padding: 4px 8px;">
                         <div style="display: flex; align-items: center; gap: 4px;">
                             <label for="tv-interval-select" style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Interval:</label>
                             <select id="tv-interval-select" onchange="changeTradingViewInterval(this.value)" style="background: var(--input-bg); color: var(--text-primary); border: var(--card-border); border-radius: 6px; padding: 3px 6px; font-family: inherit; font-size: 0.75rem; outline: none; cursor: pointer;">
@@ -264,24 +264,24 @@
                             </select>
                         </div>
                     </div>
-                    <div id="tv-chart-container"></div>
+                    <div id="tv-chart-container" style="width: 100%; height: calc(100% - 32px); min-height: 510px;"></div>
                 </div>
 
                 <!-- TABS CONTAINER -->
                 <div class="glass-card tabs-card">
-                    <div class="tab-headers">
+                    <div class="tab-headers" style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 12px;">
                         <div style="display: flex; gap: 4px; flex-wrap: wrap;">
-                            <button class="tab-btn active" id="tab-summary-btn" onclick="switchTab('summary')">📝 AI Summary</button>
-                            <button class="tab-btn" id="tab-news-btn" onclick="switchTab('news')">📰 News</button>
-                            <button class="tab-btn" id="tab-backtester-btn" onclick="switchTab('backtester')">📈 Backtester</button>
-                            <button class="tab-btn" id="tab-pine-btn" onclick="switchTab('pine')">🛠️ Pine Script</button>
+                            <button class="tab-btn active" id="tab-summary-btn" onclick="switchTab('summary')" style="padding: 5px 9px !important; font-size: 0.76rem !important; border-radius: 8px; font-weight: 600;">📝 AI Summary</button>
+                            <button class="tab-btn" id="tab-news-btn" onclick="switchTab('news')" style="padding: 5px 9px !important; font-size: 0.76rem !important; border-radius: 8px; font-weight: 600;">📰 News</button>
+                            <button class="tab-btn" id="tab-backtester-btn" onclick="switchTab('backtester')" style="padding: 5px 9px !important; font-size: 0.76rem !important; border-radius: 8px; font-weight: 600;">📈 Backtest</button>
+                            <button class="tab-btn" id="tab-pine-btn" onclick="switchTab('pine')" style="padding: 5px 9px !important; font-size: 0.76rem !important; border-radius: 8px; font-weight: 600;">🛠️ Pine Script</button>
                         </div>
                         <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
-                            <button class="tab-btn" id="refresh-data-btn" onclick="refreshDashboardData()" style="border: 1px solid var(--card-border);">
+                            <button class="tab-btn" id="refresh-data-btn" onclick="refreshDashboardData()" style="padding: 5px 9px !important; font-size: 0.76rem !important; border-radius: 8px; font-weight: 600; border: 1px solid rgba(255,255,255,0.15);">
                                 <span class="refresh-icon" style="display: inline-block;">🔄</span> <span id="lbl-refresh-btn">Refresh</span>
                             </button>
-                            <button class="tab-btn" id="export-report-btn" onclick="exportReport()" style="border: 1px solid var(--card-border);">
-                                📥 <span id="lbl-export-btn">Export</span>
+                            <button class="tab-btn" id="export-report-btn" onclick="exportReport()" style="padding: 5px 9px !important; font-size: 0.76rem !important; border-radius: 8px; font-weight: 600; border: 1px solid rgba(255,255,255,0.15);">
+                                📥 <span id="lbl-export-btn">Report</span>
                             </button>
                         </div>
                     </div>
@@ -444,9 +444,9 @@
                     <div class="chat-chips" id="quick-chips-container">
                         <!-- Dynamic suggestions -->
                     </div>
-                    <div class="chat-input-area">
-                        <textarea id="chat-input" rows="1" placeholder="Ask a question about crypto, stocks, reports or market strategy (Enter to send, Ctrl+Enter / Shift+Enter for new line)..." autocomplete="off"></textarea>
-                        <button id="chat-send-btn" class="send-btn">
+                    <div class="chat-input-area" style="display: flex; gap: 10px; background: rgba(15, 23, 42, 0.85) !important; border: 1px solid rgba(255, 255, 255, 0.15) !important; border-radius: 14px; padding: 6px 10px; align-items: flex-end;">
+                        <textarea id="chat-input" rows="1" placeholder="Ask a question about stocks, earnings reports, trading, or crypto (Enter to send, Ctrl+Enter for new line)..." autocomplete="off" style="flex: 1; background: transparent !important; border: none !important; color: #f8fafc !important; padding: 6px 4px; outline: none !important; font-family: inherit; font-size: 0.88rem; resize: none; min-height: 38px; max-height: 120px; line-height: 1.45;"></textarea>
+                        <button id="chat-send-btn" class="send-btn" style="background: linear-gradient(135deg, #a855f7, #7c3aed) !important; color: #ffffff !important; border: none !important; border-radius: 10px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 14px rgba(168, 85, 247, 0.5) !important; margin-bottom: 2px;">
                             <svg viewBox="0 0 24 24" width="20" height="20">
                                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"></path>
                             </svg>
