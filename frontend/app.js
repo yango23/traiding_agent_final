@@ -1867,6 +1867,24 @@ function closeDisclaimer() {
     document.getElementById("chat-disclaimer").style.display = "none";
 }
 
+function toggleAIChatDrawer(isOpen) {
+    const rightPanel = document.querySelector(".right-panel");
+    const backdrop = document.getElementById("chat-drawer-backdrop");
+    if (!rightPanel) return;
+
+    if (isOpen === undefined) {
+        isOpen = !rightPanel.classList.contains("open");
+    }
+
+    if (isOpen) {
+        rightPanel.classList.add("open");
+        if (backdrop) backdrop.classList.add("active");
+    } else {
+        rightPanel.classList.remove("open");
+        if (backdrop) backdrop.classList.remove("active");
+    }
+}
+
 // -------------------------------------------------------------------------
 // Resize Handle (Flexible Chat Panel Width)
 // -------------------------------------------------------------------------

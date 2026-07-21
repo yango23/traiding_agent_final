@@ -15,10 +15,11 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- CSS style -->
-    <link rel="stylesheet" href="/static/style.css?v=3.8.0&t=1721583000">
+    <link rel="stylesheet" href="/static/style.css?v=3.9.0&t=1721584000">
 </head>
 <body class="dark-theme">
     <div id="glow-bg"></div>
+    <div id="chat-drawer-backdrop" onclick="toggleAIChatDrawer(false)"></div>
     <div class="app-container">
         <!-- HEADER -->
         <header class="app-header">
@@ -32,6 +33,10 @@
                 </a>
             </div>
             <div class="header-controls">
+                <!-- Mobile AI Assistant Drawer Toggle Button -->
+                <button id="toggle-ai-drawer-btn" class="control-btn mobile-drawer-btn" onclick="toggleAIChatDrawer(true)" style="display: none; align-items: center; gap: 6px; font-weight: 700; background: linear-gradient(135deg, #a855f7, #7c3aed); color: #fff; border: none; border-radius: 8px; padding: 6px 12px; cursor: pointer; box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);">
+                    💬 <span id="lbl-toggle-drawer">ИИ Помощник</span>
+                </button>
                 <!-- Alerts Bell -->
                 <div id="alerts-bell-container" style="display: none; align-items: center; justify-content: center; position: relative; margin-right: 6px;">
                     <button id="alerts-bell-btn" class="control-btn" style="position: relative; background: var(--glass-card-bg); border: var(--card-border); border-radius: 8px; font-size: 1.1rem; cursor: pointer; padding: 6px 10px;" title="Оповещения / Price Alerts">
@@ -405,7 +410,10 @@
                             <span class="status-dot green"></span>
                             <span id="lbl-advisor-status">AI Educator (Educational Mode)</span>
                         </div>
-                        <span class="security-badge" id="lbl-security-badge" title="Full safety from financial advice and command injection">🛡️ Protected</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="security-badge" id="lbl-security-badge" title="Full safety from financial advice and command injection">🛡️ Protected</span>
+                            <button id="close-ai-drawer-btn" class="close-drawer-btn" onclick="toggleAIChatDrawer(false)" style="display: none; background: transparent; border: none; color: var(--text-muted); font-size: 1.3rem; cursor: pointer; padding: 0 4px; line-height: 1;" title="Close chat drawer">✕</button>
+                        </div>
                     </div>
                     <div class="chat-warning" id="chat-disclaimer">
                         <span id="chat-disclaimer-text">⚠️ <strong>Warning:</strong> I only provide technical/fundamental analysis and teach trading concepts. I DO NOT provide trading signals or direct buy/sell recommendations.</span>
@@ -631,6 +639,6 @@
     </div>
 
     <!-- JS app script -->
-    <script src="/static/app.js?v=3.8.0&t=1721583000"></script>
+    <script src="/static/app.js?v=3.9.0&t=1721584000"></script>
 </body>
 </html>

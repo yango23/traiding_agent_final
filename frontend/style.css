@@ -1562,3 +1562,112 @@ body.light-theme #refresh-stats-btn:hover {
 .text-neon-red {
     color: var(--neon-rose) !important;
 }
+
+/* =========================================================================
+   Mobile & Tablet Responsive Layout & Slide-out AI Assistant Drawer
+   ========================================================================= */
+
+/* Backdrop overlay for mobile drawer */
+#chat-drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(5, 7, 14, 0.7);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 998;
+}
+
+#chat-drawer-backdrop.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Portrait Mode & Narrow Screens (Mobile Phones & Portrait Tablets) */
+@media (max-width: 992px), (orientation: portrait) and (max-width: 1200px) {
+    .mobile-drawer-btn {
+        display: inline-flex !important;
+    }
+
+    .close-drawer-btn {
+        display: inline-block !important;
+    }
+
+    #resize-handle {
+        display: none !important;
+    }
+
+    .app-main-layout {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        overflow-y: auto;
+        padding-bottom: 24px;
+    }
+
+    /* Left Panel and Center Panel stack vertically */
+    .left-panel {
+        width: 100% !important;
+        flex: none;
+        max-height: none;
+    }
+
+    .center-panel {
+        width: 100% !important;
+        flex: none;
+        height: 680px !important;
+    }
+
+    /* AI Chat Assistant transforms into a slide-over drawer */
+    .right-panel {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 90%;
+        max-width: 420px;
+        height: 100vh;
+        height: 100dvh;
+        z-index: 1000;
+        transition: right 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 8px;
+        background: rgba(11, 17, 32, 0.95);
+        backdrop-filter: blur(16px);
+        box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .right-panel.open {
+        right: 0 !important;
+    }
+
+    .right-panel .chat-card {
+        height: 100%;
+        border-radius: 12px;
+    }
+}
+
+/* Landscape Mode for Smartphones & Small Tablets */
+@media (max-height: 650px) and (orientation: landscape) {
+    .app-header {
+        padding: 6px 14px;
+    }
+
+    .app-header h1 {
+        font-size: 1.1rem;
+    }
+
+    .sub-logo {
+        display: none;
+    }
+
+    .app-main-layout {
+        height: calc(100vh - 54px);
+    }
+
+    .chart-card {
+        min-height: 180px;
+    }
+}
