@@ -2530,10 +2530,10 @@ checkUserSession().then(async () => {
     await loadTradingViewSettings();
     renderTradingViewWidget();
     await loadStudiedIndicators();
+    await loadApiKeysList();
     await initChatSession();
     await loadAIContent();
     await syncQuizProgressFromServer();
-    await loadApiKeysList();
 });
 initResizeHandle();
 initVerticalChartResize();
@@ -2811,6 +2811,9 @@ async function saveApiKey() {
 
     try {
         sessionStorage.setItem("custom_api_key", key);
+        for (const k in clientSummaryCache) {
+            delete clientSummaryCache[k];
+        }
         
         const sessionToken = localStorage.getItem("session_token");
         if (sessionToken) {
@@ -2823,8 +2826,8 @@ async function saveApiKey() {
         statusDiv.style.display = "block";
         keyInput.value = ""; // clear input
         
-        // Reload content to use the new key
-        loadAIContent();
+        // Reload content to use the new key with forceRefresh = true
+        await loadAIContent(true);
         
         // Clear current chat session and re-welcome user to get live interaction
         if (sessionToken) {
@@ -3471,11 +3474,14 @@ async function activateApiKeyInDB(key_id, api_key) {
         const data = await resp.json();
         if (data.success) {
             sessionStorage.setItem("custom_api_key", api_key);
+            for (const k in clientSummaryCache) {
+                delete clientSummaryCache[k];
+            }
             await loadApiKeysList();
             
-            loadAIContent();
+            await loadAIContent(true);
             chatHistories[currentCoin] = null;
-            initChatSession();
+            await initChatSession();
         }
     } catch (e) {
         console.error("Failed to activate API key", e);
@@ -3493,10 +3499,14 @@ async function deleteApiKeyFromDB(key_id) {
         });
         const data = await resp.json();
         if (data.success) {
+            sessionStorage.removeItem("custom_api_key");
+            for (const k in clientSummaryCache) {
+                delete clientSummaryCache[k];
+            }
             await loadApiKeysList();
-            loadAIContent();
+            await loadAIContent(true);
             chatHistories[currentCoin] = null;
-            initChatSession();
+            await initChatSession();
         }
     } catch (e) {
         console.error("Failed to delete API key", e);
