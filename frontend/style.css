@@ -826,8 +826,8 @@ body.light-theme .card-divider {
 }
 
 .chat-input-area:focus-within {
-    border-color: #a855f7 !important;
-    box-shadow: 0 0 16px rgba(168, 85, 247, 0.3) !important;
+    border-color: #f97316 !important;
+    box-shadow: 0 0 16px rgba(249, 115, 22, 0.3) !important;
 }
 
 .chat-input-area input,
@@ -868,7 +868,7 @@ body.light-theme .chat-input-area textarea::placeholder {
 }
 
 .send-btn {
-    background: linear-gradient(135deg, #a855f7, #7c3aed) !important;
+    background: linear-gradient(135deg, #f97316, #ea580c) !important;
     color: #ffffff !important;
     border: none;
     border-radius: 10px;
@@ -882,12 +882,12 @@ body.light-theme .chat-input-area textarea::placeholder {
     align-self: flex-end;
     margin-bottom: 2px;
     transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-    box-shadow: 0 4px 14px rgba(168, 85, 247, 0.45) !important;
+    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.45) !important;
 }
 
 .send-btn:hover {
     transform: translateY(-2px) scale(1.06);
-    box-shadow: 0 6px 20px rgba(168, 85, 247, 0.65) !important;
+    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.65) !important;
     filter: brightness(1.15);
 }
 

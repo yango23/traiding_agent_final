@@ -165,6 +165,7 @@ let activeTab = "summary";
 let tvWidgetInstance = null;
 let currentSentimentTimeframe = "12h";
 let lastRawSummary = "";
+const clientSummaryCache = {};
 
 function switchMarketType(marketType) {
     if (currentMarketType === marketType) return;
@@ -937,6 +938,29 @@ async function loadAIContent(forceRefresh = false) {
     // 1. Fetch Stats, Indicators and News from API
     await loadStatsOnly(forceRefresh);
 
+    const cacheKey = `${currentCoin.toLowerCase()}_${currentLanguage.toLowerCase()}`;
+    
+    // Check client-side memory cache if not force refreshing
+    if (!forceRefresh && clientSummaryCache[cacheKey]) {
+        const cached = clientSummaryCache[cacheKey];
+        lastRawSummary = cached.summary;
+        aiSummaryText.innerHTML = formatMarkdown(cached.summary);
+        aiSummaryText.style.display = "block";
+        summaryLoading.style.display = "none";
+        
+        const simBanner = document.getElementById("simulated-warning");
+        const simText   = document.getElementById("simulated-warning-text");
+        if (cached.simulated) {
+            simText.textContent = currentLanguage === "ru"
+                ? "⚠️ Квота AI исчерпана — показывается смоделированный анализ (демо-режим)"
+                : "⚠️ AI quota exhausted — showing simulated analysis (demo mode)";
+            simBanner.style.display = "flex";
+        } else {
+            simBanner.style.display = "none";
+        }
+        return;
+    }
+
     // 2. Fetch AI Summary
     summaryLoading.style.display = "flex";
     aiSummaryText.style.display = "none";
@@ -949,6 +973,10 @@ async function loadAIContent(forceRefresh = false) {
         });
         const data = await response.json();
         if (data.success) {
+            clientSummaryCache[cacheKey] = {
+                summary: data.summary,
+                simulated: data.simulated
+            };
             lastRawSummary = data.summary;
             aiSummaryText.innerHTML = formatMarkdown(data.summary);
             aiSummaryText.style.display = "block";
@@ -1478,12 +1506,83 @@ function renderQuickChips() {
         chipEl.className = "chip";
         
         if (text === "indicator_of_the_day") {
-            const displayName = currentLanguage === "ru" ? `Изучить индикатор дня: ${ind.name.ru}` : `Study indicator of the day: ${ind.name.en}`;
-            chipEl.textContent = displayName;
-            chipEl.onclick = () => {
+            chipEl.className = "chip indicator-chip-wrapper";
+            chipEl.style.position = "relative";
+            chipEl.style.display = "inline-flex";
+            chipEl.style.alignItems = "center";
+            chipEl.style.gap = "6px";
+            chipEl.style.cursor = "default";
+            
+            const indName = ind.name[currentLanguage];
+            const labelSpan = document.createElement("span");
+            labelSpan.style.cursor = "pointer";
+            labelSpan.textContent = currentLanguage === "ru" ? `Изучить индикатор: ${indName}` : `Study indicator: ${indName}`;
+            labelSpan.onclick = (e) => {
+                e.stopPropagation();
                 chatInput.value = ind.query[currentLanguage];
                 sendMessage();
             };
+            
+            const arrowBtn = document.createElement("span");
+            arrowBtn.className = "indicator-select-arrow";
+            arrowBtn.innerHTML = " ▾";
+            arrowBtn.style.cursor = "pointer";
+            arrowBtn.style.padding = "2px 6px";
+            arrowBtn.style.borderRadius = "4px";
+            arrowBtn.style.background = "rgba(255, 255, 255, 0.08)";
+            arrowBtn.title = currentLanguage === "ru" ? "Выбрать другой индикатор" : "Select another indicator";
+            
+            // Dropdown menu element
+            const selectMenu = document.createElement("div");
+            selectMenu.className = "indicator-dropdown-menu";
+            selectMenu.style.display = "none";
+            selectMenu.style.position = "absolute";
+            selectMenu.style.bottom = "100%";
+            selectMenu.style.left = "0";
+            selectMenu.style.marginBottom = "6px";
+            selectMenu.style.background = "rgba(15, 23, 42, 0.95)";
+            selectMenu.style.backdropFilter = "blur(12px)";
+            selectMenu.style.border = "1px solid rgba(255, 255, 255, 0.15)";
+            selectMenu.style.borderRadius = "10px";
+            selectMenu.style.boxShadow = "0 8px 24px rgba(0,0,0,0.5)";
+            selectMenu.style.zIndex = "100";
+            selectMenu.style.maxHeight = "220px";
+            selectMenu.style.overflowY = "auto";
+            selectMenu.style.padding = "6px 0";
+            selectMenu.style.minWidth = "240px";
+            
+            INDICATORS_OF_THE_DAY.forEach(item => {
+                const menuItem = document.createElement("div");
+                menuItem.className = "indicator-dropdown-item";
+                menuItem.style.padding = "8px 14px";
+                menuItem.style.fontSize = "0.82rem";
+                menuItem.style.cursor = "pointer";
+                menuItem.style.color = "#e2e8f0";
+                menuItem.style.transition = "background 0.2s ease";
+                menuItem.textContent = item.name[currentLanguage];
+                
+                menuItem.onmouseenter = () => { menuItem.style.background = "rgba(249, 115, 22, 0.2)"; };
+                menuItem.onmouseleave = () => { menuItem.style.background = "transparent"; };
+                menuItem.onclick = (e) => {
+                    e.stopPropagation();
+                    selectMenu.style.display = "none";
+                    labelSpan.textContent = currentLanguage === "ru" ? `Изучить индикатор: ${item.name.ru}` : `Study indicator: ${item.name.en}`;
+                    chatInput.value = item.query[currentLanguage];
+                    sendMessage();
+                };
+                selectMenu.appendChild(menuItem);
+            });
+            
+            arrowBtn.onclick = (e) => {
+                e.stopPropagation();
+                const isOpen = selectMenu.style.display === "block";
+                document.querySelectorAll(".indicator-dropdown-menu").forEach(m => m.style.display = "none");
+                selectMenu.style.display = isOpen ? "none" : "block";
+            };
+
+            chipEl.appendChild(labelSpan);
+            chipEl.appendChild(arrowBtn);
+            chipEl.appendChild(selectMenu);
         } else {
             const formattedText = text.replace("{coin}", coinLabel);
             chipEl.textContent = formattedText;
@@ -2408,16 +2507,19 @@ function isIndicatorMentioned(ind) {
 }
 
 function getFreshIndicatorOfTheDay() {
-    const baseIndex = dayOfYear % INDICATORS_OF_THE_DAY.length;
-    for (let i = 0; i < INDICATORS_OF_THE_DAY.length; i++) {
-        const candidateIndex = (baseIndex + i) % INDICATORS_OF_THE_DAY.length;
-        const ind = INDICATORS_OF_THE_DAY[candidateIndex];
-        if (!isIndicatorMentioned(ind)) {
-            return ind;
-        }
+    const unstudied = INDICATORS_OF_THE_DAY.filter(ind => !isIndicatorMentioned(ind));
+    if (unstudied.length > 0) {
+        const randomIndex = Math.floor(Math.random() * unstudied.length);
+        return unstudied[randomIndex];
     }
-    return INDICATORS_OF_THE_DAY[baseIndex];
+    const randomIndex = Math.floor(Math.random() * INDICATORS_OF_THE_DAY.length);
+    return INDICATORS_OF_THE_DAY[randomIndex];
 }
+
+// Close dropdowns on outside click
+document.addEventListener("click", () => {
+    document.querySelectorAll(".indicator-dropdown-menu").forEach(m => m.style.display = "none");
+});
 
 // Initial Bootstrap
 document.documentElement.lang = currentLanguage;
