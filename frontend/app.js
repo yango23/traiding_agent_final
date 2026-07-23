@@ -4,14 +4,43 @@
 
 // Global Configuration
 const TRADINGVIEW_SYMBOLS = {
+    // Crypto
     "bitcoin": "BINANCE:BTCUSDT",
     "ethereum": "BINANCE:ETHUSDT",
     "solana": "BINANCE:SOLUSDT",
     "ripple": "BINANCE:XRPUSDT",
     "dogecoin": "BINANCE:DOGEUSDT",
     "shiba-inu": "BINANCE:SHIBUSDT",
-    "pepe": "KRAKEN:PEPEUSD"
+    "pepe": "KRAKEN:PEPEUSD",
+    // US Stocks
+    "alphabet": "NASDAQ:GOOGL",
+    "apple": "NASDAQ:AAPL",
+    "microsoft": "NASDAQ:MSFT",
+    "nvidia": "NASDAQ:NVDA",
+    "amazon": "NASDAQ:AMZN",
+    "meta": "NASDAQ:META",
+    "tesla": "NASDAQ:TSLA"
 };
+
+const CRYPTO_ASSETS = [
+    { value: "bitcoin", label: "Bitcoin (BTC)" },
+    { value: "ethereum", label: "Ethereum (ETH)" },
+    { value: "solana", label: "Solana (SOL)" },
+    { value: "ripple", label: "Ripple (XRP)" },
+    { value: "dogecoin", label: "Dogecoin (DOGE)" },
+    { value: "shiba-inu", label: "Shiba Inu (SHIB)" },
+    { value: "pepe", label: "Pepe (PEPE)" }
+];
+
+const STOCK_ASSETS = [
+    { value: "alphabet", label: "Alphabet / Google (GOOGL)" },
+    { value: "apple", label: "Apple Inc. (AAPL)" },
+    { value: "microsoft", label: "Microsoft (MSFT)" },
+    { value: "nvidia", label: "NVIDIA (NVDA)" },
+    { value: "amazon", label: "Amazon (AMZN)" },
+    { value: "meta", label: "Meta Platforms (META)" },
+    { value: "tesla", label: "Tesla Inc. (TSLA)" }
+];
 
 // UI Localization Dictionaries
 const LOCALIZATION = {
@@ -130,11 +159,47 @@ if (savedVersion !== APP_VERSION) {
 // State Variables
 let currentLanguage = localStorage.getItem("lang") || "en";
 let currentTheme = localStorage.getItem("theme") || "dark";
+let currentMarketType = "crypto";
 let currentCoin = "bitcoin";
 let activeTab = "summary";
 let tvWidgetInstance = null;
 let currentSentimentTimeframe = "12h";
 let lastRawSummary = "";
+
+function switchMarketType(marketType) {
+    if (currentMarketType === marketType) return;
+    currentMarketType = marketType;
+    
+    // Toggle active tab buttons
+    const cryptoBtn = document.getElementById("tab-market-crypto");
+    const stocksBtn = document.getElementById("tab-market-stocks");
+    if (cryptoBtn) cryptoBtn.classList.toggle("active", marketType === "crypto");
+    if (stocksBtn) stocksBtn.classList.toggle("active", marketType === "stocks");
+
+    // Populate selector dropdown
+    const selector = document.getElementById("coin-selector");
+    if (selector) {
+        selector.innerHTML = "";
+        const assetsList = marketType === "stocks" ? STOCK_ASSETS : CRYPTO_ASSETS;
+        assetsList.forEach(asset => {
+            const opt = document.createElement("option");
+            opt.value = asset.value;
+            opt.textContent = asset.label;
+            selector.appendChild(opt);
+        });
+
+        // Default selected: "alphabet" for stocks, "bitcoin" for crypto
+        const defaultAsset = marketType === "stocks" ? "alphabet" : "bitcoin";
+        selector.value = defaultAsset;
+        currentCoin = defaultAsset;
+    }
+
+    // Trigger full asset refresh
+    applyCoinTheme(currentCoin);
+    renderTradingViewWidget();
+    loadAIContent(true);
+    initChatSession();
+}
 
 // Auth Headers Vault helper
 function getAuthHeaders() {
@@ -1126,8 +1191,15 @@ async function initChatSession() {
             const data = await resp.json();
             if (data.success && data.history) {
                 if (data.history.length === 0) {
-                    const coinLabel = coinSelector.options[coinSelector.selectedIndex].text;
-                    const welcomeMsg = LOCALIZATION[currentLanguage].welcomeMessage.replace("{coin}", coinLabel);
+                    const coinLabel = coinSelector ? coinSelector.options[coinSelector.selectedIndex].text : currentCoin;
+                    const isStock = currentMarketType === "stocks" || STOCK_ASSETS.some(a => a.value === currentCoin);
+                    let welcomeTemplate = LOCALIZATION[currentLanguage].welcomeMessage;
+                    if (isStock) {
+                        welcomeTemplate = currentLanguage === "ru"
+                            ? "Привет! Я твой ИИ-преподаватель по фундаментальному и техническому анализу акций {coin}. Чем могу помочь тебе сегодня? Я могу рассказать про индикаторы (RSI, MACD, SMA), объяснить финансовую отчетность компании или показать основы построения стратегий."
+                            : "Hello! I am your AI educator for technical and fundamental analysis of {coin} shares. How can I help you today? I can explain indicators (RSI, MACD, SMA), corporate financial reports, or strategy building basics.";
+                    }
+                    const welcomeMsg = welcomeTemplate.replace("{coin}", coinLabel);
                     chatHistories[currentCoin] = [{
                         role: "model",
                         content: welcomeMsg
@@ -1149,10 +1221,17 @@ async function initChatSession() {
 
 function fallbackToLocalHistory() {
     if (!chatHistories[currentCoin]) {
-        const coinLabel = coinSelector.options[coinSelector.selectedIndex].text;
+        const coinLabel = coinSelector ? coinSelector.options[coinSelector.selectedIndex].text : currentCoin;
+        const isStock = currentMarketType === "stocks" || STOCK_ASSETS.some(a => a.value === currentCoin);
+        let welcomeTemplate = LOCALIZATION[currentLanguage].welcomeMessage;
+        if (isStock) {
+            welcomeTemplate = currentLanguage === "ru"
+                ? "Привет! Я твой ИИ-преподаватель по фундаментальному и техническому анализу акций {coin}. Чем могу помочь тебе сегодня? Я могу рассказать про индикаторы (RSI, MACD, SMA), объяснить финансовую отчетность компании или показать основы построения стратегий."
+                : "Hello! I am your AI educator for technical and fundamental analysis of {coin} shares. How can I help you today? I can explain indicators (RSI, MACD, SMA), corporate financial reports, or strategy building basics.";
+        }
         chatHistories[currentCoin] = [{
             role: "model",
-            content: LOCALIZATION[currentLanguage].welcomeMessage.replace("{coin}", coinLabel)
+            content: welcomeTemplate.replace("{coin}", coinLabel)
         }];
         saveHistories();
     }

@@ -253,8 +253,18 @@ def get_summary_cache_key(coin_id: str, lang: str) -> str:
 
 def get_simulated_summary(coin_id: str, lang: str = "ru") -> str:
     coin_name = COIN_NAMES.get(coin_id.lower().strip(), coin_id.capitalize())
+    is_stock = coin_id.lower().strip() in ["alphabet", "apple", "microsoft", "nvidia", "amazon", "meta", "tesla"]
     
     if lang == "ru":
+        if is_stock:
+            return f"""1. **Рыночный тонус**:
+Акции {coin_name} демонстрируют уверенную динамику в торговой сессии США. Наблюдается краткосрочный [green]{{бычий импульс}} на фоне устойчивых фундаментальных показателей, инвестиций в ИИ и высоких технологических доходов. Объемы торгов остаются [green]{{выше среднего}}.
+
+2. **Что говорят индикаторы**:
+Индикатор **RSI (14)** находится на отметке 56.4 ([green]{{нейтрально-бычья зона}}), оставляя запас для дальнейшего роста. Гистограмма **MACD** пересекла сигнальную линию снизу вверх, подтверждая [green]{{восходящий импульс}}. Скользящие средние (SMA-50 и SMA-200) удерживают долгосрочный [green]{{Золотой крест}}, что подчеркивает глобальный растущий тренд по ценной бумаге. **Полосы Боллинджера** сужаются перед возможным импульсным пробоем. Индекс корпоративного настроения равен 64 ([green]{{умеренный оптимизм}}).
+
+3. **Ключевой вывод**:
+Техническая и фундаментальная картина по акциям {coin_name} сохраняет [green]{{позитивный потенциал}}. Обратите внимание: данные смоделированы в учебных целях для демонстрации анализа акций."""
         return f"""1. **Рыночный тонус**:
 Криптовалюта {coin_name} демонстрирует смешанную динамику с умеренной торговой активностью. Наблюдается краткосрочный [green]{{бычий импульс}} с попыткой пробоя уровней локального сопротивления, однако объемы торгов [red]{{ниже среднего}}, что указывает на недостаточное подтверждение со стороны рынка.
 
@@ -264,6 +274,15 @@ def get_simulated_summary(coin_id: str, lang: str = "ru") -> str:
 3. **Ключевой вывод**:
 Техническая картина по {coin_name} неоднозначна: есть [green]{{позитивные сигналы}} со стороны MACD, индекса страха/жадности и долгосрочного тренда, но RSI и Стохастик предупреждают о [red]{{риске коррекции}} в краткосрочной перспективе. Обратите внимание: данные смоделированы в учебных целях из-за временного исчерпания дневной квоты API (20 запросов/день)."""
     else:
+        if is_stock:
+            return f"""1. **Market Tone**:
+The stock {coin_name} shows solid momentum during US market trading hours. We observe a short-term [green]{{bullish push}} supported by strong fundamentals, enterprise AI investment, and solid corporate revenue. Trading volume remains [green]{{above average}}.
+
+2. **Indicator Breakdown**:
+The **RSI (14)** sits at 56.4 ([green]{{neutral-bullish zone}}), leaving room for upside expansion. The **MACD** histogram crossed above its signal line, confirming a [green]{{positive momentum}}. Moving averages (SMA-50 and SMA-200) maintain a long-term [green]{{Golden Cross}}, reinforcing the structural uptrend of this equity. **Bollinger Bands** are contracting prior to a potential breakout. Market sentiment score stands at 64 ([green]{{moderate optimism}}).
+
+3. **Key Takeaway**:
+Technical and fundamental signals for {coin_name} shares remain [green]{{constructive}}. Note: Data is simulated for educational purposes to demonstrate equity market analysis."""
         return f"""1. **Market Tone**:
 The cryptocurrency {coin_name} is showing mixed dynamics with moderate trading activity. We observe a short-term [green]{{bullish push}} attempting to break through local resistance levels, however trading volumes are [red]{{below average}}, indicating insufficient market confirmation.
 

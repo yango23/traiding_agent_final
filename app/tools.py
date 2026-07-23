@@ -24,6 +24,7 @@ news_cache = APICache(ttl_seconds=300)
 
 # Base prices for fallback/simulation
 COIN_BASE_PRICES = {
+    # Crypto
     "bitcoin": 65000.0,
     "ethereum": 3500.0,
     "solana": 140.0,
@@ -31,9 +32,18 @@ COIN_BASE_PRICES = {
     "dogecoin": 0.12,
     "shiba-inu": 0.000018,
     "pepe": 0.000011,
+    # US Stocks
+    "alphabet": 182.50,
+    "apple": 224.30,
+    "microsoft": 442.80,
+    "nvidia": 123.70,
+    "amazon": 186.40,
+    "meta": 501.20,
+    "tesla": 248.90,
 }
 
 COIN_NAMES = {
+    # Crypto
     "bitcoin": "Bitcoin (BTC)",
     "ethereum": "Ethereum (ETH)",
     "solana": "Solana (SOL)",
@@ -41,6 +51,14 @@ COIN_NAMES = {
     "dogecoin": "Dogecoin (DOGE)",
     "shiba-inu": "Shiba Inu (SHIB)",
     "pepe": "Pepe (PEPE)",
+    # US Stocks
+    "alphabet": "Alphabet / Google (GOOGL)",
+    "apple": "Apple Inc. (AAPL)",
+    "microsoft": "Microsoft (MSFT)",
+    "nvidia": "NVIDIA (NVDA)",
+    "amazon": "Amazon (AMZN)",
+    "meta": "Meta Platforms (META)",
+    "tesla": "Tesla Inc. (TSLA)",
 }
 
 async def fetch_coin_data(coin_id: str, force_refresh: bool = False) -> dict:
@@ -58,6 +76,14 @@ async def fetch_coin_data(coin_id: str, force_refresh: bool = False) -> dict:
         "doge": "dogecoin",
         "shib": "shiba-inu",
         "pepe": "pepe",
+        "googl": "alphabet",
+        "google": "alphabet",
+        "aapl": "apple",
+        "msft": "microsoft",
+        "nvda": "nvidia",
+        "amzn": "amazon",
+        "meta": "meta",
+        "tsla": "tesla",
     }
     cg_id = id_map.get(coin_id, coin_id)
 
@@ -149,6 +175,14 @@ async def fetch_crypto_news(coin_id: str, lang: str = "ru", force_refresh: bool 
         "doge": "dogecoin",
         "shib": "shiba-inu",
         "pepe": "pepe",
+        "googl": "alphabet",
+        "google": "alphabet",
+        "aapl": "apple",
+        "msft": "microsoft",
+        "nvda": "nvidia",
+        "amzn": "amazon",
+        "meta": "meta",
+        "tsla": "tesla",
     }
     cg_id = id_map.get(coin_id, coin_id)
     coin_name = COIN_NAMES.get(cg_id, cg_id.capitalize())

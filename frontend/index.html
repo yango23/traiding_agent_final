@@ -15,7 +15,7 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- CSS style -->
-    <link rel="stylesheet" href="/static/style.css?v=3.10.0&t=1721585000">
+    <link rel="stylesheet" href="/static/style.css?v=3.11.0&t=1721700000">
 </head>
 <body class="dark-theme">
     <div id="glow-bg"></div>
@@ -64,6 +64,15 @@
             <!-- LEFT PANEL: Coin Selector & Stats -->
             <section class="left-panel">
                 <div class="glass-card selector-card">
+                    <!-- Market Category Tabs -->
+                    <div class="market-tabs" id="market-type-tabs">
+                        <button class="market-tab-btn active" id="tab-market-crypto" onclick="switchMarketType('crypto')">
+                            <span>🪙</span> <span id="lbl-market-crypto">Криптовалюты</span>
+                        </button>
+                        <button class="market-tab-btn" id="tab-market-stocks" onclick="switchMarketType('stocks')">
+                            <span>📈</span> <span id="lbl-market-stocks">Акции (US)</span>
+                        </button>
+                    </div>
                     <h3 id="label-select-coin">Select Crypto Asset</h3>
                     <div class="custom-select-wrapper">
                         <select id="coin-selector">
@@ -639,6 +648,6 @@
     </div>
 
     <!-- JS app script -->
-    <script src="/static/app.js?v=3.10.0&t=1721585000"></script>
+    <script src="/static/app.js?v=3.11.0&t=1721700000"></script>
 </body>
 </html>

@@ -14,6 +14,15 @@ async def test_fetch_coin_data():
     assert "volume_24h" in res
 
 @pytest.mark.asyncio
+async def test_fetch_stock_data():
+    # Test for Alphabet / Google (GOOGL stock)
+    res = await fetch_coin_data("googl")
+    assert res["success"] is True
+    assert "price" in res
+    assert "change_24h" in res
+    assert "Alphabet" in res["name"] or "GOOGL" in res["name"]
+
+@pytest.mark.asyncio
 async def test_fetch_crypto_news():
     # Test news for Bitcoin in Russian
     res = await fetch_crypto_news("btc", lang="ru")
