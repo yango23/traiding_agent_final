@@ -938,31 +938,80 @@ async function loadStatsOnly(forceRefresh = false) {
     }
 }
 
+function getClientSummaryCache(coinId, lang) {
+    const key = `summary_cache_v12h_${coinId.toLowerCase()}_${lang.toLowerCase()}`;
+    try {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+            const entry = JSON.parse(raw);
+            const now = Date.now();
+            if (now - entry.timestamp < 12 * 3600 * 1000) { // 12 hours TTL
+                return entry;
+            } else {
+                localStorage.removeItem(key);
+            }
+        }
+    } catch (e) {
+        console.error("Failed to read summary cache from localStorage:", e);
+    }
+    return null;
+}
+
+function setClientSummaryCache(coinId, lang, summary, simulated) {
+    const key = `summary_cache_v12h_${coinId.toLowerCase()}_${lang.toLowerCase()}`;
+    try {
+        const entry = {
+            timestamp: Date.now(),
+            summary: summary,
+            simulated: simulated
+        };
+        localStorage.setItem(key, JSON.stringify(entry));
+    } catch (e) {
+        console.error("Failed to save summary cache to localStorage:", e);
+    }
+}
+
+function clearClientSummaryCache() {
+    try {
+        Object.keys(localStorage).forEach(key => {
+            if (key.startsWith("summary_cache_")) {
+                localStorage.removeItem(key);
+            }
+        });
+    } catch (e) {
+        console.error("Failed to clear summary cache from localStorage:", e);
+    }
+}
+
 async function loadAIContent(forceRefresh = false) {
     // 1. Fetch Stats, Indicators and News from API
     await loadStatsOnly(forceRefresh);
 
-    const cacheKey = `${currentCoin.toLowerCase()}_${currentLanguage.toLowerCase()}`;
+    if (forceRefresh) {
+        clearClientSummaryCache();
+    }
     
-    // Check client-side memory cache if not force refreshing
-    if (!forceRefresh && clientSummaryCache[cacheKey]) {
-        const cached = clientSummaryCache[cacheKey];
-        lastRawSummary = cached.summary;
-        aiSummaryText.innerHTML = formatMarkdown(cached.summary);
-        aiSummaryText.style.display = "block";
-        summaryLoading.style.display = "none";
-        
-        const simBanner = document.getElementById("simulated-warning");
-        const simText   = document.getElementById("simulated-warning-text");
-        if (cached.simulated) {
-            simText.textContent = currentLanguage === "ru"
-                ? "⚠️ Квота AI исчерпана — показывается смоделированный анализ (демо-режим)"
-                : "⚠️ AI quota exhausted — showing simulated analysis (demo mode)";
-            simBanner.style.display = "flex";
-        } else {
-            simBanner.style.display = "none";
+    // Check client-side persistent 12-hour cache if not force refreshing
+    if (!forceRefresh) {
+        const cached = getClientSummaryCache(currentCoin, currentLanguage);
+        if (cached) {
+            lastRawSummary = cached.summary;
+            aiSummaryText.innerHTML = formatMarkdown(cached.summary);
+            aiSummaryText.style.display = "block";
+            summaryLoading.style.display = "none";
+            
+            const simBanner = document.getElementById("simulated-warning");
+            const simText   = document.getElementById("simulated-warning-text");
+            if (cached.simulated) {
+                simText.textContent = currentLanguage === "ru"
+                    ? "⚠️ Квота AI исчерпана — показывается смоделированный анализ (демо-режим)"
+                    : "⚠️ AI quota exhausted — showing simulated analysis (demo mode)";
+                simBanner.style.display = "flex";
+            } else {
+                simBanner.style.display = "none";
+            }
+            return;
         }
-        return;
     }
 
     // 2. Fetch AI Summary
@@ -977,10 +1026,7 @@ async function loadAIContent(forceRefresh = false) {
         });
         const data = await response.json();
         if (data.success) {
-            clientSummaryCache[cacheKey] = {
-                summary: data.summary,
-                simulated: data.simulated
-            };
+            setClientSummaryCache(currentCoin, currentLanguage, data.summary, data.simulated);
             lastRawSummary = data.summary;
             aiSummaryText.innerHTML = formatMarkdown(data.summary);
             aiSummaryText.style.display = "block";
@@ -1870,14 +1916,14 @@ function formatMarkdown(text) {
     }
     formatted = newLines.join('\n');
         
-    // 2. Parse green/red highlights using curly braces or BBCode tags BEFORE preprocessing terms
+    // 2. Parse green/red highlights using curly braces, BBCode, or raw tags BEFORE preprocessing terms
     formatted = formatted
-        .replace(/\[green\]\{([^}]+)\}/g, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
-        .replace(/\[red\]\{([^}]+)\}/g, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>')
+        .replace(/\[green\]\{([^}]+)\}/gi, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
+        .replace(/\[red\]\{([^}]+)\}/gi, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>')
         .replace(/\[green\](.*?)\[\/green\]/gi, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
         .replace(/\[red\](.*?)\[\/red\]/gi, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>')
-        .replace(/\[green\]([a-zA-Z0-9_-]+)/g, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
-        .replace(/\[red\]([a-zA-Z0-9_-]+)/g, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>');
+        .replace(/\[green\]([А-Яа-яЁёa-zA-Z0-9_\-\s()]+?)(?=[.,;:\!\?\n]|\[red\]|\[green\]|\[\/red\]|\[\/green\]|$)/g, '<span class="text-neon-green" style="color: var(--neon-green); font-weight: 600; text-shadow: 0 0 8px rgba(16, 185, 129, 0.25);">$1</span>')
+        .replace(/\[red\]([А-Яа-яЁёa-zA-Z0-9_\-\s()]+?)(?=[.,;:\!\?\n]|\[green\]|\[red\]|\[\/green\]|\[\/red\]|$)/g, '<span class="text-neon-red" style="color: var(--neon-rose); font-weight: 600; text-shadow: 0 0 8px rgba(244, 63, 94, 0.25);">$1</span>');
         
     // 3. Preprocess terms to wrap them in [term]{term:Topic}
     formatted = preprocessMarkdownTerms(formatted);

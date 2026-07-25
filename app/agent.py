@@ -230,16 +230,28 @@ EDUCATIONAL APPROACH (For Beginners and Investors):
 
 def get_system_instruction(coin_id: str, lang: str = "ru") -> str:
     coin_name = COIN_NAMES.get(coin_id.lower().strip(), coin_id.capitalize())
+    is_stock = coin_id.lower().strip() in ["alphabet", "apple", "microsoft", "nvidia", "amazon", "meta", "tesla"]
     
+    asset_type_clause_ru = (
+        f"ВНИМАНИЕ: На главном экране открыт график ценной бумаги: {coin_name} (Акции США / Уолл-стрит). Это акция корпорации, а НЕ криптовалюта! КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО называть этот актив криптовалютой или упоминать Биткоин."
+        if is_stock else
+        f"На главном экране открыт график криптовалюты: {coin_name}."
+    )
+    
+    asset_type_clause_en = (
+        f"NOTE: The active asset on screen is a US Stock Equity: {coin_name} (US Equities / Wall Street). This is corporate stock, NOT a cryptocurrency! IT IS STRICTLY FORBIDDEN to refer to this asset as a crypto or mention Bitcoin."
+        if is_stock else
+        f"The active asset on screen is cryptocurrency: {coin_name}."
+    )
+
     if lang == "ru":
-        return SYSTEM_INSTRUCTION_RU.format(coin_name=coin_name)
+        return SYSTEM_INSTRUCTION_RU.format(coin_name=coin_name) + f"\n{asset_type_clause_ru}"
     else:
-        return SYSTEM_INSTRUCTION_EN.format(coin_name=coin_name)
+        return SYSTEM_INSTRUCTION_EN.format(coin_name=coin_name) + f"\n{asset_type_clause_en}"
 
 # -------------------------------------------------------------------------
 # Daily Cache for AI Summaries (key: {coin_id}_{lang}_{YYYY-MM-DD})
 # -------------------------------------------------------------------------
-# datetime and timezone imported at top
 summary_daily_cache = {}
 
 def get_summary_cache_key(coin_id: str, lang: str) -> str:
@@ -250,7 +262,6 @@ def get_summary_cache_key(coin_id: str, lang: str) -> str:
 # Generation Helpers
 # -------------------------------------------------------------------------
 
-
 def get_simulated_summary(coin_id: str, lang: str = "ru") -> str:
     coin_name = COIN_NAMES.get(coin_id.lower().strip(), coin_id.capitalize())
     is_stock = coin_id.lower().strip() in ["alphabet", "apple", "microsoft", "nvidia", "amazon", "meta", "tesla"]
@@ -258,13 +269,13 @@ def get_simulated_summary(coin_id: str, lang: str = "ru") -> str:
     if lang == "ru":
         if is_stock:
             return f"""1. **Рыночный тонус**:
-Акции {coin_name} демонстрируют уверенную динамику в торговой сессии США. Наблюдается краткосрочный [green]{{бычий импульс}} на фоне устойчивых фундаментальных показателей, инвестиций в ИИ и высоких технологических доходов. Объемы торгов остаются [green]{{выше среднего}}.
+Текущая цена ценной бумаги {coin_name} отражает активную динамику на фондовом рынке США. Наблюдается краткосрочный [green]{{бычий импульс}} на фоне устойчивых фундаментальных показателей компании, инвестиций в ИИ и высоких квартальных доходов. Объемы торгов остаются [green]{{выше среднего}}.
 
 2. **Что говорят индикаторы**:
-Индикатор **RSI (14)** находится на отметке 56.4 ([green]{{нейтрально-бычья зона}}), оставляя запас для дальнейшего роста. Гистограмма **MACD** пересекла сигнальную линию снизу вверх, подтверждая [green]{{восходящий импульс}}. Скользящие средние (SMA-50 и SMA-200) удерживают долгосрочный [green]{{Золотой крест}}, что подчеркивает глобальный растущий тренд по ценной бумаге. **Полосы Боллинджера** сужаются перед возможным импульсным пробоем. Индекс корпоративного настроения равен 64 ([green]{{умеренный оптимизм}}).
+Индикатор **RSI (14)** находится на отметке 56.4 ([green]{{нейтрально-бычья зона}}), оставляя запас для дальнейшего роста. Гистограмма **MACD** пересекла сигнальную линию снизу вверх, подтверждая [green]{{бычий импульс}}. Скользящие средние (SMA-50 и SMA-200) удерживают долгосрочный [green]{{Золотой крест}}, что подчеркивает глобальный растущий тренд по акции. **Полосы Боллинджера** сужаются перед возможным импульсным пробоем. Настроения инвесторов отражают [green]{{умеренный оптимизм}}.
 
 3. **Ключевой вывод**:
-Техническая и фундаментальная картина по акциям {coin_name} сохраняет [green]{{позитивный потенциал}}. Обратите внимание: данные смоделированы в учебных целях для демонстрации анализа акций."""
+Акции {coin_name} демонстрируют [green]{{позитивную фундаментальную и техническую структуру}}. Помните, что ценные бумаги требуют фундаментального анализа отчетов компании и контроля рисков."""
         return f"""1. **Рыночный тонус**:
 Криптовалюта {coin_name} демонстрирует смешанную динамику с умеренной торговой активностью. Наблюдается краткосрочный [green]{{бычий импульс}} с попыткой пробоя уровней локального сопротивления, однако объемы торгов [red]{{ниже среднего}}, что указывает на недостаточное подтверждение со стороны рынка.
 
@@ -294,26 +305,44 @@ The technical picture for {coin_name} is mixed: there are [green]{{positive sign
 
 def get_simulated_chat_response(query: str, coin_id: str, lang: str = "ru") -> str:
     coin_name = COIN_NAMES.get(coin_id.lower().strip(), coin_id.capitalize())
+    is_stock = coin_id.lower().strip() in ["alphabet", "apple", "microsoft", "nvidia", "amazon", "meta", "tesla"]
     query_lower = query.lower()
     
     if lang == "ru":
         if any(w in query_lower for w in ["rsi", "macd", "индикатор", "средние", "sma", "мувинг"]):
-            return f"""Вы спросили о технических индикаторах в контексте {coin_name}.
+            return f"""Вы спросили о технических индикаторах в контексте акций {coin_name}." if is_stock else f"Вы спросили о технических индикаторах в контексте {coin_name}."
 В демо-режиме ИИ-консультант может объяснить основные принципы:
 * **Индекс относительной силы (RSI)** измеряет скорость движения цены. Значения выше 70 указывают на [red]{{перекупленность}} (риск коррекции), а ниже 30 — на [green]{{перепроданность}} (потенциальный отскок).
-* **MACD** показывает направление и силу тренда. Когда гистограмма выше 0, импульс считается [green]{{бычьим (восходящим)}}, когда ниже — [red]{{медвежтим (нисходящим)}}.
+* **MACD** показывает направление и силу тренда. Когда гистограмма выше 0, импульс считается [green]{{бычьим (восходящим)}}, когда ниже — [red]{{медвежьим (нисходящим)}}.
 * **Полосы Боллинджера** указывают на волатильность: выход за границы часто предвещает разворот цены.
 
 Это образовательная модель. Не используйте эти показатели для принятия реальных торговых решений без тестирования на демо-счете!"""
-        elif any(w in query_lower for w in ["новост", "событи", "news", "halving", "халвинг"]):
-            return f"""Что касается фундаментального анализа и новостей по {coin_name}:
+        elif any(w in query_lower for w in ["новост", "событи", "news", "отчет", "выручк", "квартал"]):
+            if is_stock:
+                return f"""Что касается фундаментального анализа и корпоративных новостей по акциям {coin_name}:
+В образовательных целях помните, что акции зависят от отчетов компаний и рынка США:
+1. Позитивные квартальные отчеты (рост выручки, инвестиции в ИИ, расширение облачных сервисов) вызывают [green]{{бычий импульс}}.
+2. Негативные факторы (рост капитальных расходов, судебные риски, общее падение индекса S&P 500) вызывают [red]{{медвежью реакцию}}.
+
+Всегда проверяйте финансовую отчетность 10-K/10-Q и не принимайте решения импульсивно!"""
+            else:
+                return f"""Что касается фундаментального анализа и новостей по {coin_name}:
 В образовательных целях помните, что новости сильно влияют на крипторынок:
 1. Позитивные новости (партнерства, обновления, регуляторное одобрение) могут вызвать [green]{{бычий импульс}}.
 2. Негативные новости (взломы, запреты, FUD) часто вызывают [red]{{медвежью реакцию}}.
 
 Всегда проверяйте источники новостей и не принимайте решения импульсивно!"""
         else:
-            return f"""Привет! Я твой ИИ-преподаватель по {coin_name}.
+            if is_stock:
+                return f"""Привет! Я твой ИИ-преподаватель по ценным бумагам компании {coin_name}.
+Я могу рассказать тебе про:
+* Технический анализ акций (RSI, MACD, скользящие средние)
+* Фундаментальный анализ корпоративной отчетности и новостей рынка США
+* Риск-менеджмент и основы торговых стратегий Pine Script v5
+
+Задай мне вопрос о фундаментальном или техническом анализе акций {coin_name}!"""
+            else:
+                return f"""Привет! Я твой ИИ-преподаватель по {coin_name}.
 Я могу рассказать тебе про:
 * Технический анализ (индикаторы RSI, MACD, скользящие средние)
 * Фундаментальный анализ и новости
@@ -323,28 +352,22 @@ def get_simulated_chat_response(query: str, coin_id: str, lang: str = "ru") -> s
     else:
         # English
         if any(w in query_lower for w in ["rsi", "macd", "indicator", "average", "sma", "moving"]):
-            return f"""You asked about technical indicators in the context of {coin_name}.
-In demo mode, here is an educational overview of key concepts:
-* **Relative Strength Index (RSI)** measures price momentum. Values above 70 indicate [red]{{overbought}} conditions (risk of pullback), while values below 30 indicate [green]{{oversold}} conditions (rebound opportunity).
-* **MACD** shows trend direction and strength. A histogram above zero indicates [green]{{bullish momentum}}, whereas below zero indicates [red]{{bearish momentum}}.
-* **Bollinger Bands** reflect volatility: price moving outside the bands often signals a potential reversal.
+            return f"""You asked about technical indicators for {coin_name} shares.""" if is_stock else f"""You asked about technical indicators for {coin_name}."""
+        elif any(w in query_lower for w in ["news", "event", "earnings", "quarter", "report"]):
+            if is_stock:
+                return f"""Regarding fundamental analysis and news for {coin_name} stock:
+In equity markets, key drivers include earnings reports, revenue growth, and macroeconomic data:
+1. Positive quarterly earnings and AI investment expansion drive a [green]{{bullish rally}}.
+2. High CapEx and broader S&P 500 tech sell-offs can trigger [red]{{bearish pullbacks}}.
 
-This is educational guidance. Always test your strategies on a demo account first!"""
-        elif any(w in query_lower for w in ["news", "event", "halving", "fundamental"]):
-            return f"""Regarding fundamental analysis and news for {coin_name}:
-In cryptocurrency markets, news is a primary driver of price action:
-1. Positive news (partnerships, tech upgrades, regulatory clearance) often drives a [green]{{bullish rally}}.
-2. Negative news (hacks, crackdowns, FUD) typically triggers [red]{{bearish sell-offs}}.
-
-Always verify news sources and avoid emotional trading!"""
+Always review company 10-Q earnings reports before investing!"""
+            else:
+                return f"""Regarding fundamental analysis and news for {coin_name}:
+1. Positive news drives a [green]{{bullish rally}}.
+2. Negative news triggers [red]{{bearish sell-offs}}."""
         else:
             return f"""Hello! I am your AI educator for {coin_name}.
-I can help you learn about:
-* Technical indicators (RSI, MACD, Moving Averages)
-* Fundamental analysis and crypto news
-* Risk management and strategy basics (like Pine Script v5)
-
-Please ask me a more specific question about these topics! Note that the app is currently running in demo mode."""
+I can help you learn about technical indicators, corporate earnings, and risk management!"""
 
 async def retrieve_relevant_news(query: str, news: list, client, limit: int = 2) -> list:
     if not news:
@@ -576,10 +599,14 @@ async def generate_coin_summary(
         quota_tracker["summary_calls"] += 1
         save_quota(quota_tracker)
         
+        is_stock = coin_id.lower().strip() in ["alphabet", "apple", "microsoft", "nvidia", "amazon", "meta", "tesla"]
+        asset_label_ru = f"АКЦИЯМ компании {coin_data['name']} (Акции США / Уолл-стрит). КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО называть этот актив криптовалютой или упоминать Биткоин!" if is_stock else f"криптовалюте {coin_data['name']}"
+        asset_label_en = f"US Stock Equity {coin_data['name']} (US Equities / Wall Street). IT IS STRICTLY FORBIDDEN to call this asset a cryptocurrency or mention Bitcoin!" if is_stock else f"cryptocurrency {coin_data['name']}"
+
         # Prepare the single prompt to perform Tech and Fundamental analysis + risk education in 1 call
         if lang == "ru":
             prompt = f"""
-            Подготовь итоговую аналитическую сводку по криптовалюте {coin_data['name']} для новичков на основе следующих данных:
+            Подготовь итоговую аналитическую сводку по {asset_label_ru} для новичков на основе следующих данных:
             
             ТЕКУЩИЕ ДАННЫЕ РЫНКА:
             - Текущая цена: ${coin_data['price']:.4f}
@@ -610,7 +637,7 @@ async def generate_coin_summary(
             sys_inst = "Вы — Старший ИИ-консультант и Преподаватель. Вы преобразуете технические и фундаментальные данные рынка в понятный учебный текст с жестким соблюдением правил разметки и безопасности."
         else:
             prompt = f"""
-            Prepare the final analytical summary for {coin_data['name']} for beginners based on the following data:
+            Prepare the final analytical summary for {asset_label_en} for beginners based on the following data:
             
             CURRENT MARKET DATA:
             - Current Price: ${coin_data['price']:.4f}

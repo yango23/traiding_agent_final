@@ -33,13 +33,13 @@ COIN_BASE_PRICES = {
     "shiba-inu": 0.000018,
     "pepe": 0.000011,
     # US Stocks
-    "alphabet": 182.50,
-    "apple": 224.30,
-    "microsoft": 442.80,
-    "nvidia": 123.70,
-    "amazon": 186.40,
-    "meta": 501.20,
-    "tesla": 248.90,
+    "alphabet": 319.70,
+    "apple": 333.00,
+    "microsoft": 381.70,
+    "nvidia": 206.80,
+    "amazon": 232.10,
+    "meta": 595.20,
+    "tesla": 313.00,
 }
 
 COIN_NAMES = {
@@ -61,13 +61,23 @@ COIN_NAMES = {
     "tesla": "Tesla Inc. (TSLA)",
 }
 
+STOCK_TICKER_MAP = {
+    "alphabet": "GOOGL",
+    "apple": "AAPL",
+    "microsoft": "MSFT",
+    "nvidia": "NVDA",
+    "amazon": "AMZN",
+    "meta": "META",
+    "tesla": "TSLA",
+}
+
 async def fetch_coin_data(coin_id: str, force_refresh: bool = False) -> dict:
     """
-    Fetches real-time price and 24h market metrics from CoinGecko.
+    Fetches real-time price and 24h market metrics from CoinGecko or Yahoo Finance for stocks.
     Falls back to a realistic simulation if rate-limited or offline.
     """
     coin_id = coin_id.lower().strip()
-    # Map friendly names to CoinGecko IDs
+    # Map friendly names to standard IDs
     id_map = {
         "btc": "bitcoin",
         "eth": "ethereum",
@@ -93,6 +103,45 @@ async def fetch_coin_data(coin_id: str, force_refresh: bool = False) -> dict:
         if cached_data:
             return cached_data
 
+    # Check if this is a US stock asset
+    if cg_id in STOCK_TICKER_MAP:
+        stock_symbol = STOCK_TICKER_MAP[cg_id]
+        yahoo_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{stock_symbol}?interval=1d&range=2d"
+        headers_yahoo = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        try:
+            async with httpx.AsyncClient(timeout=4.0) as client:
+                resp = await client.get(yahoo_url, headers=headers_yahoo)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    result_chart = data.get("chart", {}).get("result", [])
+                    if result_chart:
+                        meta = result_chart[0].get("meta", {})
+                        current_price = meta.get("regularMarketPrice", 0)
+                        prev_close = meta.get("chartPreviousClose", current_price)
+                        price_change_24h = ((current_price - prev_close) / prev_close) * 100 if prev_close else 0.0
+                        high_24h = meta.get("regularMarketDayHigh", current_price * 1.01)
+                        low_24h = meta.get("regularMarketDayLow", current_price * 0.99)
+                        total_volume = meta.get("regularMarketVolume", 10000000)
+                        
+                        result = {
+                            "success": True,
+                            "id": cg_id,
+                            "name": COIN_NAMES.get(cg_id, stock_symbol),
+                            "symbol": stock_symbol,
+                            "price": current_price,
+                            "change_24h": price_change_24h,
+                            "high_24h": high_24h,
+                            "low_24h": low_24h,
+                            "market_cap": current_price * 10000000000,
+                            "volume_24h": total_volume,
+                            "source": "yahoo_finance"
+                        }
+                        coin_data_cache.set(cg_id, result)
+                        return result
+        except Exception:
+            pass
+
+    # Crypto API (CoinGecko)
     url = f"https://api.coingecko.com/api/v3/coins/{cg_id}?localization=false&tickers=false&community_data=false&developer_data=false&sparkline=false"
     headers = {"accept": "application/json"}
     
@@ -129,14 +178,14 @@ async def fetch_coin_data(coin_id: str, force_refresh: bool = False) -> dict:
         pass
         
     # Simulated fallback (random walk based on timestamp)
-    base_price = COIN_BASE_PRICES.get(cg_id, 1.0)
+    base_price = COIN_BASE_PRICES.get(cg_id, 100.0)
     seed_offset = sum(ord(c) for c in cg_id)
     random.seed(int(time.time() / 60) + seed_offset)
     
-    change_pct = random.uniform(-5.0, 5.0)
+    change_pct = random.uniform(-3.0, 3.0)
     price = base_price * (1 + change_pct / 100.0)
-    high = price * random.uniform(1.0, 1.03)
-    low = price * random.uniform(0.97, 1.0)
+    high = price * random.uniform(1.0, 1.02)
+    low = price * random.uniform(0.98, 1.0)
     vol = price * random.uniform(5000000, 200000000)
     market_cap = price * random.uniform(100000000, 1000000000)
     
@@ -144,7 +193,7 @@ async def fetch_coin_data(coin_id: str, force_refresh: bool = False) -> dict:
         "success": True,
         "id": cg_id,
         "name": COIN_NAMES.get(cg_id, cg_id.capitalize()),
-        "symbol": coin_id.upper(),
+        "symbol": STOCK_TICKER_MAP.get(cg_id, coin_id.upper()),
         "price": price,
         "change_24h": change_pct,
         "high_24h": high,
@@ -153,13 +202,12 @@ async def fetch_coin_data(coin_id: str, force_refresh: bool = False) -> dict:
         "volume_24h": vol,
         "source": "simulation"
     }
-    # Cache the simulated fallback as well to prevent flapping
     coin_data_cache.set(cg_id, result)
     return result
 
 async def fetch_crypto_news(coin_id: str, lang: str = "ru", force_refresh: bool = False) -> list:
     """
-    Fetches latest real crypto news via public RSS feeds (CoinTelegraph, CoinDesk, CryptoNews, Bitcoin.com).
+    Fetches latest real market news via Yahoo Finance RSS for US stocks or public crypto RSS feeds for crypto assets.
     Combines, deduplicates, and sorts by date descending.
     """
     import xml.etree.ElementTree as ET
@@ -186,7 +234,7 @@ async def fetch_crypto_news(coin_id: str, lang: str = "ru", force_refresh: bool 
     }
     cg_id = id_map.get(coin_id, coin_id)
     coin_name = COIN_NAMES.get(cg_id, cg_id.capitalize())
-    cache_key = f"{cg_id}_{lang}_rss_v2"
+    cache_key = f"{cg_id}_{lang}_rss_v3"
 
     # Check cache first (15-minute TTL)
     if not force_refresh:
@@ -194,7 +242,63 @@ async def fetch_crypto_news(coin_id: str, lang: str = "ru", force_refresh: bool 
         if cached_news:
             return cached_news
 
-    # RSS feeds configuration
+    # Check if this is a US stock asset
+    if cg_id in STOCK_TICKER_MAP:
+        stock_symbol = STOCK_TICKER_MAP[cg_id]
+        stock_rss_url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={stock_symbol}&region=US&lang=en-US"
+        headers_stock = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+        result_stock = []
+        try:
+            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
+                resp = await client.get(stock_rss_url, headers=headers_stock)
+                if resp.status_code == 200:
+                    root = ET.fromstring(resp.text)
+                    items = root.findall(".//item")
+                    for item in items[:8]:
+                        title = html_module.unescape(item.findtext("title", "")).strip()
+                        link = item.findtext("link", "").strip()
+                        pub_raw = item.findtext("pubDate", "")
+                        try:
+                            from email.utils import parsedate_to_datetime
+                            ts = int(parsedate_to_datetime(pub_raw).timestamp())
+                        except Exception:
+                            ts = int(time.time())
+                        if title and link:
+                            result_stock.append({
+                                "title": title,
+                                "body": title,
+                                "url": link,
+                                "source": "Yahoo Finance",
+                                "time": ts,
+                            })
+        except Exception:
+            pass
+
+        if result_stock:
+            news_cache.set(cache_key, result_stock)
+            return result_stock
+
+        # Fallback for stocks (Corporate / Wall Street financial news)
+        stock_fallback = [
+            {
+                "title": f"{coin_name}: Отчетность и фундаментальные показатели компании на Уолл-стрит" if lang == "ru" else f"{coin_name}: Corporate Earnings & Fundamentals Overview",
+                "body": f"Аналитики отмечают стабильный рост квартальной выручки компании {coin_name}, масштабирование облачных вычислений и капитальные вложения в технологии ИИ." if lang == "ru" else f"Analysts highlight steady revenue growth, cloud computing scaling, and AI infrastructure capital expenditures for {coin_name}.",
+                "source": "Yahoo Finance",
+                "time": int(time.time()),
+                "url": f"https://finance.yahoo.com/quote/{stock_symbol}",
+            },
+            {
+                "title": f"Анализ акций {stock_symbol} на рынке ценных бумаг США" if lang == "ru" else f"{stock_symbol} Stock Analysis & Market Trends",
+                "body": f"Ценная бумага {stock_symbol} демонстрирует высокую активность институциональных инвесторов и стабильный долгосрочный тренд." if lang == "ru" else f"{stock_symbol} equity shows strong institutional investor activity and solid long-term trend.",
+                "source": "MarketWatch",
+                "time": int(time.time()),
+                "url": f"https://www.marketwatch.com/investing/stock/{stock_symbol.lower()}",
+            }
+        ]
+        news_cache.set(cache_key, stock_fallback)
+        return stock_fallback
+
+    # Crypto RSS feeds configuration
     RSS_FEEDS = {
         "bitcoin":   [
             "https://cointelegraph.com/rss/tag/bitcoin",
@@ -305,7 +409,7 @@ async def fetch_crypto_news(coin_id: str, lang: str = "ru", force_refresh: bool 
         news_cache.set(cache_key, final_news)
         return final_news
 
-    # Fallback
+    # Fallback for Crypto
     fallback = [
         {
             "title": f"Актуальные новости {coin_name} — CoinTelegraph" if lang == "ru" else f"Latest {coin_name} News — CoinTelegraph",
