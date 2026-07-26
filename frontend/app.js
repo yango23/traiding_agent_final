@@ -46,16 +46,23 @@ const STOCK_ASSETS = [
 const LOCALIZATION = {
     ru: {
         subtitle: "Учебный дашборд по техническому анализу",
-        lblSelectCoin: "Выберите актив",
+        tabMarketCrypto: "Криптовалюты",
+        tabMarketStocks: "Акции (US)",
+        lblSelectCoinCrypto: "Выберите криптовалюту",
+        lblSelectCoinStock: "Выберите акцию США",
         lblHigh24h: "24ч Макс",
         lblLow24h: "24ч Мин",
         lblVolume: "Объем (24ч)",
         lblCap: "Капитализация",
         tabSummary: "📝 Сводка ИИ",
         tabNews: "📰 Новости",
+        tabBacktest: "📈 Бэктест",
+        tabPine: "🛠️ Pine Script",
         lblAdvisorStatus: "ИИ-Преподаватель (Обучение)",
         chatDisclaimer: "⚠️ <strong>Внимание:</strong> Я даю только технический/фундаментальный анализ и обучаю концепциям торговли. Я НЕ даю сигналов и финансовых рекомендаций по покупке/продаже.",
-        chatPlaceholder: "Задайте вопрос об активном токене...",
+        chatPlaceholderCrypto: "Задайте вопрос о криптовалюте (Bitcoin, Ethereum, RSI, стратегии)...",
+        chatPlaceholderStock: "Задайте вопрос об акции или компании (Alphabet, Apple, Microsoft)...",
+        chatSearchPlaceholder: "Поиск по истории сообщений...",
         lblLoadingSummary: "Генерация ИИ-анализа...",
         errorSummary: "Не удалось сгенерировать ИИ-сводку.",
         errorChat: "Произошла ошибка при получении ответа от ИИ.",
@@ -85,28 +92,62 @@ const LOCALIZATION = {
             strongBuy: "Активная покупка",
             sentimentTitle: "Настроение рынка"
         },
-        lblExportBtn: "Скачать отчет",
+        lblExportBtn: "Отчет",
         lblApiKeyTitle: "Ключ API Gemini",
         apiKeyPlaceholder: "Введите API-ключ...",
         btnApplyKey: "Применить ключ",
-        lblRefreshBtn: "Обновить данные",
+        lblRefreshBtn: "Обновить",
         tipRefreshStats: "Обновить только рыночные данные",
         lblPatternsLabel: "Свечные паттерны",
-        tipPatterns: "Активные паттерны, сканируемые на дневном графике Binance (например, Доджи, Молот, Падающая звезда, Поглощение).",
-        tipApiKey: "Вы можете указать свой собственный API-ключ Gemini для сброса ограничений суточной квоты или выхода из демонстрационного режима. Все ключи хранятся исключительно в сессионном хранилище вашего браузера и никогда не передаются автору и не используются в сторонних целях."
+        tipPatterns: "Активные паттерны, сканируемые на дневном графике (например, Доджи, Молот, Падающая звезда, Поглощение).",
+        tipApiKey: "Вы можете указать свой собственный API-ключ Gemini для сброса ограничений суточной квоты или выхода из демонстрационного режима. Все ключи хранятся исключительно в сессионном хранилище вашего браузера.",
+        authLogin: "Войти",
+        authLogout: "Выйти",
+        authRegister: "Регистрация",
+        authEmail: "Электронная почта",
+        authPassword: "Пароль",
+        authConfirmTitle: "Подтверждение Email",
+        authConfirmDesc: "Код подтверждения отправлен на вашу почту. Пожалуйста, введите его ниже для завершения регистрации.",
+        authConfirmCode: "Код подтверждения (6 цифр)",
+        authConfirmDemoTip: "Для демо: введите 777777 или код из консоли",
+        authConfirmSubmit: "Подтвердить",
+        pinePromptLabel: "Что должен делать скрипт?",
+        pinePromptPlaceholder: "Например: Пересечение скользящих средних EMA 9 и EMA 21 с сигналами на покупку/продажу...",
+        pineSelectTpl: "Выбрать готовый шаблон...",
+        pineGenerateBtn: "Создать Скрипт",
+        pineLoading: "Генерация скрипта...",
+        pineResultTitle: "Pine Script v5 Код",
+        pineCopyBtn: "Копировать",
+        alertsTitle: "Ценовые оповещения",
+        alertMetric: "Параметр",
+        alertCond: "Условие",
+        alertVal: "Значение",
+        alertCreateBtn: "Создать оповещение",
+        activeAlertsTitle: "Активные оповещения",
+        indSettingsTitle: "Настройка индикаторов",
+        indSettingsSubmit: "Применить настройки",
+        simulatedWarning: "Квота ИИ исчерпана — показывается симулированный анализ (демо-режим)",
+        savedKeysTitle: "Сохраненные ключи API"
     },
     en: {
         subtitle: "Educational Dashboard & Technical Analysis",
-        lblSelectCoin: "Select Crypto Asset",
+        tabMarketCrypto: "Cryptocurrencies",
+        tabMarketStocks: "Stocks (US)",
+        lblSelectCoinCrypto: "Select Crypto Asset",
+        lblSelectCoinStock: "Select US Stock Asset",
         lblHigh24h: "24h High",
         lblLow24h: "24h Low",
         lblVolume: "Volume (24h)",
         lblCap: "Market Cap",
         tabSummary: "📝 AI Summary",
         tabNews: "📰 News",
+        tabBacktest: "📈 Backtest",
+        tabPine: "🛠️ Pine Script",
         lblAdvisorStatus: "AI Educator (Educational Mode)",
         chatDisclaimer: "⚠️ <strong>Warning:</strong> I only provide technical/fundamental analysis and teach trading concepts. I DO NOT provide trading signals or direct buy/sell recommendations.",
-        chatPlaceholder: "Ask a question about the active token...",
+        chatPlaceholderCrypto: "Ask a question about crypto, technical indicators, or trading strategies...",
+        chatPlaceholderStock: "Ask a question about stocks, earnings reports, trading, or financial stats...",
+        chatSearchPlaceholder: "Search chat history...",
         lblLoadingSummary: "Generating AI Analysis...",
         errorSummary: "Failed to generate AI summary.",
         errorChat: "An error occurred while receiving a response from the AI.",
@@ -136,15 +177,42 @@ const LOCALIZATION = {
             strongBuy: "Strong Buy",
             sentimentTitle: "Market Sentiment"
         },
-        lblExportBtn: "Export Report",
+        lblExportBtn: "Report",
         lblApiKeyTitle: "Gemini API Key",
         apiKeyPlaceholder: "Enter API Key...",
         btnApplyKey: "Apply Key",
-        lblRefreshBtn: "Refresh Data",
+        lblRefreshBtn: "Refresh",
         tipRefreshStats: "Refresh market data only",
         lblPatternsLabel: "Candlestick Patterns",
-        tipPatterns: "Active patterns scanned on the daily Binance chart (e.g. Doji, Hammer, Shooting Star, Engulfing).",
-        tipApiKey: "Users can specify their own Gemini API key to bypass daily quota limits or exit demo mode. Keys are stored securely in session storage, the author never collects, saves, or uses your keys for any other purpose."
+        tipPatterns: "Active patterns scanned on the daily chart (e.g. Doji, Hammer, Shooting Star, Engulfing).",
+        tipApiKey: "Users can specify their own Gemini API key to bypass daily quota limits or exit demo mode. Keys are stored securely in session storage.",
+        authLogin: "Login",
+        authLogout: "Logout",
+        authRegister: "Register",
+        authEmail: "Email Address",
+        authPassword: "Password",
+        authConfirmTitle: "Confirm Email",
+        authConfirmDesc: "Verification code has been sent to your email. Please enter it below to complete registration.",
+        authConfirmCode: "Verification code (6 digits)",
+        authConfirmDemoTip: "For demo: enter 777777 or code from console",
+        authConfirmSubmit: "Confirm",
+        pinePromptLabel: "What should the script do?",
+        pinePromptPlaceholder: "e.g. Moving average crossover EMA 9 and EMA 21 with buy/sell signals...",
+        pineSelectTpl: "Select ready template...",
+        pineGenerateBtn: "Generate Script",
+        pineLoading: "Generating script...",
+        pineResultTitle: "Pine Script v5 Code",
+        pineCopyBtn: "Copy",
+        alertsTitle: "Price Alerts",
+        alertMetric: "Metric",
+        alertCond: "Condition",
+        alertVal: "Value",
+        alertCreateBtn: "Create Alert",
+        activeAlertsTitle: "Active Alerts",
+        indSettingsTitle: "Indicator Settings",
+        indSettingsSubmit: "Apply Settings",
+        simulatedWarning: "AI quota exhausted — showing simulated analysis (demo mode)",
+        savedKeysTitle: "Saved API Keys"
     }
 };
 
@@ -196,6 +264,7 @@ function switchMarketType(marketType) {
     }
 
     // Trigger full asset refresh
+    localizeUI();
     applyCoinTheme(currentCoin);
     renderTradingViewWidget();
     loadAIContent(true);
@@ -755,19 +824,54 @@ function localizeUI() {
         langToggleBtn.textContent = currentLanguage.toUpperCase();
     }
     document.getElementById("header-subtitle").textContent = t.subtitle;
-    document.getElementById("label-select-coin").textContent = t.lblSelectCoin;
+    
+    // Market Category Buttons & Selector Title
+    const lblMarketCrypto = document.getElementById("lbl-market-crypto");
+    if (lblMarketCrypto) lblMarketCrypto.textContent = t.tabMarketCrypto;
+    const lblMarketStocks = document.getElementById("lbl-market-stocks");
+    if (lblMarketStocks) lblMarketStocks.textContent = t.tabMarketStocks;
+    
+    const isStock = currentMarketType === "stocks" || STOCK_ASSETS.some(a => a.value === currentCoin);
+    const selectLabel = document.getElementById("label-select-coin");
+    if (selectLabel) {
+        selectLabel.textContent = isStock ? t.lblSelectCoinStock : t.lblSelectCoinCrypto;
+    }
+
     document.getElementById("lbl-high-24h").textContent = t.lblHigh24h;
     document.getElementById("lbl-low-24h").textContent = t.lblLow24h;
     document.getElementById("lbl-volume").textContent = t.lblVolume;
     document.getElementById("lbl-cap").textContent = t.lblCap;
-    document.getElementById("tab-summary-btn").textContent = t.tabSummary;
-    document.getElementById("tab-news-btn").textContent = t.tabNews;
+
+    // Center Panel Tabs
+    const tabSummaryBtn = document.getElementById("tab-summary-btn");
+    if (tabSummaryBtn) tabSummaryBtn.textContent = t.tabSummary;
+    const tabNewsBtn = document.getElementById("tab-news-btn");
+    if (tabNewsBtn) tabNewsBtn.textContent = t.tabNews;
+    const tabBacktestBtn = document.getElementById("tab-backtester-btn");
+    if (tabBacktestBtn) tabBacktestBtn.textContent = t.tabBacktest;
+    const tabPineBtn = document.getElementById("tab-pine-btn");
+    if (tabPineBtn) tabPineBtn.textContent = t.tabPine;
+
     document.getElementById("lbl-advisor-status").textContent = t.lblAdvisorStatus;
     document.getElementById("chat-disclaimer-text").innerHTML = t.chatDisclaimer;
-    chatInput.placeholder = t.chatPlaceholder;
+    
+    if (chatInput) {
+        chatInput.placeholder = isStock ? t.chatPlaceholderStock : t.chatPlaceholderCrypto;
+    }
+    const chatSearchInput = document.getElementById("chat-search-input");
+    if (chatSearchInput) {
+        chatSearchInput.placeholder = t.chatSearchPlaceholder;
+    }
+
     document.getElementById("lbl-loading-summary").textContent = t.lblLoadingSummary;
     
-    // Additional elements localized dynamically
+    // Auth Buttons in Header
+    const authLoginBtn = document.getElementById("auth-login-btn");
+    if (authLoginBtn) authLoginBtn.textContent = t.authLogin;
+    const authLogoutBtn = document.getElementById("auth-logout-btn");
+    if (authLogoutBtn) authLogoutBtn.textContent = t.authLogout;
+
+    // Technical Indicators
     document.getElementById("lbl-indicators-title").textContent = t.lblIndicatorsTitle;
     document.getElementById("lbl-indicator-sma-label").textContent = t.lblSmaLabel;
     document.getElementById("lbl-indicator-fg-label").textContent = t.lblFgLabel;
@@ -785,12 +889,13 @@ function localizeUI() {
     const apiKeyTip = document.getElementById("tip-api-key");
     if (apiKeyTip) apiKeyTip.setAttribute("data-tooltip", t.tipApiKey);
     
-    
     const secBadge = document.getElementById("lbl-security-badge");
-    secBadge.textContent = t.lblSecurityBadge;
-    secBadge.setAttribute("title", t.lblSecurityBadgeTitle);
+    if (secBadge) {
+        secBadge.textContent = t.lblSecurityBadge;
+        secBadge.setAttribute("title", t.lblSecurityBadgeTitle);
+    }
     
-    langToggleBtn.setAttribute("title", t.langToggleTitle);
+    if (langToggleBtn) langToggleBtn.setAttribute("title", t.langToggleTitle);
     
     const closeBtn = document.getElementById("btn-close-disclaimer");
     if (closeBtn) {
@@ -798,30 +903,33 @@ function localizeUI() {
     }
 
     const expBtnLabel = document.getElementById("lbl-export-btn");
-    if (expBtnLabel) {
-        expBtnLabel.textContent = t.lblExportBtn;
-    }
+    if (expBtnLabel) expBtnLabel.textContent = t.lblExportBtn;
     
     const refBtnLabel = document.getElementById("lbl-refresh-btn");
-    if (refBtnLabel) {
-        refBtnLabel.textContent = t.lblRefreshBtn;
-    }
+    if (refBtnLabel) refBtnLabel.textContent = t.lblRefreshBtn;
 
     const toggleDrawerBtn = document.getElementById("lbl-toggle-drawer");
-    if (toggleDrawerBtn) {
-        toggleDrawerBtn.textContent = t.lblToggleDrawer;
-    }
+    if (toggleDrawerBtn) toggleDrawerBtn.textContent = t.lblToggleDrawer;
     
     const refStatsBtn = document.getElementById("refresh-stats-btn");
-    if (refStatsBtn) {
-        refStatsBtn.setAttribute("title", t.tipRefreshStats);
+    if (refStatsBtn) refStatsBtn.setAttribute("title", t.tipRefreshStats);
+
+    const chartResizeHandle = document.getElementById("chart-resize-handle");
+    if (chartResizeHandle) {
+        chartResizeHandle.setAttribute("title", currentLanguage === "ru" ? "Потяните вверх/вниз для изменения высоты графика" : "Drag up/down to resize chart height");
     }
     
-    // Translate Market Sentiment Title and Update Gauge
-    document.getElementById("lbl-sentiment-title").textContent = t.sentimentLabels.sentimentTitle;
+    const indSettingsBtn = document.getElementById("open-indicator-settings-btn");
+    if (indSettingsBtn) {
+        indSettingsBtn.setAttribute("title", currentLanguage === "ru" ? "Настроить параметры индикаторов" : "Configure indicator parameters");
+    }
+    
+    // Market Sentiment Title & Gauge
+    const sentTitle = document.getElementById("lbl-sentiment-title");
+    if (sentTitle) sentTitle.textContent = t.sentimentLabels.sentimentTitle;
     updateSentimentUI();
 
-    // Translate API Key Card
+    // API Key Card
     const apiKeyTitle = document.getElementById("lbl-api-key-title");
     const apiKeyInput = document.getElementById("api-key-input");
     const apiKeyBtn = document.getElementById("api-key-submit-btn");
@@ -836,7 +944,26 @@ function localizeUI() {
     }
     if (apiKeyBtn) apiKeyBtn.textContent = t.btnApplyKey;
 
-    // Translate Backtester
+    const savedKeysTitle = document.getElementById("lbl-saved-keys-title");
+    if (savedKeysTitle) savedKeysTitle.textContent = t.savedKeysTitle;
+
+    // Pine Script Tab
+    const lblPinePrompt = document.getElementById("lbl-pine-prompt");
+    if (lblPinePrompt) lblPinePrompt.textContent = t.pinePromptLabel;
+    const pinePromptInput = document.getElementById("pine-prompt-input");
+    if (pinePromptInput) pinePromptInput.placeholder = t.pinePromptPlaceholder;
+    const lblPineTpl = document.getElementById("lbl-pine-select-tpl");
+    if (lblPineTpl) lblPineTpl.textContent = t.pineSelectTpl;
+    const genPineBtn = document.getElementById("generate-pine-btn");
+    if (genPineBtn) genPineBtn.textContent = t.pineGenerateBtn;
+    const lblLoadingPine = document.getElementById("lbl-loading-pine");
+    if (lblLoadingPine) lblLoadingPine.textContent = t.pineLoading;
+    const lblPineResTitle = document.getElementById("lbl-pine-result-title");
+    if (lblPineResTitle) lblPineResTitle.textContent = t.pineResultTitle;
+    const copyPineBtn = document.getElementById("copy-pine-btn");
+    if (copyPineBtn) copyPineBtn.textContent = t.pineCopyBtn;
+
+    // Backtester
     const lblSelectStrat = document.getElementById("lbl-select-strategy");
     if (lblSelectStrat) lblSelectStrat.textContent = currentLanguage === "ru" ? "Стратегия" : "Strategy";
     const runBtBtn = document.getElementById("run-backtest-btn");
@@ -854,10 +981,53 @@ function localizeUI() {
     const lblBtCurve = document.getElementById("lbl-bt-curve");
     if (lblBtCurve) lblBtCurve.textContent = currentLanguage === "ru" ? "График роста капитала" : "Equity Growth Curve";
 
-    // Translate Quiz
+    // Quiz
     const lblQuizTitle = document.getElementById("lbl-quiz-title");
     if (lblQuizTitle) lblQuizTitle.textContent = currentLanguage === "ru" ? "Викторина по тех. анализу" : "Technical Analysis Quiz";
     loadQuizQuestion();
+
+    // Modals
+    const lblAuthEmail = document.getElementById("lbl-auth-email");
+    if (lblAuthEmail) lblAuthEmail.textContent = t.authEmail;
+    const lblAuthPass = document.getElementById("lbl-auth-password");
+    if (lblAuthPass) lblAuthPass.textContent = t.authPassword;
+    const lblGoogleOr = document.getElementById("lbl-google-or");
+    if (lblGoogleOr) lblGoogleOr.textContent = t.authGoogleOr;
+    const lblConfirmDesc = document.getElementById("lbl-confirm-desc");
+    if (lblConfirmDesc) lblConfirmDesc.textContent = t.authConfirmDesc;
+    const lblConfirmCode = document.getElementById("lbl-confirm-code");
+    if (lblConfirmCode) lblConfirmCode.textContent = t.authConfirmCode;
+    const lblConfirmDemoTip = document.getElementById("lbl-confirm-demo-tip");
+    if (lblConfirmDemoTip) lblConfirmDemoTip.textContent = t.authConfirmDemoTip;
+    const confirmSubmitBtn = document.getElementById("confirm-submit-btn");
+    if (confirmSubmitBtn) confirmSubmitBtn.textContent = t.authConfirmSubmit;
+    const tabLoginBtn = document.getElementById("tab-login-btn");
+    if (tabLoginBtn) tabLoginBtn.textContent = t.authLogin;
+    const tabRegBtn = document.getElementById("tab-register-btn");
+    if (tabRegBtn) tabRegBtn.textContent = t.authRegister;
+    const authSubmitBtn = document.getElementById("auth-submit-btn");
+    if (authSubmitBtn) authSubmitBtn.textContent = currentAuthTab === "login" ? t.authLogin : t.authRegister;
+
+    const indSettingsTitle = document.getElementById("lbl-ind-settings-title-text");
+    if (indSettingsTitle) indSettingsTitle.textContent = t.indSettingsTitle;
+    const cfgSubmitBtn = document.getElementById("cfg-submit-btn");
+    if (cfgSubmitBtn) cfgSubmitBtn.textContent = t.indSettingsSubmit;
+
+    const alertsTitle = document.getElementById("lbl-alerts-title-text");
+    if (alertsTitle) alertsTitle.textContent = t.alertsTitle;
+    const lblAlertMetric = document.getElementById("lbl-alert-metric");
+    if (lblAlertMetric) lblAlertMetric.textContent = t.alertMetric;
+    const lblAlertCond = document.getElementById("lbl-alert-cond");
+    if (lblAlertCond) lblAlertCond.textContent = t.alertCond;
+    const lblAlertVal = document.getElementById("lbl-alert-val");
+    if (lblAlertVal) lblAlertVal.textContent = t.alertVal;
+    const btnCreateAlert = document.getElementById("lbl-btn-add-alert");
+    if (btnCreateAlert) btnCreateAlert.textContent = t.alertCreateBtn;
+    const activeAlertsTitle = document.getElementById("lbl-active-alerts");
+    if (activeAlertsTitle) activeAlertsTitle.textContent = t.activeAlertsTitle;
+
+    const simWarnText = document.getElementById("simulated-warning-text");
+    if (simWarnText) simWarnText.textContent = t.simulatedWarning;
 }
 
 // -------------------------------------------------------------------------

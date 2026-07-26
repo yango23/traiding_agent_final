@@ -15,7 +15,7 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- CSS style -->
-    <link rel="stylesheet" href="/static/style.css?v=3.15.0&t=1721750000">
+    <link rel="stylesheet" href="/static/style.css?v=3.16.0&t=1721760000">
 </head>
 <body class="dark-theme">
     <div id="glow-bg"></div>
@@ -378,7 +378,7 @@
                                 <div id="pine-results" style="display: none; flex-direction: column; gap: 8px;">
                                     <div style="display: flex; justify-content: space-between; align-items: center;">
                                         <h5 style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted);" id="lbl-pine-result-title">Pine Script v5 Код</h5>
-                                        <button class="control-btn" onclick="copyPineScript()" style="font-size: 0.72rem; padding: 4px 10px; font-weight: 600;">Копировать</button>
+                                        <button class="control-btn" id="copy-pine-btn" onclick="copyPineScript()" style="font-size: 0.72rem; padding: 4px 10px; font-weight: 600;">Copy</button>
                                     </div>
                                     <pre style="background: rgba(0,0,0,0.2); border: var(--card-border); border-radius: 8px; padding: 10px; font-family: monospace; font-size: 0.75rem; overflow-x: auto; max-height: 180px; color: #a9b1d6; white-space: pre-wrap;" id="pine-code-block"></pre>
                                 </div>
@@ -628,6 +628,6 @@
     </div>
 
     <!-- JS app script -->
-    <script src="/static/app.js?v=3.15.0&t=1721750000"></script>
+    <script src="/static/app.js?v=3.16.0&t=1721760000"></script>
 </body>
 </html>
