@@ -584,7 +584,8 @@ async def generate_coin_summary(
         print(f"Serving cached AI summary for {coin_id} ({lang})")
         return summary_daily_cache[cache_key]
 
-    if not custom_api_key and (quota_tracker["quota_exhausted"] or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true"):
+    has_api_key = bool(custom_api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "False").lower() == "true")
+    if not has_api_key or quota_tracker["quota_exhausted"] or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true":
         quota_tracker["quota_exhausted"] = True
         return get_simulated_summary(coin_id, lang)
 
@@ -706,7 +707,8 @@ async def chat_with_agent(
     Streams the agent's chat response using Gemini API.
     Orchestrates Technical and Fundamental agents dynamically.
     """
-    if not custom_api_key and (quota_tracker["quota_exhausted"] or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true"):
+    has_api_key = bool(custom_api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "False").lower() == "true")
+    if not has_api_key or quota_tracker["quota_exhausted"] or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true":
         quota_tracker["quota_exhausted"] = True
         sim_response = get_simulated_chat_response(query, coin_id, lang)
         chunk_size = 8

@@ -1038,36 +1038,47 @@ let tvIntervalSetting = "D";
 let tvStyleSetting = "1";
 
 function renderTradingViewWidget() {
-    const symbol = TRADINGVIEW_SYMBOLS[currentCoin] || "BINANCE:BTCUSDT";
+    const chartContainer = document.getElementById("tv-chart-container");
+    if (!chartContainer) return;
     
-    // Clear container
-    document.getElementById("tv-chart-container").innerHTML = "";
-    
-    tvWidgetInstance = new TradingView.widget({
-        "autosize": true,
-        "symbol": symbol,
-        "interval": tvIntervalSetting,
-        "timezone": "Etc/UTC",
-        "theme": currentTheme,
-        "style": tvStyleSetting,
-        "locale": currentLanguage === "ru" ? "ru" : "en",
-        "toolbar_bg": currentTheme === "dark" ? "#0f172a" : "#ffffff",
-        "enable_publishing": false,
-        "hide_side_toolbar": false,
-        "allow_symbol_change": true,
-        "show_popup_button": true,
-        "popup_width": "1200",
-        "popup_height": "800",
-        "save_image": true,
-        "details": true,
-        "calendar": true,
-        "hotlist": true,
-        "withdateranges": true,
-        "studies": [
-            "STD;Volume"
-        ],
-        "container_id": "tv-chart-container"
-    });
+    if (typeof TradingView === "undefined" || !TradingView.widget) {
+        console.warn("TradingView library not loaded yet. Retrying in 500ms...");
+        setTimeout(renderTradingViewWidget, 500);
+        return;
+    }
+
+    try {
+        const symbol = TRADINGVIEW_SYMBOLS[currentCoin] || "BINANCE:BTCUSDT";
+        chartContainer.innerHTML = "";
+        
+        tvWidgetInstance = new TradingView.widget({
+            "autosize": true,
+            "symbol": symbol,
+            "interval": tvIntervalSetting,
+            "timezone": "Etc/UTC",
+            "theme": currentTheme,
+            "style": tvStyleSetting,
+            "locale": currentLanguage === "ru" ? "ru" : "en",
+            "toolbar_bg": currentTheme === "dark" ? "#0f172a" : "#ffffff",
+            "enable_publishing": false,
+            "hide_side_toolbar": false,
+            "allow_symbol_change": true,
+            "show_popup_button": true,
+            "popup_width": "1200",
+            "popup_height": "800",
+            "save_image": true,
+            "details": true,
+            "calendar": true,
+            "hotlist": true,
+            "withdateranges": true,
+            "studies": [
+                "STD;Volume"
+            ],
+            "container_id": "tv-chart-container"
+        });
+    } catch (e) {
+        console.error("Error initializing TradingView widget:", e);
+    }
 }
 
 // -------------------------------------------------------------------------
