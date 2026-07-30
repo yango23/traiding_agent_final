@@ -57,6 +57,14 @@ def is_quota_error(e: Exception) -> bool:
 # Load environment variables
 load_dotenv()
 
+def is_valid_api_key(key: str | None) -> bool:
+    """Validates Gemini API key format. Google AI Studio keys start with 'AIza'."""
+    if not key or not isinstance(key, str):
+        return False
+    key = key.strip()
+    # Google AI Studio keys start with 'AIza', Vertex AI keys may vary but are validated at call time
+    return key.startswith("AIza") and len(key) >= 30
+
 # Setup Gemini Client
 def get_gemini_client(custom_api_key: str = None) -> genai.Client:
     api_key = custom_api_key or os.getenv("GEMINI_API_KEY")
@@ -584,9 +592,10 @@ async def generate_coin_summary(
         print(f"Serving cached AI summary for {coin_id} ({lang})")
         return summary_daily_cache[cache_key]
 
-    has_api_key = bool(custom_api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "False").lower() == "true")
+    use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "False").lower() == "true"
+    env_key = os.getenv("GEMINI_API_KEY", "")
+    has_api_key = bool(custom_api_key) or use_vertex or is_valid_api_key(env_key)
     if not has_api_key or quota_tracker["quota_exhausted"] or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true":
-        quota_tracker["quota_exhausted"] = True
         return get_simulated_summary(coin_id, lang)
 
     try:
@@ -707,9 +716,10 @@ async def chat_with_agent(
     Streams the agent's chat response using Gemini API.
     Orchestrates Technical and Fundamental agents dynamically.
     """
-    has_api_key = bool(custom_api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "False").lower() == "true")
+    use_vertex = os.getenv("GOOGLE_GENAI_USE_VERTEXAI", "False").lower() == "true"
+    env_key = os.getenv("GEMINI_API_KEY", "")
+    has_api_key = bool(custom_api_key) or use_vertex or is_valid_api_key(env_key)
     if not has_api_key or quota_tracker["quota_exhausted"] or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true":
-        quota_tracker["quota_exhausted"] = True
         sim_response = get_simulated_chat_response(query, coin_id, lang)
         chunk_size = 8
         for i in range(0, len(sim_response), chunk_size):

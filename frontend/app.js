@@ -1037,20 +1037,33 @@ function localizeUI() {
 let tvIntervalSetting = "D";
 let tvStyleSetting = "1";
 
+let _tvRetryCount = 0;
+const _TV_MAX_RETRIES = 20; // 10 seconds max wait
+
 function renderTradingViewWidget() {
     const chartContainer = document.getElementById("tv-chart-container");
     if (!chartContainer) return;
-    
+
     if (typeof TradingView === "undefined" || !TradingView.widget) {
-        console.warn("TradingView library not loaded yet. Retrying in 500ms...");
+        _tvRetryCount++;
+        if (_tvRetryCount >= _TV_MAX_RETRIES) {
+            // TradingView CDN failed to load — show fallback
+            const noChartMsg = currentLanguage === "ru"
+                ? "📡 График недоступен — проверьте подключение к интернету (TradingView CDN не загружен)"
+                : "📡 Chart unavailable — check your internet connection (TradingView CDN failed to load)";
+            chartContainer.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:240px;color:var(--text-secondary);font-size:0.9rem;text-align:center;padding:24px;gap:8px;">${noChartMsg}</div>`;
+            _tvRetryCount = 0;
+            return;
+        }
         setTimeout(renderTradingViewWidget, 500);
         return;
     }
 
+    _tvRetryCount = 0;
     try {
         const symbol = TRADINGVIEW_SYMBOLS[currentCoin] || "BINANCE:BTCUSDT";
         chartContainer.innerHTML = "";
-        
+
         tvWidgetInstance = new TradingView.widget({
             "autosize": true,
             "symbol": symbol,
@@ -1071,13 +1084,12 @@ function renderTradingViewWidget() {
             "calendar": true,
             "hotlist": true,
             "withdateranges": true,
-            "studies": [
-                "STD;Volume"
-            ],
+            "studies": ["STD;Volume"],
             "container_id": "tv-chart-container"
         });
     } catch (e) {
         console.error("Error initializing TradingView widget:", e);
+        chartContainer.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:240px;color:var(--text-secondary);font-size:0.9rem;text-align:center;padding:24px;">${e.message || "Chart initialization error"}</div>`;
     }
 }
 
