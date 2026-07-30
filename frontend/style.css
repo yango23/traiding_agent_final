@@ -457,25 +457,14 @@ body.light-theme .card-divider {
 
 #tv-chart-container {
     width: 100%;
-    height: 100%;
+    height: calc(100% - 28px);
     border-radius: 16px;
     overflow: hidden;
 }
-#tv-chart-container iframe,
-.tradingview-widget-container,
-.tradingview-widget-container__widget {
+#tv-chart-container iframe {
     width: 100% !important;
     height: 100% !important;
     display: block !important;
-    border: none !important;
-}
-
-body.is-resizing,
-body.is-resizing * {
-    user-select: none !important;
-}
-body.is-resizing iframe {
-    pointer-events: none !important;
 }
 
 /* Vertical Chart Resize Handle */
@@ -879,8 +868,8 @@ body.light-theme .chat-input-area textarea::placeholder {
 }
 
 .send-btn {
-    background: linear-gradient(135deg, #9e7820, #7d5f18) !important;
-    color: rgba(255, 243, 200, 0.95) !important;
+    background: linear-gradient(135deg, #f97316, #ea580c) !important;
+    color: #ffffff !important;
     border: none;
     border-radius: 10px;
     width: 36px;
@@ -893,13 +882,13 @@ body.light-theme .chat-input-area textarea::placeholder {
     align-self: flex-end;
     margin-bottom: 2px;
     transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-    box-shadow: 0 2px 8px rgba(140, 110, 20, 0.18) !important;
+    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.45) !important;
 }
 
 .send-btn:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 4px 14px rgba(140, 110, 20, 0.28) !important;
-    filter: brightness(1.12);
+    transform: translateY(-2px) scale(1.06);
+    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.65) !important;
+    filter: brightness(1.15);
 }
 
 .send-btn:active {

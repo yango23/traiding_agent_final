@@ -814,9 +814,8 @@ function toggleLanguage() {
     langToggleBtn.textContent = currentLanguage.toUpperCase();
     
     localizeUI();
-    clearClientSummaryCache(); // always regenerate in the new language
-    loadAIContent(true);  // force-refresh so server generates in new language
-    initChatSession();    // re-render chat in new language
+    loadAIContent(); // Reload AI Summary & news in new language
+    initChatSession(); // Restore/re-render chat history or initialize welcome message
 }
 
 function localizeUI() {
@@ -1039,57 +1038,20 @@ let tvIntervalSetting = "D";
 let tvStyleSetting = "1";
 
 function renderTradingViewWidget() {
-    const chartContainer = document.getElementById("tv-chart-container");
-    if (!chartContainer) return;
-
     const symbol = TRADINGVIEW_SYMBOLS[currentCoin] || "BINANCE:BTCUSDT";
-    const lang = currentLanguage === "ru" ? "ru" : "en";
-    const theme = currentTheme === "dark" ? "dark" : "light";
-
-    chartContainer.innerHTML = "";
-
-    // 1. Try window.TradingView.widget constructor if script is available
-    if (typeof TradingView !== "undefined" && TradingView.widget) {
-        try {
-            tvWidgetInstance = new TradingView.widget({
-                "autosize": true,
-                "symbol": symbol,
-                "interval": tvIntervalSetting,
-                "timezone": "Etc/UTC",
-                "theme": theme,
-                "style": tvStyleSetting,
-                "locale": lang,
-                "toolbar_bg": theme === "dark" ? "#0f172a" : "#ffffff",
-                "enable_publishing": false,
-                "hide_side_toolbar": false,
-                "allow_symbol_change": true,
-                "show_popup_button": true,
-                "popup_width": "1200",
-                "popup_height": "800",
-                "save_image": true,
-                "details": true,
-                "calendar": true,
-                "hotlist": true,
-                "withdateranges": true,
-                "studies": ["STD;Volume"],
-                "container_id": "tv-chart-container"
-            });
-            return;
-        } catch (e) {
-            console.warn("TradingView.widget constructor failed, using embed fallback:", e);
-        }
-    }
-
-    // 2. Direct TradingView Embed Fallback (works even if tv.js script is delayed or blocked)
-    const widgetConfig = {
+    
+    // Clear container
+    document.getElementById("tv-chart-container").innerHTML = "";
+    
+    tvWidgetInstance = new TradingView.widget({
         "autosize": true,
         "symbol": symbol,
         "interval": tvIntervalSetting,
         "timezone": "Etc/UTC",
-        "theme": theme,
+        "theme": currentTheme,
         "style": tvStyleSetting,
-        "locale": lang,
-        "toolbar_bg": theme === "dark" ? "#0f172a" : "#ffffff",
+        "locale": currentLanguage === "ru" ? "ru" : "en",
+        "toolbar_bg": currentTheme === "dark" ? "#0f172a" : "#ffffff",
         "enable_publishing": false,
         "hide_side_toolbar": false,
         "allow_symbol_change": true,
@@ -1101,29 +1063,11 @@ function renderTradingViewWidget() {
         "calendar": true,
         "hotlist": true,
         "withdateranges": true,
-        "studies": ["STD;Volume"],
-        "support_host": "https://www.tradingview.com"
-    };
-
-    const containerDiv = document.createElement("div");
-    containerDiv.className = "tradingview-widget-container";
-    containerDiv.style.width = "100%";
-    containerDiv.style.height = "100%";
-
-    const widgetInnerDiv = document.createElement("div");
-    widgetInnerDiv.className = "tradingview-widget-container__widget";
-    widgetInnerDiv.style.width = "100%";
-    widgetInnerDiv.style.height = "100%";
-
-    const script = document.createElement("script");
-    script.type = "text/javascript";
-    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
-    script.async = true;
-    script.text = JSON.stringify(widgetConfig);
-
-    containerDiv.appendChild(widgetInnerDiv);
-    containerDiv.appendChild(script);
-    chartContainer.appendChild(containerDiv);
+        "studies": [
+            "STD;Volume"
+        ],
+        "container_id": "tv-chart-container"
+    });
 }
 
 // -------------------------------------------------------------------------
@@ -2358,8 +2302,8 @@ function initResizeHandle() {
 
     resizeHandle.addEventListener("mousedown", (e) => {
         isResizing = true;
-        document.body.classList.add("is-resizing");
         document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
         resizeHandle.classList.add("active");
     });
 
@@ -2377,8 +2321,8 @@ function initResizeHandle() {
     document.addEventListener("mouseup", () => {
         if (isResizing) {
             isResizing = false;
-            document.body.classList.remove("is-resizing");
             document.body.style.cursor = "";
+            document.body.style.userSelect = "";
             resizeHandle.classList.remove("active");
         }
     });
@@ -2404,8 +2348,11 @@ function initVerticalChartResize() {
         startY = clientY;
         startHeight = chartCard.getBoundingClientRect().height;
         handle.classList.add("dragging");
-        document.body.classList.add("is-resizing");
         document.body.style.cursor = "row-resize";
+        document.body.style.userSelect = "none";
+        if (chartContainer) {
+            chartContainer.style.pointerEvents = "none";
+        }
     };
 
     const doDrag = (clientY) => {
@@ -2422,8 +2369,14 @@ function initVerticalChartResize() {
         if (isResizing) {
             isResizing = false;
             handle.classList.remove("dragging");
-            document.body.classList.remove("is-resizing");
             document.body.style.cursor = "";
+            document.body.style.userSelect = "";
+            if (chartContainer) {
+                chartContainer.style.pointerEvents = "auto";
+            }
+            if (typeof renderTradingViewWidget === "function") {
+                renderTradingViewWidget();
+            }
         }
     };
 
@@ -2788,45 +2741,23 @@ document.addEventListener("click", () => {
     document.querySelectorAll(".indicator-dropdown-menu").forEach(m => m.style.display = "none");
 });
 
-// -------------------------------------------------------------------------
-// Init helper: run a promise with a max timeout (avoids hanging init chain)
-// -------------------------------------------------------------------------
-function withTimeout(promise, ms = 5000) {
-    return Promise.race([
-        promise,
-        new Promise(resolve => setTimeout(resolve, ms))
-    ]);
-}
-
 // Initial Bootstrap
 document.documentElement.lang = currentLanguage;
 initTheme();
 applyCoinTheme(currentCoin);
 localizeUI();
+checkUserSession().then(async () => {
+    await loadTradingViewSettings();
+    renderTradingViewWidget();
+    await loadStudiedIndicators();
+    await loadApiKeysList();
+    await initChatSession();
+    await loadAIContent();
+    await syncQuizProgressFromServer();
+});
 initResizeHandle();
 initVerticalChartResize();
 updateQuotaUI();
-
-// 1. Render TradingView widget immediately on load
-loadTradingViewSettings().then(() => {
-    renderTradingViewWidget();
-}).catch(() => {
-    renderTradingViewWidget();
-});
-
-// 2. Load Market Data & AI Summary immediately on load
-loadAIContent();
-
-// 3. User session & auth data load asynchronously in parallel (non-blocking)
-checkUserSession().then(() => {
-    loadStudiedIndicators().catch(() => {});
-    loadApiKeysList().catch(() => {});
-    initChatSession().catch(() => {});
-    syncQuizProgressFromServer().catch(() => {});
-}).catch(() => {
-    initChatSession().catch(() => {});
-});
-
 loadQuizQuestion();
 // Refresh quota indicator every 60 seconds
 setInterval(updateQuotaUI, 60000);
