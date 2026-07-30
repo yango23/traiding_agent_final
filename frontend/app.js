@@ -1038,60 +1038,92 @@ function localizeUI() {
 let tvIntervalSetting = "D";
 let tvStyleSetting = "1";
 
-let _tvRetryCount = 0;
-const _TV_MAX_RETRIES = 20; // 10 seconds max wait
-
 function renderTradingViewWidget() {
     const chartContainer = document.getElementById("tv-chart-container");
     if (!chartContainer) return;
 
-    if (typeof TradingView === "undefined" || !TradingView.widget) {
-        _tvRetryCount++;
-        if (_tvRetryCount >= _TV_MAX_RETRIES) {
-            // TradingView CDN failed to load — show fallback
-            const noChartMsg = currentLanguage === "ru"
-                ? "📡 График недоступен — проверьте подключение к интернету (TradingView CDN не загружен)"
-                : "📡 Chart unavailable — check your internet connection (TradingView CDN failed to load)";
-            chartContainer.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:240px;color:var(--text-secondary);font-size:0.9rem;text-align:center;padding:24px;gap:8px;">${noChartMsg}</div>`;
-            _tvRetryCount = 0;
+    const symbol = TRADINGVIEW_SYMBOLS[currentCoin] || "BINANCE:BTCUSDT";
+    const lang = currentLanguage === "ru" ? "ru" : "en";
+    const theme = currentTheme === "dark" ? "dark" : "light";
+
+    chartContainer.innerHTML = "";
+
+    // 1. Try window.TradingView.widget constructor if script is available
+    if (typeof TradingView !== "undefined" && TradingView.widget) {
+        try {
+            tvWidgetInstance = new TradingView.widget({
+                "autosize": true,
+                "symbol": symbol,
+                "interval": tvIntervalSetting,
+                "timezone": "Etc/UTC",
+                "theme": theme,
+                "style": tvStyleSetting,
+                "locale": lang,
+                "toolbar_bg": theme === "dark" ? "#0f172a" : "#ffffff",
+                "enable_publishing": false,
+                "hide_side_toolbar": false,
+                "allow_symbol_change": true,
+                "show_popup_button": true,
+                "popup_width": "1200",
+                "popup_height": "800",
+                "save_image": true,
+                "details": true,
+                "calendar": true,
+                "hotlist": true,
+                "withdateranges": true,
+                "studies": ["STD;Volume"],
+                "container_id": "tv-chart-container"
+            });
             return;
+        } catch (e) {
+            console.warn("TradingView.widget constructor failed, using embed fallback:", e);
         }
-        setTimeout(renderTradingViewWidget, 500);
-        return;
     }
 
-    _tvRetryCount = 0;
-    try {
-        const symbol = TRADINGVIEW_SYMBOLS[currentCoin] || "BINANCE:BTCUSDT";
-        chartContainer.innerHTML = "";
+    // 2. Direct TradingView Embed Fallback (works even if tv.js script is delayed or blocked)
+    const widgetConfig = {
+        "autosize": true,
+        "symbol": symbol,
+        "interval": tvIntervalSetting,
+        "timezone": "Etc/UTC",
+        "theme": theme,
+        "style": tvStyleSetting,
+        "locale": lang,
+        "toolbar_bg": theme === "dark" ? "#0f172a" : "#ffffff",
+        "enable_publishing": false,
+        "hide_side_toolbar": false,
+        "allow_symbol_change": true,
+        "show_popup_button": true,
+        "popup_width": "1200",
+        "popup_height": "800",
+        "save_image": true,
+        "details": true,
+        "calendar": true,
+        "hotlist": true,
+        "withdateranges": true,
+        "studies": ["STD;Volume"],
+        "support_host": "https://www.tradingview.com"
+    };
 
-        tvWidgetInstance = new TradingView.widget({
-            "autosize": true,
-            "symbol": symbol,
-            "interval": tvIntervalSetting,
-            "timezone": "Etc/UTC",
-            "theme": currentTheme,
-            "style": tvStyleSetting,
-            "locale": currentLanguage === "ru" ? "ru" : "en",
-            "toolbar_bg": currentTheme === "dark" ? "#0f172a" : "#ffffff",
-            "enable_publishing": false,
-            "hide_side_toolbar": false,
-            "allow_symbol_change": true,
-            "show_popup_button": true,
-            "popup_width": "1200",
-            "popup_height": "800",
-            "save_image": true,
-            "details": true,
-            "calendar": true,
-            "hotlist": true,
-            "withdateranges": true,
-            "studies": ["STD;Volume"],
-            "container_id": "tv-chart-container"
-        });
-    } catch (e) {
-        console.error("Error initializing TradingView widget:", e);
-        chartContainer.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:240px;color:var(--text-secondary);font-size:0.9rem;text-align:center;padding:24px;">${e.message || "Chart initialization error"}</div>`;
-    }
+    const containerDiv = document.createElement("div");
+    containerDiv.className = "tradingview-widget-container";
+    containerDiv.style.width = "100%";
+    containerDiv.style.height = "100%";
+
+    const widgetInnerDiv = document.createElement("div");
+    widgetInnerDiv.className = "tradingview-widget-container__widget";
+    widgetInnerDiv.style.width = "100%";
+    widgetInnerDiv.style.height = "100%";
+
+    const script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js";
+    script.async = true;
+    script.text = JSON.stringify(widgetConfig);
+
+    containerDiv.appendChild(widgetInnerDiv);
+    containerDiv.appendChild(script);
+    chartContainer.appendChild(containerDiv);
 }
 
 // -------------------------------------------------------------------------
@@ -2326,8 +2358,8 @@ function initResizeHandle() {
 
     resizeHandle.addEventListener("mousedown", (e) => {
         isResizing = true;
+        document.body.classList.add("is-resizing");
         document.body.style.cursor = "col-resize";
-        document.body.style.userSelect = "none";
         resizeHandle.classList.add("active");
     });
 
@@ -2345,8 +2377,8 @@ function initResizeHandle() {
     document.addEventListener("mouseup", () => {
         if (isResizing) {
             isResizing = false;
+            document.body.classList.remove("is-resizing");
             document.body.style.cursor = "";
-            document.body.style.userSelect = "";
             resizeHandle.classList.remove("active");
         }
     });
@@ -2372,11 +2404,8 @@ function initVerticalChartResize() {
         startY = clientY;
         startHeight = chartCard.getBoundingClientRect().height;
         handle.classList.add("dragging");
+        document.body.classList.add("is-resizing");
         document.body.style.cursor = "row-resize";
-        document.body.style.userSelect = "none";
-        if (chartContainer) {
-            chartContainer.style.pointerEvents = "none";
-        }
     };
 
     const doDrag = (clientY) => {
@@ -2393,14 +2422,8 @@ function initVerticalChartResize() {
         if (isResizing) {
             isResizing = false;
             handle.classList.remove("dragging");
+            document.body.classList.remove("is-resizing");
             document.body.style.cursor = "";
-            document.body.style.userSelect = "";
-            if (chartContainer) {
-                chartContainer.style.pointerEvents = "auto";
-            }
-            if (typeof renderTradingViewWidget === "function") {
-                renderTradingViewWidget();
-            }
         }
     };
 
@@ -2780,27 +2803,30 @@ document.documentElement.lang = currentLanguage;
 initTheme();
 applyCoinTheme(currentCoin);
 localizeUI();
-checkUserSession().then(async () => {
-    // Step 1: load TV settings (needed before widget render)
-    await withTimeout(loadTradingViewSettings(), 3000);
-    renderTradingViewWidget();
-
-    // Step 2: load user data in parallel — don't let any one of them block the summary
-    await Promise.allSettled([
-        withTimeout(loadStudiedIndicators(), 4000),
-        withTimeout(loadApiKeysList(), 4000),
-        withTimeout(initChatSession(), 4000),
-    ]);
-
-    // Step 3: load AI summary (this must always run)
-    await loadAIContent();
-
-    // Step 4: non-critical, fire-and-forget
-    syncQuizProgressFromServer().catch(e => console.error("syncQuiz failed:", e));
-});
 initResizeHandle();
 initVerticalChartResize();
 updateQuotaUI();
+
+// 1. Render TradingView widget immediately on load
+loadTradingViewSettings().then(() => {
+    renderTradingViewWidget();
+}).catch(() => {
+    renderTradingViewWidget();
+});
+
+// 2. Load Market Data & AI Summary immediately on load
+loadAIContent();
+
+// 3. User session & auth data load asynchronously in parallel (non-blocking)
+checkUserSession().then(() => {
+    loadStudiedIndicators().catch(() => {});
+    loadApiKeysList().catch(() => {});
+    initChatSession().catch(() => {});
+    syncQuizProgressFromServer().catch(() => {});
+}).catch(() => {
+    initChatSession().catch(() => {});
+});
+
 loadQuizQuestion();
 // Refresh quota indicator every 60 seconds
 setInterval(updateQuotaUI, 60000);

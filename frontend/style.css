@@ -457,14 +457,25 @@ body.light-theme .card-divider {
 
 #tv-chart-container {
     width: 100%;
-    height: calc(100% - 28px);
+    height: 100%;
     border-radius: 16px;
     overflow: hidden;
 }
-#tv-chart-container iframe {
+#tv-chart-container iframe,
+.tradingview-widget-container,
+.tradingview-widget-container__widget {
     width: 100% !important;
     height: 100% !important;
     display: block !important;
+    border: none !important;
+}
+
+body.is-resizing,
+body.is-resizing * {
+    user-select: none !important;
+}
+body.is-resizing iframe {
+    pointer-events: none !important;
 }
 
 /* Vertical Chart Resize Handle */
