@@ -868,8 +868,8 @@ body.light-theme .chat-input-area textarea::placeholder {
 }
 
 .send-btn {
-    background: linear-gradient(135deg, #f97316, #ea580c) !important;
-    color: #ffffff !important;
+    background: linear-gradient(135deg, #c2631a, #a8521a) !important;
+    color: rgba(255, 255, 255, 0.92) !important;
     border: none;
     border-radius: 10px;
     width: 36px;
@@ -882,13 +882,13 @@ body.light-theme .chat-input-area textarea::placeholder {
     align-self: flex-end;
     margin-bottom: 2px;
     transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.45) !important;
+    box-shadow: 0 4px 12px rgba(180, 90, 20, 0.25) !important;
 }
 
 .send-btn:hover {
     transform: translateY(-2px) scale(1.06);
-    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.65) !important;
-    filter: brightness(1.15);
+    box-shadow: 0 6px 18px rgba(180, 90, 20, 0.35) !important;
+    filter: brightness(1.1);
 }
 
 .send-btn:active {
