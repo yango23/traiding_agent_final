@@ -15,7 +15,7 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- CSS style -->
-    <link rel="stylesheet" href="/static/style.css?v=3.22.0&t=1722460000">
+    <link rel="stylesheet" href="/static/style.css?v=3.23.0&t=1722470000">
 </head>
 <body class="dark-theme">
     <div id="glow-bg"></div>
@@ -53,6 +53,9 @@
                         <button id="auth-logout-btn" class="control-btn logout-btn" style="font-weight: 700; padding: 6px 12px; font-size: 0.8rem; background: rgba(244, 63, 94, 0.15); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: 8px; color: var(--neon-rose); cursor: pointer;">Выйти</button>
                     </div>
                 </div>
+                <button class="control-btn mobile-drawer-btn" id="mobile-chat-btn" onclick="toggleAIChatDrawer()" style="display: none; align-items: center; gap: 6px; font-weight: 600; font-size: 0.8rem; background: linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(99, 102, 241, 0.25)); border: 1px solid rgba(168, 85, 247, 0.4); color: #e9d5ff;">
+                    💬 <span id="lbl-toggle-drawer">Чат</span>
+                </button>
                 <button id="lang-toggle-btn" class="control-btn" title="Switch Language">EN</button>
                 <button id="theme-toggle-btn" class="control-btn" title="Toggle Theme">🌙</button>
             </div>
@@ -628,6 +631,6 @@
     </div>
 
     <!-- JS app script -->
-    <script src="/static/app.js?v=3.22.0&t=1722460000"></script>
+    <script src="/static/app.js?v=3.23.0&t=1722470000"></script>
 </body>
 </html>

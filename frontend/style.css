@@ -1745,3 +1745,120 @@ body.light-theme #refresh-stats-btn:hover {
         min-height: 180px;
     }
 }
+
+/* =========================================================================
+   Mobile & Tablet Responsive Layout & Slide-out AI Assistant Drawer
+   ========================================================================= */
+
+#chat-drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(5, 7, 14, 0.7);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 998;
+}
+
+#chat-drawer-backdrop.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+@media (max-width: 992px), (orientation: portrait) and (max-width: 1200px) {
+    .mobile-drawer-btn {
+        display: inline-flex !important;
+    }
+
+    .close-drawer-btn {
+        display: inline-block !important;
+    }
+
+    #resize-handle {
+        display: none !important;
+    }
+
+    .app-main-layout {
+        display: flex;
+        flex-direction: column;
+        height: auto;
+        overflow-y: auto;
+        padding: 10px 14px 40px 14px !important;
+        gap: 14px !important;
+    }
+
+    .left-panel {
+        display: contents !important;
+    }
+
+    .center-panel {
+        display: contents !important;
+    }
+
+    /* Mobile ordering layout */
+    .selector-card {
+        order: 1 !important;
+        margin: 0 !important;
+    }
+    .stats-card {
+        order: 2 !important;
+        margin: 0 !important;
+    }
+    .sentiment-card {
+        order: 3 !important;
+        margin: 0 !important;
+    }
+    .chart-card {
+        order: 4 !important;
+        height: 380px !important;
+        min-height: 380px !important;
+        flex: none !important;
+        margin: 0 !important;
+    }
+    #chart-resize-handle {
+        display: none !important;
+    }
+    .tabs-card {
+        order: 5 !important;
+        margin: 0 !important;
+        min-height: 300px !important;
+    }
+    .quiz-card {
+        order: 6 !important;
+        margin: 0 !important;
+    }
+    .api-key-card {
+        order: 7 !important;
+        margin: 0 !important;
+    }
+
+    /* AI Chat Assistant transforms into a slide-over drawer */
+    .right-panel {
+        position: fixed;
+        top: 0;
+        right: -100%;
+        width: 90%;
+        max-width: 420px;
+        height: 100vh;
+        height: 100dvh;
+        z-index: 1000;
+        transition: right 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: 8px;
+        background: rgba(11, 17, 32, 0.95);
+        backdrop-filter: blur(16px);
+        box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+    }
+
+    .right-panel.open {
+        right: 0 !important;
+    }
+
+    .right-panel .chat-card {
+        height: 100%;
+        border-radius: 12px;
+    }
+}
