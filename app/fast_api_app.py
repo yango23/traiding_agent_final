@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from app.tools import fetch_coin_data, fetch_crypto_news, calculate_technical_indicators, run_backtest_simulation
-from app.agent import chat_with_agent, generate_coin_summary, is_query_safe, quota_tracker
+from app.agent import chat_with_agent, generate_coin_summary, is_query_safe, is_valid_api_key, quota_tracker
 from app.db import (
     init_db, register_user, login_user, logout_user, validate_session, get_user_email,
     save_chat_message, get_chat_history, clear_chat_history, get_indicator_config, save_indicator_config,
@@ -220,7 +220,13 @@ async def get_ai_summary(request: SummaryRequest, authorization: str = Header(No
             custom_api_key=custom_key,
             config=config
         )
-        is_simulated = False if custom_key else quota_tracker["quota_exhausted"]
+        is_simulated = (
+            False if custom_key else (
+                quota_tracker["quota_exhausted"]
+                or os.getenv("FORCE_DEMO_MODE", "False").lower() == "true"
+                or not is_valid_api_key(os.getenv("GEMINI_API_KEY", ""))
+            )
+        )
         return {"success": True, "summary": summary_text, "simulated": is_simulated}
     except Exception as e:
         if custom_key:

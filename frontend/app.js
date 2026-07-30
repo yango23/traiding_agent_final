@@ -814,8 +814,9 @@ function toggleLanguage() {
     langToggleBtn.textContent = currentLanguage.toUpperCase();
     
     localizeUI();
-    loadAIContent(); // Reload AI Summary & news in new language
-    initChatSession(); // Restore/re-render chat history or initialize welcome message
+    clearClientSummaryCache(); // always regenerate in the new language
+    loadAIContent(true);  // force-refresh so server generates in new language
+    initChatSession();    // re-render chat in new language
 }
 
 function localizeUI() {
@@ -2764,19 +2765,38 @@ document.addEventListener("click", () => {
     document.querySelectorAll(".indicator-dropdown-menu").forEach(m => m.style.display = "none");
 });
 
+// -------------------------------------------------------------------------
+// Init helper: run a promise with a max timeout (avoids hanging init chain)
+// -------------------------------------------------------------------------
+function withTimeout(promise, ms = 5000) {
+    return Promise.race([
+        promise,
+        new Promise(resolve => setTimeout(resolve, ms))
+    ]);
+}
+
 // Initial Bootstrap
 document.documentElement.lang = currentLanguage;
 initTheme();
 applyCoinTheme(currentCoin);
 localizeUI();
 checkUserSession().then(async () => {
-    await loadTradingViewSettings();
+    // Step 1: load TV settings (needed before widget render)
+    await withTimeout(loadTradingViewSettings(), 3000);
     renderTradingViewWidget();
-    await loadStudiedIndicators();
-    await loadApiKeysList();
-    await initChatSession();
+
+    // Step 2: load user data in parallel — don't let any one of them block the summary
+    await Promise.allSettled([
+        withTimeout(loadStudiedIndicators(), 4000),
+        withTimeout(loadApiKeysList(), 4000),
+        withTimeout(initChatSession(), 4000),
+    ]);
+
+    // Step 3: load AI summary (this must always run)
     await loadAIContent();
-    await syncQuizProgressFromServer();
+
+    // Step 4: non-critical, fire-and-forget
+    syncQuizProgressFromServer().catch(e => console.error("syncQuiz failed:", e));
 });
 initResizeHandle();
 initVerticalChartResize();
